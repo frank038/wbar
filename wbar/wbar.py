@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 0.5.1
+# V. 0.5.2
 
 import os,sys,shutil,stat
 import gi
@@ -533,7 +533,6 @@ class MyWindow(Gtk.Window):
         
         # for menu rebuild
         self.q = queue.Queue(maxsize=1)
-        self.bookmarks = []
         
         if USE_CLIPBOARD:
             self.clipboard_conf = _clipboard_conf
@@ -2477,8 +2476,7 @@ class menuWin(Gtk.Window):
         self.q.put_nowait("new")
         self.on_populate_menu()
         # populate categories
-        # self.bookmarks = []
-        self.bookmarks = self._parent.bookmarks
+        self.bookmarks = []
         self.set_categories()
         
         ###########
