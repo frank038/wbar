@@ -41,7 +41,8 @@ Options and configurations
 Wbar has a graphical configurator for many options. Other options have 
 to be changed manually.
 
-Middle mouse click to force a menu update (the menu should update automatically).
+Mouse middle click on an item to force a menu update 
+(the menu should update automatically).
 
 The bash scripts volume_SOMENAME.sh use the command pactl for their 
 actions. amixer can also be used: switch the commands in those files.
