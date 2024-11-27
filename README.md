@@ -1,8 +1,6 @@
 # wbar
 Bar for wayland
 
-v. 0.5
-
 free to use and modify
 
 Wbar is a panel to be used under wayland, if the display server support 
