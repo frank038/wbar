@@ -1,0 +1,111 @@
+/* the window border colour */
+@define-color border_color #00B300;
+
+/* the panel */
+.mywindow {
+  border-bottom-width: 2px;
+  border-color: @border_color;
+  border-style: solid;
+}
+
+/* the menu window */
+.menuwin { 
+  border-radius: 10px 10px 10px 10px;
+  border-width: 2px;
+  border-color: @border_color;
+  border-style: solid;
+}
+
+.menuwin button {
+  border-radius: 6px;
+  border: solid;
+  border-width: 1px;
+  border-color: #7F7F7F;
+  margin: 2px;
+}
+
+/* the shutdown/reboot/logout dialog */
+.commandwin { 
+  border-radius: 10px 10px 10px 10px;
+  border-width: 2px;
+  border-color: @border_color;
+  border-style: solid;
+}
+
+.commandwin button {
+  border-radius: 6px;
+  border: solid;
+  border-width: 1px;
+  border-color: #7F7F7F;
+  margin: 2px;
+}
+
+/* the clipboard window */
+.clipboardwin { 
+  border-radius: 10px 10px 10px 10px;
+  border-width: 2px;
+  border-color: @border_color;
+  border-style: solid;
+}
+
+.clipboardwin button {
+  border-radius: 6px;
+  border: solid;
+  border-width: 1px;
+  border-color: #7F7F7F;
+  margin: 2px;
+}
+
+/* the service window */
+.servicewin { 
+  border-radius: 10px 10px 10px 10px;
+  border-width: 2px;
+  border-color: @border_color;
+  border-style: solid;
+}
+.servicewin button {
+  border-radius: 6px;
+  border: solid;
+  border-width: 1px;
+  border-color: #7F7F7F;
+  margin: 2px;
+}
+
+/* the notification window */
+.notificationwin { 
+  border-radius: 10px 10px 10px 10px;
+  border-width: 2px;
+  border-color: @border_color;
+  border-style: solid;
+}
+
+.notificationwin button {
+  border-radius: 6px;
+  border: solid;
+  border-width: 1px;
+  border-color: #7F7F7F;
+  margin: 2px;
+}
+
+/* the volume meter */
+/*
+.vollevelbar trough, progress {
+  background-color: white;
+}*/
+
+/* the output command left label */
+/*
+.label1 {
+}*/
+
+/* the output command center label */
+/*
+.label2 {
+}*/
+
+/* the clock label */
+/*
+.clocklabel {
+  font-family: digital-7;
+  font-size: 28px;
+}*/

@@ -1,0 +1,16 @@
+{
+    "panel": {
+        "height": 30,
+        "width": 10,
+        "corner-top": 0,
+        "corner-bottom": 20,
+        "position": 0,
+        "clipboard": 1,
+        "label1": 0,
+        "label2": 0,
+        "tasklist": 1,
+        "clock": 1,
+        "time_format": 0,
+        "volume_command": ""
+    }
+}
