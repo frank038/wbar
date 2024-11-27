@@ -41,7 +41,8 @@ to be changed manually.
 The bash scripts volume_SOMENAME.sh use the command pactl for their 
 actions. amixer can also be used: switch the commands in those files.
 
-Middle mouse click to force a menu update (the menu should update automatically).
+Mouse middle click on an item to force a menu update 
+(the menu should update automatically).
 
 Wbar has two slots for the command out scripts, at left and in the center;
 the scripts are located in the scripts folder; the labels in the panel accept the left 
