@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 0.5
+# V. 0.5.1
 
 import os,sys,shutil,stat
 import gi
@@ -9,6 +9,7 @@ gi.require_version('Gdk', '3.0')
 gi.require_version('GtkLayerShell', '0.1')
 from gi.repository import Gtk, Gdk, Gio, GLib, GtkLayerShell, GObject, Pango
 from gi.repository import GdkPixbuf
+from pathlib import Path
 import json
 from threading import Thread
 from threading import Event
@@ -20,7 +21,11 @@ import subprocess
 import time, datetime
 import dbus
 import dbus.service as Service
-from PIL import Image
+_USE_PIL = 1
+try:
+    from PIL import Image
+except:
+    _USE_PIL = 0
 import io
 
 
@@ -35,9 +40,11 @@ import io
 # USE_TRAY = 1
 # ##
 
+_HOME = Path.home()
 
 _display = Gdk.Display.get_default()
 display_type = GObject.type_name(_display.__gtype__)
+
 is_wayland = display_type=="GdkWaylandDisplay"
 if not is_wayland:
     _error_log("Wayland required.")
@@ -524,6 +531,10 @@ class MyWindow(Gtk.Window):
         
         self.connect("destroy", self._to_close)
         
+        # for menu rebuild
+        self.q = queue.Queue(maxsize=1)
+        self.bookmarks = []
+        
         if USE_CLIPBOARD:
             self.clipboard_conf = _clipboard_conf
             self.clips_path = os.path.join(_curr_dir, "clips")
@@ -807,6 +818,9 @@ class MyWindow(Gtk.Window):
         self.label2button.connect('button-press-event', self.on_label2)
         self.center_box.pack_start(self.label2button,False,False,4)
         
+        gdir1 = Gio.File.new_for_path(os.path.join(_HOME, ".local/share/applications"))
+        self.monitor1 = gdir1.monitor_directory(Gio.FileMonitorFlags.SEND_MOVED, None)
+        self.monitor1.connect("changed", self.directory_changed)
         gdir2 = Gio.File.new_for_path("/usr/share/applications")
         self.monitor2 = gdir2.monitor_directory(Gio.FileMonitorFlags.SEND_MOVED, None)
         self.monitor2.connect("changed", self.directory_changed)
@@ -1041,13 +1055,17 @@ class MyWindow(Gtk.Window):
         if not self.q.empty():
             if _path in self.bookmarks:
                 self.bookmarks.remove(_path)
-            with open(os.path.join(main_dir, "favorites"), "w") as _f:
+            with open(os.path.join(_curr_dir, "favorites"), "w") as _f:
                 for el in self.bookmarks:
                     _f.write(el+"\n")
-            # rebuild bookmarks
-            self.populate_bookmarks_at_start()
-            if USER_THEME == 1:
-                self.btn_bookmark.clicked()
+            # # rebuild bookmarks
+            # self.populate_bookmarks_at_start()
+            # if USER_THEME == 1:
+                # self.btn_bookmark.clicked()
+            #
+            if self.MW:
+                self.MW.close()
+                self.MW = None
             #
             self.rebuild_menu()
     
@@ -1122,7 +1140,7 @@ class MyWindow(Gtk.Window):
             elif 'label' in _dict:
                 _label_name = _dict['label'].replace("_","")
             #
-            if 'icon-data' in _dict:
+            if 'icon-data' in _dict and _USE_PIL:
                 _icon_data = _dict['icon-data']
                 pb = None
                 with Image.open(io.BytesIO(bytes(_icon_data))) as im:
@@ -2369,10 +2387,10 @@ class menuWin(Gtk.Window):
         self.iconview.connect("item-activated", self.on_iv_item_activated)
         self.iconview.connect("button_press_event", self.mouse_event)
         self.scrolledwindow.add(self.iconview)
-        # # separator
-        # separator = Gtk.Separator()
-        # separator.set_orientation(Gtk.Orientation.HORIZONTAL)
-        # self.main_box.pack_start(separator, False, False, 4)
+        # separator
+        separator = Gtk.Separator()
+        separator.set_orientation(Gtk.Orientation.HORIZONTAL)
+        self.main_box.pack_start(separator, False, False, 4)
         # search box
         self.scbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
         self.scbox.set_homogeneous(True)
@@ -2459,7 +2477,8 @@ class menuWin(Gtk.Window):
         self.q.put_nowait("new")
         self.on_populate_menu()
         # populate categories
-        self.bookmarks = []
+        # self.bookmarks = []
+        self.bookmarks = self._parent.bookmarks
         self.set_categories()
         
         ###########
@@ -3021,7 +3040,8 @@ class clipboardWin(Gtk.Window):
             _text = None
             with open(os.path.join(self._parent.clips_path,str(_clip)), "r") as _f:
                 _text = "".join(_f.readlines())
-            clipboard.set_text(_text, -1)
+            # clipboard.set_text(_text, -1)
+            subprocess.Popen(f"wl-copy {_text}",shell=True)
             self.hide()
         except:
             pass
