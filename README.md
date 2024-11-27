@@ -1,0 +1,2 @@
+# wbar
+Bar for wayland
