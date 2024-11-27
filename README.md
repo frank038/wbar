@@ -41,6 +41,8 @@ Options and configurations
 Wbar has a graphical configurator for many options. Other options have 
 to be changed manually.
 
+Middle mouse click to force a menu update (the menu should update automatically).
+
 The bash scripts volume_SOMENAME.sh use the command pactl for their 
 actions. amixer can also be used: switch the commands in those files.
 
@@ -48,9 +50,9 @@ Wbar has two slots for the command out scripts, at left and in the center;
 the scripts are located in the scripts folder; the labels in the panel accept the left 
 mouse button action to launch a custom application: set its name in the 
 files label1.script (left label) and/or label2.script (center label).
-The scripts can be of two different type: single shot and continuous shots.
+The scripts can be of two different types: single shot and continuous shots.
 The single shot script has to be in the form output1.#s (output2.#s) or 
-output1.#m (output2.#m). #s means the script will be executed every # second,
+output1.#m (output2.#m). #s means the script will be executed every # seconds,
 while #m means the scripts will be executed every # minutes.
 The continuous shot scripts have to be in the form output1.sh and/or output2.sh:
 the scripts have to be able to output something and to control the whole process.
