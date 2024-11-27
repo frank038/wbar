@@ -61,3 +61,8 @@ In the foldef configs is the file panelstyle.css.
 
 The file notifications_skipped is a simple file in which to write the 
 name of the applications you may want not to be stored in the history list.
+
+![My image](https://github.com/frank038/wbar/blob/main/wbar_01.jpg)
+
+![My image](https://github.com/frank038/wbar/blob/main/wbar_02.jpg)
+
