@@ -1,19 +1,18 @@
 #!/bin/bash
 
-# output: on or off
+# output: 0=mute enabled or 1=mute disabled
 
-# _mute=`amixer sget Master|grep 'Front Left:'| awk -F ' ' '{print $6}'`
-# _lenght=${#_mute}
-# if [ $_lenght -eq 4 ];then
-# echo -n "${_mute:1:2}"
-# else
-# echo -n "${_mute:1:3}"
-# fi
+#_mute=`amixer sget Master|grep 'Front Left:'| awk -F ' ' '{print $6}'`
+#if [ $_mute == "[on]" ]; then
+#echo 0
+#elif [ $_mute == "[off]" ]; then
+#echo 1
+#fi
 
 
 _state=`pactl get-sink-mute @DEFAULT_SINK@ | awk -F ' ' '{print $2}'`
-if [ $_state = "no" ]; then
-echo -n "on"
-elif [ $_state = "yes" ]; then
-echo -n "off"
+if [ $_state == "no" ]; then
+echo 0
+elif [ $_state == "yes" ]; then
+echo 1
 fi

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 0.5.2
+# V. 0.5.3
 
 import os,sys,shutil,stat
 import gi
@@ -1018,10 +1018,7 @@ class MyWindow(Gtk.Window):
             _level = round(int(ret1.decode().strip("\n"))/100,2)
         _mute = -1
         if ret2:
-            if ret2.decode() == "on":
-                _mute = 0
-            elif ret2.decode() == "off":
-                _mute = 1
+            _mute = int(ret2.decode())
         
         if 0 <= _level <= 1:
             self.volume_bar.set_fraction(_level)
@@ -2642,7 +2639,7 @@ class menuWin(Gtk.Window):
         if len(self.searchentry.get_text()) >= self._parent.menu_live_search:
             self.perform_searching(self.searchentry.get_text().lower())
         elif len(self.searchentry.get_text()) == 0:
-            if self._btn_toggled.icat == "Bookmarks":
+            if self._btn_toggled.icat != None and self._btn_toggled.icat == "Bookmarks":
                 self.liststore.clear()
                 self.populate_bookmarks()
     
@@ -2651,17 +2648,20 @@ class menuWin(Gtk.Window):
             self.clabel.set_label("Searching...")
         _cat = ["Development", "Game", "Education", "Graphics", "Multimedia", "Network", "Office", "Utility", "Settings", "System", "Other"]
         _list = []
-        
+        # [_el_name,_el_cat,_el_exec,_el_icon,_el_comment,_el_path,_el])
         for _el in the_menu:
             if _el[4]:
                 if _text in _el[4].lower():
                     _list.append(_el[5])
-            elif _el[0]:
+            if _el[0]:
                 if _text in _el[0].lower():
-                    _list.append(_el[5])
-            elif _el[2]:
+                    if not _text in _list:
+                        _list.append(_el[5])
+            if _el[2]:
                 if _text in _el[2].lower():
-                    _list.append(_el[5])
+                    if not _text in _list:
+                        _list.append(_el[5])
+        
         if _list:
             self.f_on_pop_iv(_list)
     
@@ -2845,6 +2845,7 @@ class menuWin(Gtk.Window):
         if ret == False:
             _exec_name = self.liststore[rrow][3]
             self.msg_simple(f"{_exec_name} not found or not setted.")
+        self.on_focus_out(None, None)
     
     def sigtype_handler(self, sig, frame):
         if sig == signal.SIGINT or sig == signal.SIGTERM:
@@ -3020,7 +3021,8 @@ class clipboardWin(Gtk.Window):
                 _tmp_btn.connect('clicked', self.on_tmp_btn, __row)
                 _tmp_box.pack_start(_tmp_btn,False,False,0)
                 self.list_box.insert(__row, 0)
-        
+    
+    # remove the clip
     def on_tmp_btn(self, btn, __row):
         _clip = btn.iid
         if _clip in CLIP_STORAGE:
@@ -3038,14 +3040,27 @@ class clipboardWin(Gtk.Window):
             _text = None
             with open(os.path.join(self._parent.clips_path,str(_clip)), "r") as _f:
                 _text = "".join(_f.readlines())
-            # clipboard.set_text(_text, -1)
-            subprocess.Popen(f"wl-copy {_text}",shell=True)
-            self.hide()
+            # remove the selected clip
+            if _clip in CLIP_STORAGE:
+                del CLIP_STORAGE[_clip]
+            try:
+                _clip_file = os.path.join(_curr_dir, "clips", _clip)
+                if os.path.exists(_clip_file):
+                    os.remove(_clip_file)
+                # clipboard.set_text(_text, -1)
+                subprocess.Popen(f"wl-copy {_text}",shell=True)
+            except:
+                pass
+            if self._parent.CW:
+                self._parent.CW = None
+            self.close()
         except:
             pass
     
     def on_focus_out(self, win, event):
-        self.hide()
+        if self._parent.CW:
+            self._parent.CW = None
+        self.close()
         
     # def on_show(self, widget):
         # pass
@@ -3143,7 +3158,7 @@ class otherWin(Gtk.Window):
         self.body_lbl.set_xalign(0)
         self.body_lbl.set_line_wrap(True)
         self.body_lbl.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
-        _scrolledwin.set_size_request(-1,min(int(self._parent.service_height/2),150))
+        _scrolledwin.set_size_request(-1,max(int(self._parent.service_height/2),150))
         _scrolledwin.add(self.body_lbl)
         
         _clip_dir = os.path.join(_curr_dir,"mynots")
@@ -3173,6 +3188,8 @@ class otherWin(Gtk.Window):
             
             _summ_lbl = Gtk.Label()
             _summ_lbl.set_single_line_mode(False)
+            _summ_lbl.set_line_wrap(True)
+            _summ_lbl.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
             _summ_lbl.set_use_markup(True)
             _summ_lbl.set_markup(_app+"\n"+f"<b>{_summ}</b>")
             _summ_lbl.set_xalign(0)
@@ -3559,13 +3576,13 @@ class DialogConfiguration(Gtk.Dialog):
         menu_i_spinbtn.connect('value-changed', self.on_menu_wh_spinbtn, "ii")
         menu_i_spinbtn.set_input_purpose(Gtk.InputPurpose.DIGITS)
         
-        menu_lbl_t = Gtk.Label(label="Terminal")
-        self.page2_box.attach(menu_lbl_t,0,4,1,1)
-        menu_lbl_t.set_halign(1)
-        self.entry_menu_t = Gtk.Entry.new()
-        self.entry_menu_t.connect('changed', self.on_entry_menu, "t")
-        self.page2_box.attach_next_to(self.entry_menu_t,menu_lbl_t,1,1,1)
-        self.entry_menu_t.set_text(self._parent.menu_terminal)
+        # menu_lbl_t = Gtk.Label(label="Terminal")
+        # self.page2_box.attach(menu_lbl_t,0,4,1,1)
+        # menu_lbl_t.set_halign(1)
+        # self.entry_menu_t = Gtk.Entry.new()
+        # self.entry_menu_t.connect('changed', self.on_entry_menu, "t")
+        # self.page2_box.attach_next_to(self.entry_menu_t,menu_lbl_t,1,1,1)
+        # self.entry_menu_t.set_text(self._parent.menu_terminal)
         
         menu_lbl_ls = Gtk.Label(label="Live search characters")
         self.page2_box.attach(menu_lbl_ls,0,5,1,1)
