@@ -8,15 +8,14 @@ the layer-shell protocols. All the lroots based window managers should
 support wbar.
 
 Features:
-- application menu (at left)
-- clock
-- clipboard (with history)
-- tray
-- volume
-- notifications (with history)
-- a simple timer
-- command outputs
-- a graphical configurator (at right)
+- a wayland display server with layer-shell support
+- python3
+- gtk3 python bindings
+- python3-dbus
+- psutil
+- PIL for the tray section
+- wl-clipboard for the clipboard (wl-paste and wl-copy are needed)
+- pactl for volume applet (amixer is supported; read below for more)
 
 Requirements:
 - a wayland display server with layer-shell support
@@ -39,8 +38,12 @@ Options and configurations
 Wbar has a graphical configurator for many options. Other options have 
 to be changed manually.
 
-Mouse middle click on an item to force a menu update 
-(the menu should update automatically).
+The menu updates automatically; middle mouse click on an item in any 
+category, except bookmarks, to force a menu update.
+
+Left mouse click on the volume bar level to mute the output;
+right mouse click to open the mixer, if one has been choosen in the 
+configurator.
 
 The bash scripts volume_SOMENAME.sh use the command pactl for their 
 actions. amixer can also be used: switch the commands in those files.
