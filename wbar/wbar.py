@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 0.5.5
+# V. 0.6
 
 import os,sys,shutil,stat
 import gi
@@ -1036,31 +1036,37 @@ class MyWindow(Gtk.Window):
         _f_populate_menu()
     
     def directory_changed(self, monitor, file1, file2, event):
-        if (event == Gio.FileMonitorEvent.CREATED) or (event == Gio.FileMonitorEvent.DELETED):
-            self.on_directory_changed(file1.get_path())
+        if (event == Gio.FileMonitorEvent.CREATED):
+            self.on_directory_changed(file1.get_path(), "created")
+        elif (event == Gio.FileMonitorEvent.DELETED):
+            self.on_directory_changed(file1.get_path(), "deleted")
 
-    def on_directory_changed(self, _path):
+    def on_directory_changed(self, _path, _type):
         try:
             if self.q.empty():
                 self.q.put("new", timeout=0.001)
         except:
             pass
-        #
+        
         if not self.q.empty():
-            if _path in self.bookmarks:
-                self.bookmarks.remove(_path)
-            with open(os.path.join(_curr_dir, "favorites"), "w") as _f:
-                for el in self.bookmarks:
-                    _f.write(el+"\n")
-            # # rebuild bookmarks
-            # self.populate_bookmarks_at_start()
-            # if USER_THEME == 1:
-                # self.btn_bookmark.clicked()
-            #
             if self.MW:
                 self.MW.close()
                 self.MW = None
-            #
+            
+            _bookmarks = None
+            with open(os.path.join(_curr_dir, "favorites"), "r") as _f:
+                _bookmarks = _f.readlines()
+            
+            if _type == "deleted":
+                for el in _bookmarks[:]:
+                    if el.strip("\n") == _path:
+                        _bookmarks.remove(el)
+                        break
+            
+            with open(os.path.join(_curr_dir, "favorites"), "w") as _f:
+                for el in _bookmarks:
+                    _f.write(el)
+            
             self.rebuild_menu()
     
     def _item_event(self, widget, event, args):
