@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 0.5.4
+# V. 0.5.5
 
 import os,sys,shutil,stat
 import gi
@@ -735,7 +735,7 @@ class MyWindow(Gtk.Window):
         _img = Gtk.Image.new_from_pixbuf(_pixbf)
         self.otherbutton.add(_img)
         self.otherbutton.connect('button-press-event', self.on_other_button)
-        self.right_box.pack_end(self.otherbutton,False,False,0)
+        self.right_box.pack_end(self.otherbutton,False,False,10)
         
         # # clock
         # if self.clock_use:
