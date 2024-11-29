@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 0.5.3
+# V. 0.5.4
 
 import os,sys,shutil,stat
 import gi
@@ -615,7 +615,7 @@ class MyWindow(Gtk.Window):
         self.clock_use = _panel_conf["clock"]
         self.time_format = _panel_conf["time_format"]
         self.volume_command = _panel_conf["volume_command"]
-        self.volume_command_tmp = ""
+        self.volume_command_tmp = None
         
         self.script1_id = None
         self.script2_id = None
@@ -757,13 +757,11 @@ class MyWindow(Gtk.Window):
 
             self.volume_bar = Gtk.ProgressBar()
             self.volume_btn.add(self.volume_bar)
-            self.volume_bar.set_valign(3)
+            self.volume_bar.props.expand = True
+            self.volume_bar.set_valign(0)
             self.volume_btn.set_events(Gdk.EventMask.BUTTON_PRESS_MASK | Gdk.EventMask.SCROLL_MASK)
             self.vol_style_context = self.volume_bar.get_style_context()
             self.vol_style_context.add_class("vollevelbar")
-            self.volume_bar.set_vexpand(False)
-            self.volume_bar.set_valign(1)
-            self.volume_bar.set_size_request(60,18)
             
             self.vol_box.pack_start(self.volume_btn,False,True,0)
             self.volume_btn.connect('button-press-event', self.on_volume_bar)
@@ -2050,7 +2048,7 @@ class MyWindow(Gtk.Window):
             if self.volume_command_tmp != self.volume_command:
                 self.volume_command = self.volume_command_tmp
                 self._configuration["panel"]["volume_command"] = self.volume_command
-                self.volume_command_tmp = ""
+                self.volume_command_tmp = None
             
             ## CLIPBOARD
             if self.clip_width_tmp != 0:
@@ -2134,7 +2132,7 @@ class MyWindow(Gtk.Window):
             if self.clock_use:
                 self.time_format = self._configuration["panel"]["time_format"]
             
-            self.volume_command_tmp = ""
+            self.volume_command_tmp = None
             
             self.menu_width_tmp = 0
             self.menu_height_tmp = 0
@@ -2775,28 +2773,8 @@ class menuWin(Gtk.Window):
         else:
             _icon = None
         
-        pixbuf = None
         if _icon != None:
-            try:
-                pixbuf = Gtk.IconTheme().load_icon(_icon, self.ICON_SIZE, Gtk.IconLookupFlags.FORCE_SVG)
-            except:
-                pass
-            if pixbuf == None:
-                try:
-                    pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(_icon, self.ICON_SIZE, self.ICON_SIZE, True)
-                except:
-                    pass
-            if pixbuf == None:
-                try:
-                    pixbuf = Gtk.IconTheme().load_icon("binary", self.ICON_SIZE, Gtk.IconLookupFlags.FORCE_SVG)
-                except:
-                    pass
-            if pixbuf == None:
-                try:
-                    pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(os.path.join(_curr_dir,"icons"+"/none.svg"), self.ICON_SIZE, self.ICON_SIZE, 1)
-                except:
-                    pass
-        
+            pixbuf = self._find_the_icon(_icon)
         # icon name comment exec path appinfo
         self.liststore.append([ pixbuf, _name, _description, _exec, _path, _ap ])
     
@@ -2812,36 +2790,46 @@ class menuWin(Gtk.Window):
             return
         for el in the_menu:
             if el[1] == cat_name:
-                pixbuf = None
-                try:
-                    pixbuf = Gtk.IconTheme().load_icon(el[3], self.ICON_SIZE, Gtk.IconLookupFlags.FORCE_SVG)
-                except:
-                    pass
-                if pixbuf == None:
-                    try:
-                        pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(el[3], self.ICON_SIZE, self.ICON_SIZE, True)
-                    except:
-                        pass
-                if pixbuf == None:
-                    try:
-                        pixbuf = Gtk.IconTheme().load_icon("binary", self.ICON_SIZE, Gtk.IconLookupFlags.FORCE_SVG)
-                    except:
-                        pass
-                if pixbuf == None:
-                    try:
-                        pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(os.path.join(_curr_dir,"icons"+"/none.svg"), self.ICON_SIZE, self.ICON_SIZE, 1)
-                    except:
-                        pass
+                pixbuf = self._find_the_icon(el[3])
                 # icon name comment exec path appinfo
                 self.liststore.append([ pixbuf, el[0], el[4], el[2], el[5], el[6] ])
+    
+    def _find_the_icon(self,_item):
+        pixbuf = None
+        try:
+            pixbuf = Gtk.IconTheme().load_icon(_item, self.ICON_SIZE, Gtk.IconLookupFlags.FORCE_SVG)
+            pixbuf = pixbuf.scale_simple(pixbuf,self.ICON_SIZE,self.ICON_SIZE,GdkPixbuf.InterpType.BILINEAR)
+        except:
+            pass
+        if pixbuf == None:
+            try:
+                pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(_item, self.ICON_SIZE, self.ICON_SIZE, True)
+            except:
+                pass
+        if pixbuf == None:
+            try:
+                pixbuf = Gtk.IconTheme().load_icon("binary", self.ICON_SIZE, Gtk.IconLookupFlags.FORCE_SVG)
+                pixbuf = pixbuf.scale_simple(pixbuf,self.ICON_SIZE,self.ICON_SIZE,GdkPixbuf.InterpType.BILINEAR)
+            except:
+                pass
+        if pixbuf == None:
+            try:
+                pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(os.path.join(_curr_dir,"icons"+"/none.svg"), self.ICON_SIZE, self.ICON_SIZE, 1)
+            except:
+                pass
+        return pixbuf
     
     # launch a program
     def on_iv_item_activated(self, iconview, widget):
         if self.iconview.get_selected_items() != None:
             rrow = self.iconview.get_selected_items()[0]
-        #
+        
+        # _ctx = Gio.AppLaunchContext.new()
+        # _ctx.setenv("PWD",f"{_HOME}".encode())
         app_to_exec = self.liststore[rrow][5]
+        os.chdir(_HOME)
         ret=app_to_exec.launch()
+        os.chdir(_curr_dir)
         if ret == False:
             _exec_name = self.liststore[rrow][3]
             self.msg_simple(f"{_exec_name} not found or not setted.")
