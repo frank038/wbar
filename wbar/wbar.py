@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 0.6
+# V. 0.6.1
 
 import os,sys,shutil,stat
 import gi
@@ -2657,14 +2657,17 @@ class menuWin(Gtk.Window):
             if _el[4]:
                 if _text in _el[4].lower():
                     _list.append(_el[5])
+                    continue
             if _el[0]:
                 if _text in _el[0].lower():
                     if not _text in _list:
                         _list.append(_el[5])
+                        continue
             if _el[2]:
                 if _text in _el[2].lower():
                     if not _text in _list:
                         _list.append(_el[5])
+                        continue
         
         if _list:
             self.f_on_pop_iv(_list)
