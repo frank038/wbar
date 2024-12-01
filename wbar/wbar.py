@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 0.6.1
+# V. 0.6.2
 
 import os,sys,shutil,stat
 import gi
@@ -2807,7 +2807,7 @@ class menuWin(Gtk.Window):
         pixbuf = None
         try:
             pixbuf = Gtk.IconTheme().load_icon(_item, self.ICON_SIZE, Gtk.IconLookupFlags.FORCE_SVG)
-            pixbuf = pixbuf.scale_simple(pixbuf,self.ICON_SIZE,self.ICON_SIZE,GdkPixbuf.InterpType.BILINEAR)
+            pixbuf = pixbuf.scale_simple(self.ICON_SIZE,self.ICON_SIZE,GdkPixbuf.InterpType.BILINEAR)
         except:
             pass
         if pixbuf == None:
@@ -2818,7 +2818,7 @@ class menuWin(Gtk.Window):
         if pixbuf == None:
             try:
                 pixbuf = Gtk.IconTheme().load_icon("binary", self.ICON_SIZE, Gtk.IconLookupFlags.FORCE_SVG)
-                pixbuf = pixbuf.scale_simple(pixbuf,self.ICON_SIZE,self.ICON_SIZE,GdkPixbuf.InterpType.BILINEAR)
+                pixbuf = pixbuf.scale_simple(self.ICON_SIZE,self.ICON_SIZE,GdkPixbuf.InterpType.BILINEAR)
             except:
                 pass
         if pixbuf == None:
