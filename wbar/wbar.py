@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 0.6.2
+# V. 0.6.3
 
 import os,sys,shutil,stat
 import gi
@@ -28,6 +28,14 @@ except:
     _USE_PIL = 0
 import io
 
+
+_curr_dir = os.getcwd()
+
+def _error_log(_error):
+    _now = datetime.datetime.now().strftime("%Y-%m-%d %H:%m")
+    _ff = open(os.path.join(_curr_dir, "error.log"), "a")
+    _ff.write(_now+": "+_error+"\n\n")
+    _ff.close()
 
 # ## MORE OPTIONS
 # # the pad inside the windows
@@ -60,16 +68,6 @@ if is_wayland:
     if ret == False:
         _error_log("Gtk layer shell support required.")
         sys.exit()
-
-
-_curr_dir = os.getcwd()
-
-def _error_log(_error):
-    _now = datetime.datetime.now().strftime("%Y-%m-%d %H:%m")
-    _ff = open(os.path.join(_curr_dir, "error.log"), "a")
-    _ff.write(_now+": "+_error+"\n\n")
-    _ff.close()
-
 
 # other options
 _other_settings_conf = None
