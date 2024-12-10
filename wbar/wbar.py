@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 0.6.3
+# V. 0.6.4
 
 import os,sys,shutil,stat
 import gi
@@ -2760,31 +2760,34 @@ class menuWin(Gtk.Window):
             self.f_menu_item(eel)
     
     def f_menu_item(self, _item):
-        _ap = Gio.DesktopAppInfo.new_from_filename(_item)
-        _name = _ap.get_display_name()
-        # executable
-        _exec = _ap.get_executable()
-        # comment
-        _description = _ap.get_description() or None
-        _path = _ap.get_filename()
-        
-        if not _name or not _exec or not _path:
+        try:
+            _ap = Gio.DesktopAppInfo.new_from_filename(_item)
+            _name = _ap.get_display_name()
+            # executable
+            _exec = _ap.get_executable()
+            # comment
+            _description = _ap.get_description() or None
+            _path = _ap.get_filename()
+            
+            if not _name or not _exec or not _path:
+                return
+            
+            _icon = _ap.get_icon()
+            if _icon:
+                if isinstance(_icon,Gio.ThemedIcon):
+                    _icon = _icon.to_string()
+                elif isinstance(_icon,Gio.FileIcon):
+                    _icon = _icon.get_file().get_path()
+            else:
+                _icon = None
+            
+            if _icon != None:
+                pixbuf = self._find_the_icon(_icon)
+            # icon name comment exec path appinfo
+            self.liststore.append([ pixbuf, _name, _description, _exec, _path, _ap ])
+        except:
             return
         
-        _icon = _ap.get_icon()
-        if _icon:
-            if isinstance(_icon,Gio.ThemedIcon):
-                _icon = _icon.to_string()
-            elif isinstance(_icon,Gio.FileIcon):
-                _icon = _icon.get_file().get_path()
-        else:
-            _icon = None
-        
-        if _icon != None:
-            pixbuf = self._find_the_icon(_icon)
-        # icon name comment exec path appinfo
-        self.liststore.append([ pixbuf, _name, _description, _exec, _path, _ap ])
-    
     def populate_category(self, cat_name):
         self.liststore.clear()
         self.on_populate_category_main(cat_name)
