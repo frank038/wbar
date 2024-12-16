@@ -23,13 +23,19 @@ clips_path = os.path.join(_curr_dir, "clips")
 _text = sys.stdin.read()
 
 _not_path = 1
+def _find_urls(_text):
+    global _not_path
+    _text_list = _text.split("\n")
+    for el in _text_list:
+        if not os.path.exists(el):
+            _not_path = 0
+            break
+
 if SKIP_FILES:
-    if len(_text) < 1000:
-        _text_list = _text.split("\n")
-        for el in _text_list:
-            if not os.path.exists(el):
-                _not_path = 0
-                break
+    if MAX_CHARS > 0 and len(_text) < MAX_CHARS:
+        _find_urls(_text)
+    else:
+        _find_urls(_text)
 else:
     _not_path = 0
 
