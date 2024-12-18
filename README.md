@@ -16,6 +16,7 @@ Features:
 - PIL for the tray section
 - wl-clipboard for the clipboard (wl-paste and wl-copy are needed)
 - pactl for volume applet (amixer is supported; read below for more)
+- sticky notes
 
 Requirements:
 - a wayland display server with layer-shell support
@@ -38,6 +39,9 @@ Options and configurations
 Wbar has a graphical configurator for many options. Other options have 
 to be changed manually.
 
+The bash scripts volume_SOMENAME.sh use the command pactl for their 
+actions. amixer can also be used: switch the commands in those files.
+
 The menu updates automatically; middle mouse click on an item in any 
 category, except bookmarks, to force a menu update.
 
@@ -45,8 +49,11 @@ Left mouse click on the volume bar level to mute the output;
 right mouse click to open the mixer, if one has been choosen in the 
 configurator.
 
-The bash scripts volume_SOMENAME.sh use the command pactl for their 
-actions. amixer can also be used: switch the commands in those files.
+The sticky notes: just open the service menu, usually at right, and choose
+the notes tab; there user can choose to add a new note or to show/hide 
+all of them. Click on Accept to store the note, click on Delete to 
+remove and delete that note. The background colour of the notes can be changed 
+in the panelstyle.css file. Initial implementation.
 
 Wbar has two slots for the command out scripts, at left and in the center;
 the scripts are located in the scripts folder; the labels in the panel accept the left 
