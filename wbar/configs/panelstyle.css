@@ -1,5 +1,6 @@
 /* the window border colour */
 @define-color border_color #00B300;
+@define-color stickynote_color #F3C000;
 
 /* the panel */
 .mywindow {
@@ -104,8 +105,34 @@
 }*/
 
 /* the clock label */
-/*
 .clocklabel {
-  font-family: digital-7;
-  font-size: 28px;
+  font-family: DIGITALDREAMFAT;
+  font-size: 21px;
+}
+
+/* the timer win */
+.timerwin button {
+  border-radius: 6px;
+  border: solid;
+  border-width: 1px;
+  border-color: #7F7F7F;
+  margin: 2px;
+}
+
+/* the note window */
+.notewin * {
+  background-color: @stickynote_color;
+}
+
+.notewin button {
+  border-radius: 6px;
+  border: solid;
+  border-width: 1px;
+  border-color: #7F7F7F;
+  margin: 2px;
+}
+
+/*
+.notewin textview text {
+  color: black;
 }*/
