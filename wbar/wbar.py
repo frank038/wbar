@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 0.6.4
+# V. 0.9
 
 import os,sys,shutil,stat
 import gi
@@ -68,6 +68,15 @@ if is_wayland:
     if ret == False:
         _error_log("Gtk layer shell support required.")
         sys.exit()
+
+# sticky notes folder
+if not os.path.exists(os.path.join(_curr_dir,"notes")):
+    try:
+        os.makedirs(os.path.join(_curr_dir,"notes"))
+    except:
+        _error_log("Cannot create the folder notes.")
+        sys.exit()
+        
 
 # other options
 _other_settings_conf = None
@@ -735,6 +744,20 @@ class MyWindow(Gtk.Window):
         self.otherbutton.connect('button-press-event', self.on_other_button)
         self.right_box.pack_end(self.otherbutton,False,False,10)
         
+        # sticky notes list
+        self.list_notes = []
+        #
+        try:
+            list_notes = os.listdir(os.path.join(_curr_dir,"notes"))
+            if list_notes:
+                for el in list_notes:
+                    with open(os.path.join(_curr_dir,"notes",el)) as ffile:
+                        _note = ffile.read()
+                        _notedialog = noteDialog(self, _note, el)
+                        self.list_notes.append(_notedialog)
+        except:
+            pass
+        
         # # clock
         # if self.clock_use:
             # self.on_set_clock(None)
@@ -745,9 +768,9 @@ class MyWindow(Gtk.Window):
             self.vol_box = Gtk.Box.new(0,0)
             self.right_box.pack_end(self.vol_box,False,False,4)
             
-            self.volpix = Gtk.IconTheme().load_icon("gtk-delete", 24, Gtk.IconLookupFlags.FORCE_SVG)
-            self.volume_image = Gtk.Image.new_from_pixbuf(self.volpix)
-            self.vol_box.pack_start(self.volume_image,False,False,4)
+            # self.volpix = Gtk.IconTheme().load_icon("gtk-delete", 24, Gtk.IconLookupFlags.FORCE_SVG)
+            # self.volume_image = Gtk.Image.new_from_pixbuf(self.volpix)
+            # self.vol_box.pack_start(self.volume_image,False,False,4)
             
             self.volume_btn = Gtk.EventBox()
             self.volume_btn.set_size_request(60,-1)
@@ -825,7 +848,8 @@ class MyWindow(Gtk.Window):
         
         self.show_all()
         if USE_VOLUME:
-            self.volume_image.hide()
+            # self.volume_image.hide()
+            self.volume_bar.set_sensitive(True)
             self._on_start_vol()
             self.athread.start()
         
@@ -1018,11 +1042,14 @@ class MyWindow(Gtk.Window):
         
         if 0 <= _level <= 1:
             self.volume_bar.set_fraction(_level)
-        self.volume_image.hide()
+        # self.volume_image.hide()
+        self.volume_bar.set_sensitive(True)
         if _mute == 0:
-            self.volume_image.hide()
+            self.volume_bar.set_sensitive(False)
+            # self.volume_image.hide()
         elif _mute == 1:
-            self.volume_image.show()
+            self.volume_bar.set_sensitive(True)
+            # self.volume_image.show()
     
 ############# audio end ##############
 
@@ -1891,6 +1918,12 @@ class MyWindow(Gtk.Window):
     
     # the menu window
     def on_button1_clicked(self, widget, event):
+        if self.menu_win_position in [0,1]:
+            self.open_menu_win()
+        elif self.menu_win_position == 2:
+            self.open_service_win()
+    
+    def open_menu_win(self):
         # close the service window
         if self.OW:
             self.OW.close()
@@ -2050,7 +2083,10 @@ class MyWindow(Gtk.Window):
                 self._t_id = GLib.timeout_add(60000, self.on_clock)
             # volume application
             if self.volume_command_tmp != self.volume_command:
-                self.volume_command = self.volume_command_tmp
+                if self.volume_command_tmp == None:
+                    self.volume_command = ""
+                else:
+                    self.volume_command = self.volume_command_tmp
                 self._configuration["panel"]["volume_command"] = self.volume_command
                 self.volume_command_tmp = None
             
@@ -2163,6 +2199,12 @@ class MyWindow(Gtk.Window):
             self.not_sounds_tmp = -1
     
     def on_other_button(self, btn, event):
+        if self.menu_win_position in [0,1]:
+            self.open_service_win()
+        elif self.menu_win_position == 2:
+            self.open_menu_win()
+    
+    def open_service_win(self):
         if self.OW:
             isVisible = self.OW.get_property("visible")
             if self.OW.get_realized() and not self.OW.get_property("visible"):
@@ -2303,12 +2345,18 @@ class menuWin(Gtk.Window):
             if self._parent.menu_win_position == 0:
                 GtkLayerShell.set_margin(self, GtkLayerShell.Edge.LEFT, 10)
                 GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.LEFT, 1)
+            elif self._parent.menu_win_position == 2:
+                GtkLayerShell.set_margin(self, GtkLayerShell.Edge.RIGHT, 10)
+                GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.RIGHT, 1)
             GtkLayerShell.set_margin(self, GtkLayerShell.Edge.BOTTOM, 10)
             GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.BOTTOM, 1)
         else:
             if self._parent.menu_win_position == 0:
                 GtkLayerShell.set_margin(self, GtkLayerShell.Edge.LEFT, 10)
                 GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.LEFT, 1)
+            elif self._parent.menu_win_position == 2:
+                GtkLayerShell.set_margin(self, GtkLayerShell.Edge.RIGHT, 10)
+                GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.RIGHT, 1)
             GtkLayerShell.set_margin(self, GtkLayerShell.Edge.TOP, 10)
             GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.TOP, 1)
         
@@ -3074,29 +3122,32 @@ class otherWin(Gtk.Window):
         
         _win_pos = self._parent.win_position
         
-        # 0 left - 1 right
-        self._position = 1
-        
         GtkLayerShell.init_for_window(self)
         GtkLayerShell.set_namespace(self, "servicewin")
-        if self._position == 0:
-            GtkLayerShell.set_margin(self, GtkLayerShell.Edge.LEFT, 10)
-        elif self._position == 1:
-            GtkLayerShell.set_margin(self, GtkLayerShell.Edge.RIGHT, 10)
         
         if _win_pos == 1:
             GtkLayerShell.set_margin(self, GtkLayerShell.Edge.BOTTOM, 10)
             GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.BOTTOM, 1)
-            GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.RIGHT, 1)
+            if self._parent.menu_win_position in [0,1]:
+                GtkLayerShell.set_margin(self, GtkLayerShell.Edge.RIGHT, 10)
+                GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.RIGHT, 1)
+            elif self._parent.menu_win_position == 2:
+                GtkLayerShell.set_margin(self, GtkLayerShell.Edge.LEFT, 10)
+                GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.LEFT, 1)
         else:
             GtkLayerShell.set_margin(self, GtkLayerShell.Edge.TOP, 10)
             GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.TOP, 1)
-            GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.RIGHT, 1)
+            if self._parent.menu_win_position in [0,1]:
+                GtkLayerShell.set_margin(self, GtkLayerShell.Edge.RIGHT, 10)
+                GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.RIGHT, 1)
+            elif self._parent.menu_win_position == 2:
+                GtkLayerShell.set_margin(self, GtkLayerShell.Edge.LEFT, 10)
+                GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.LEFT, 1)
         
         GtkLayerShell.set_layer(self, GtkLayerShell.Layer.OVERLAY)
         GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.ON_DEMAND)
         
-        # self.connect('focus-out-event', self.on_focus_out)
+        self.connect('focus-out-event', self.on_focus_out)
         # self.connect('show', self.on_show)
         
         self.set_size_request(self._parent.service_width, self._parent.service_height)
@@ -3112,9 +3163,13 @@ class otherWin(Gtk.Window):
         self._stack = Gtk.Stack()
         _stack_vbox1 = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=0)
         self._stack.add_titled(_stack_vbox1,"Calendar","Calendar")
+        
         _stack_vbox2 = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=0)
         # _stack_vbox2.set_homogeneous(True)
         self._stack.add_titled(_stack_vbox2,"Notifications","Notifications")
+        
+        _stack_vbox3 = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=0)
+        self._stack.add_titled(_stack_vbox3,"Notes","Notes")
         
         self._stacksw = Gtk.StackSwitcher()
         self._stacksw.set_stack(self._stack)
@@ -3206,6 +3261,18 @@ class otherWin(Gtk.Window):
             
             self.list_box.add(row)
         
+        ## STICKY NOTES
+        self.path_notes = os.path.join(_curr_dir,"notes")
+        self.add_note = Gtk.Button(label="New sticky note")
+        self.add_note.set_relief(Gtk.ReliefStyle.NONE)
+        self.add_note.connect('clicked', self.on_add_note)
+        _stack_vbox3.add(self.add_note)
+        
+        self.show_hide_notes = Gtk.Button(label="Show/hide all notes")
+        self.show_hide_notes.set_relief(Gtk.ReliefStyle.NONE)
+        self.show_hide_notes.connect('clicked', self.on_show_hide_notes)
+        _stack_vbox3.add(self.show_hide_notes)
+        
         ##############
         
         self.timer_btn = Gtk.Button.new()
@@ -3245,6 +3312,33 @@ class otherWin(Gtk.Window):
         
         self.show_all()
         
+    def on_add_note(self, btn):
+        if self._parent.OW:
+            self._parent.OW.close()
+            self._parent.OW = None
+        
+        time_now = str(int(time.time()))
+        while os.path.exists(os.path.join(self.path_notes, time_now)):
+            sleep(0.1)
+            time_now = str(int(time.time()))
+            i += 1
+            if i == 10:
+                break
+            return
+        
+        for el in self._parent.list_notes:
+            el.show_all()
+        
+        _notedialog = noteDialog(self, "", time_now)
+        _notedialog.show_all()
+    
+    def on_show_hide_notes(self, btn):
+        for el in self._parent.list_notes:
+            # if el.get_realized():
+            if el.get_property("visible"):
+                el.hide()
+            elif not el.get_property("visible"):
+                el.show_all()
         
     def on_remove_btn(self, btn, el, row):
         try:
@@ -3319,11 +3413,109 @@ class otherWin(Gtk.Window):
         if _y == 2024 and _m == 10 and _d == 29:
             return "10.15"
     
-    # def on_focus_out(self, win, event):
+    def on_focus_out(self, win, event):
         # self.close()
+        if self._parent.OW:
+            self._parent.OW.close()
+            self._parent.OW = None
         
     # def on_show(self, widget):
         # pass
+
+class noteDialog(Gtk.Window):
+    def __init__(self, _parent, _text, _id):
+        super().__init__()
+        
+        self._parent = _parent
+        self._text = _text
+        self._id = _id
+        self.path_notes = os.path.join(_curr_dir,"notes")
+        
+        # GtkLayerShell.init_for_window(self)
+        # GtkLayerShell.set_namespace(self, "notewin")
+        # GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.ON_DEMAND)
+        # # GtkLayerShell.set_layer(self, GtkLayerShell.Layer.TOP)
+        
+        self.set_title("Note")
+        self.set_decorated(False)
+        # self.set_transient_for(self._parent)
+        
+        self.connect('delete-event', self.delete_event)
+        self.connect('destroy-event', self.delete_event)
+        self.connect('destroy', self.delete_event)
+        self.connect('unmap-event', self.on_unmap_event)
+        self.connect('hide', self.on_unmap_event)
+        
+        self.self_style_context = self.get_style_context()
+        self.self_style_context.add_class("notewin")
+        
+        # self.set_default_size(300, 300)
+        self.set_size_request(300, 300)
+        
+        box = Gtk.Box.new(orientation=Gtk.Orientation.VERTICAL,spacing=0)
+        self.add(box)
+        
+        _scrolledwin = Gtk.ScrolledWindow()
+        _scrolledwin.set_overlay_scrolling(True)
+        _scrolledwin.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        box.pack_start(_scrolledwin, True, True, 0)
+        
+        self.text_view = Gtk.TextView()
+        self.text_view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        # self.text_view.override_background_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(10, 8, 0, 1))
+        _scrolledwin.add(self.text_view)
+        
+        # button box
+        btn_box = Gtk.Box.new(orientation=Gtk.Orientation.HORIZONTAL,spacing=0)
+        box.add(btn_box)
+        
+        delete_btn = Gtk.Button(label="Delete")
+        delete_btn.set_relief(Gtk.ReliefStyle.NONE)
+        delete_btn.connect('clicked', self.on_delete)
+        btn_box.pack_start(delete_btn,True,True,0)
+        
+        accept_btn = Gtk.Button(label="Accept")
+        accept_btn.set_relief(Gtk.ReliefStyle.NONE)
+        accept_btn.connect('clicked', self.on_accept)
+        btn_box.pack_start(accept_btn,True,True,0)
+        
+        self.text_buffer = self.text_view.get_buffer()
+        self.text_buffer.set_text(_text)
+        
+        # self.show_all()
+        
+    def on_unmap_event(self, widget, event=None):
+        if self.get_property("visible"):
+            return False
+    
+    def delete_event(self, widget, event=None):
+        return True
+        
+    def get_textview_text(self):
+        text_view_text = self.text_buffer.get_text(self.text_buffer.get_start_iter(),self.text_buffer.get_end_iter(),False)
+        return text_view_text
+    
+    def on_accept(self, btn=None):
+        textview_text = self.get_textview_text()
+        if textview_text == None or textview_text == "":
+            self.close()
+        else:
+            try:
+                with open(os.path.join(self.path_notes,self._id),"w") as ffile:
+                    ffile.write(textview_text)
+                if not self._id in self._parent._parent.list_notes:
+                    self._parent._parent.list_notes.append(self)
+            except:
+                pass
+    
+    def on_delete(self, btn=None):
+        if os.path.exists(os.path.join(self.path_notes,self._id)):
+            try:
+                os.remove(os.path.join(self.path_notes,self._id))
+                self._parent.list_notes.remove(self)
+            except:
+                pass
+        self.destroy()
 
 
 class timerDialog(Gtk.Dialog):
@@ -3335,9 +3527,16 @@ class timerDialog(Gtk.Dialog):
         
         self._parent = parent
         
+        self.self_style_context = self.get_style_context()
+        self.self_style_context.add_class("timerwin")
+        
         self.set_default_size(100, 100)
         box = self.get_content_area()
         self.set_decorated(False)
+        
+        for el in box.get_children()[0].get_children()[0].get_children():
+            if isinstance(el, Gtk.Button):
+                el.set_relief(Gtk.ReliefStyle.NONE)
         
         _lbl = Gtk.Label(label="Minutes")
         box.add(_lbl)
@@ -3597,6 +3796,7 @@ class DialogConfiguration(Gtk.Dialog):
         menu_combo_p = Gtk.ComboBoxText.new()
         menu_combo_p.append_text("Left")
         menu_combo_p.append_text("Center")
+        menu_combo_p.append_text("Right")
         menu_combo_p.set_active(self._parent.menu_win_position)
         menu_combo_p.connect('changed', self.on_menu_combo, "pos")
         self.page2_box.attach_next_to(menu_combo_p,menu_lbl_wp,1,1,1)
