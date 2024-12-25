@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 0.9
+# V. 0.9.1
 
 import os,sys,shutil,stat
 import gi
@@ -1687,7 +1687,17 @@ class MyWindow(Gtk.Window):
             if self.time_format == 0:
                 self.clock_lbl.set_label(time.strftime('%H:%M'))
             elif self.time_format == 1:
-                self.clock_lbl.set_label(time.strftime('%I:%M%p'))
+                # self.clock_lbl.set_label(time.strftime('%I:%M%p'))
+                _am_pm = ""
+                try:
+                    ____what = int(time.strftime('%H'))
+                    if ____what > 12:
+                        _am_pm = " pm"
+                    else:
+                        _am_pm = " am"
+                except:
+                    _am_pm = ""
+                self.clock_lbl.set_label(time.strftime('%I:%M')+_am_pm)
         return self._timer
     
     def on_set_clipboard(self, _pos):
@@ -1711,7 +1721,17 @@ class MyWindow(Gtk.Window):
         if self.time_format == 0:
             self.clock_lbl.set_label(time.strftime('%H:%M'))
         elif self.time_format == 1:
-            self.clock_lbl.set_label(time.strftime('%I:%M%p'))
+            # self.clock_lbl.set_label(time.strftime('%I:%M%p'))
+            _am_pm = ""
+            try:
+                ____what = int(time.strftime('%H'))
+                if ____what > 12:
+                    _am_pm = " pm"
+                else:
+                    _am_pm = " am"
+            except:
+                _am_pm = ""
+            self.clock_lbl.set_label(time.strftime('%I:%M')+_am_pm)
         self.clock_lbl_style_context = self.clock_lbl.get_style_context()
         self.clock_lbl_style_context.add_class("clocklabel")
         self.center_box.pack_start(self.clock_lbl,False,False,10)
@@ -2079,7 +2099,17 @@ class MyWindow(Gtk.Window):
                 if self.time_format == 0:
                     self.clock_lbl.set_label(time.strftime('%H:%M'))
                 elif self.time_format == 1:
-                    self.clock_lbl.set_label(time.strftime('%I:%M%p'))
+                    # self.clock_lbl.set_label(str(time.strftime('%I:%M%p')))
+                    _am_pm = ""
+                    try:
+                        ____what = int(time.strftime('%H'))
+                        if ____what > 12:
+                            _am_pm = " pm"
+                        else:
+                            _am_pm = " am"
+                    except:
+                        _am_pm = ""
+                    self.clock_lbl.set_label(time.strftime('%I:%M')+_am_pm)
                 self._t_id = GLib.timeout_add(60000, self.on_clock)
             # volume application
             if self.volume_command_tmp != self.volume_command:
@@ -3094,7 +3124,10 @@ class clipboardWin(Gtk.Window):
                 if os.path.exists(_clip_file):
                     os.remove(_clip_file)
                 # clipboard.set_text(_text, -1)
-                subprocess.Popen(f"wl-copy {_text}",shell=True)
+                #
+                subprocess.Popen("wl-copy --clear",shell=True)
+                # subprocess.Popen(f"wl-copy {_text}",shell=True)
+                subprocess.Popen("wl-copy '{}'".format(_text),shell=True)
             except:
                 pass
             if self._parent.CW:
