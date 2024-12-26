@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 0.9.1
+# V. 0.9.2
 
 import os,sys,shutil,stat
 import gi
@@ -1686,15 +1686,22 @@ class MyWindow(Gtk.Window):
         if self._timer:
             if self.time_format == 0:
                 self.clock_lbl.set_label(time.strftime('%H:%M'))
-            elif self.time_format == 1:
+            else:
+            # elif self.time_format == 1:
                 # self.clock_lbl.set_label(time.strftime('%I:%M%p'))
                 _am_pm = ""
                 try:
                     ____what = int(time.strftime('%H'))
-                    if ____what > 12:
-                        _am_pm = " pm"
-                    else:
-                        _am_pm = " am"
+                    if self.time_format == 1:
+                        if 11 < ____what < 23:
+                            _am_pm = " pm"
+                        else:
+                            _am_pm = " am"
+                    elif self.time_format == 2:
+                        if ____what > 12:
+                            _am_pm = " pm"
+                        else:
+                            _am_pm = " am"
                 except:
                     _am_pm = ""
                 self.clock_lbl.set_label(time.strftime('%I:%M')+_am_pm)
@@ -1720,15 +1727,22 @@ class MyWindow(Gtk.Window):
         self.clock_lbl = Gtk.Label(label="")
         if self.time_format == 0:
             self.clock_lbl.set_label(time.strftime('%H:%M'))
-        elif self.time_format == 1:
+        else:
+        # elif self.time_format == 1:
             # self.clock_lbl.set_label(time.strftime('%I:%M%p'))
             _am_pm = ""
             try:
                 ____what = int(time.strftime('%H'))
-                if ____what > 12:
-                    _am_pm = " pm"
-                else:
-                    _am_pm = " am"
+                if self.time_format == 1:
+                    if 11 < ____what < 23:
+                        _am_pm = " pm"
+                    else:
+                        _am_pm = " am"
+                elif self.time_format == 2:
+                    if ____what > 12:
+                        _am_pm = " pm"
+                    else:
+                        _am_pm = " am"
             except:
                 _am_pm = ""
             self.clock_lbl.set_label(time.strftime('%I:%M')+_am_pm)
@@ -2098,15 +2112,22 @@ class MyWindow(Gtk.Window):
                 GLib.source_remove(self._t_id)
                 if self.time_format == 0:
                     self.clock_lbl.set_label(time.strftime('%H:%M'))
-                elif self.time_format == 1:
+                else:
+                # elif self.time_format == 1:
                     # self.clock_lbl.set_label(str(time.strftime('%I:%M%p')))
                     _am_pm = ""
                     try:
                         ____what = int(time.strftime('%H'))
-                        if ____what > 12:
-                            _am_pm = " pm"
-                        else:
-                            _am_pm = " am"
+                        if self.time_format == 1:
+                            if 11 < ____what < 23:
+                                _am_pm = " pm"
+                            else:
+                                _am_pm = " am"
+                        elif self.time_format == 2:
+                            if ____what > 12:
+                                _am_pm = " pm"
+                            else:
+                                _am_pm = " am"
                     except:
                         _am_pm = ""
                     self.clock_lbl.set_label(time.strftime('%I:%M')+_am_pm)
@@ -2114,7 +2135,7 @@ class MyWindow(Gtk.Window):
             # volume application
             if self.volume_command_tmp != self.volume_command:
                 if self.volume_command_tmp == None:
-                    self.volume_command = ""
+                    pass
                 else:
                     self.volume_command = self.volume_command_tmp
                 self._configuration["panel"]["volume_command"] = self.volume_command
@@ -3515,8 +3536,24 @@ class noteDialog(Gtk.Window):
         self.text_buffer = self.text_view.get_buffer()
         self.text_buffer.set_text(_text)
         
+        # _data = self._id.split("_")
+        # if _data and len(_data) == 2:
+            # _x,_y = _data[1].split("-")
+            # self.move(_x,_y)
+        
+        # self.connect('hide', self.on_hide)
+        
+        # self.set_events(Gdk.EventMask.PROPERTY_CHANGE_MASK)
+        # self.connect('property-notify-event', self.on_move)
+        
         # self.show_all()
         
+    # def on_move(self,widget,event):
+        # pass
+    
+    # def on_hide(self, widget):
+        # _position = self.get_position()
+    
     def on_unmap_event(self, widget, event=None):
         if self.get_property("visible"):
             return False
@@ -3755,7 +3792,8 @@ class DialogConfiguration(Gtk.Dialog):
         # 
         _time_format = Gtk.ComboBoxText.new()
         _time_format.append_text("24H")
-        _time_format.append_text("AM/PM")
+        _time_format.append_text("AM/PM (12am is midnight)")
+        _time_format.append_text("AM/PM (12am is noon)")
         _time_format.set_active(self._parent.time_format)
         _time_format.connect('changed', self.on_time_combo)
         self.page1_box.attach_next_to(_time_format,clock_sw,1,1,1)
