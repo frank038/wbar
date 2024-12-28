@@ -74,6 +74,8 @@ In the foldef configs is the file panelstyle.css.
 The file notifications_skipped is a simple file in which to write the 
 name of the applications you may want not to be stored in the history list.
 
+------------------------------
+
 Known issue:
 - maybe the tray could freeze without any reason from time to time, and the only solution is to terminate the program; if you experience this bug, please disable the tray section in the configurator.
 
