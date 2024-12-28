@@ -57,6 +57,14 @@
   margin: 2px;
 }
 
+.clipboardwin #cliprow {
+  border-radius: 6px;
+  border: solid;
+  border-width: 1px;
+  border-color: #7F7F7F;
+  margin: 2px;
+}
+
 /* the service window */
 .servicewin { 
   border-radius: 10px 10px 10px 10px;
