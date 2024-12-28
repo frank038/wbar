@@ -8,14 +8,15 @@ the layer-shell protocols. All the lroots based window managers should
 support wbar.
 
 Features:
-- a wayland display server with layer-shell support
-- python3
-- gtk3 python bindings
-- python3-dbus
-- psutil
-- PIL for the tray section
-- wl-clipboard for the clipboard (wl-paste and wl-copy are needed)
-- pactl for volume applet (amixer is supported; read below for more)
+- application menu (at left)
+- clock
+- clipboard (with history)
+- tray
+- volume
+- notifications (with history)
+- a simple timer
+- command outputs
+- a graphical configurator (at right)
 - sticky notes
 
 Requirements:
@@ -72,6 +73,9 @@ In the foldef configs is the file panelstyle.css.
 
 The file notifications_skipped is a simple file in which to write the 
 name of the applications you may want not to be stored in the history list.
+
+Known issue:
+- maybe the tray could freeze without any reason from time to time, and the only solution is to terminate the program; if you experience this bug, please disable the tray section in the configurator.
 
 ![My image](https://github.com/frank038/wbar/blob/main/wbar_01.jpg)
 
