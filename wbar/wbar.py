@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 0.9.2
+# V. 0.9.3
 
 import os,sys,shutil,stat
 import gi
@@ -236,6 +236,7 @@ if USE_NOTIFICATIONS:
 USE_CLIPBOARD = 1
 CLIP_STORAGE = {}
 clipboardpid = None
+CLIP_CHAR_PREVIEW = 499
 if USE_CLIPBOARD:
     SKIP_FILES = 1
     if is_x11:
@@ -726,6 +727,7 @@ class MyWindow(Gtk.Window):
         
         # clock
         if self.clock_use:
+            self._t_id = None
             self.on_set_clock2(None)
             
         # # tasklist
@@ -1681,50 +1683,12 @@ class MyWindow(Gtk.Window):
             self.ClipDaemon._stop()
         Gtk.main_quit()
         
-    
     def on_clock(self):
         if self._timer:
-            if self.time_format == 0:
-                self.clock_lbl.set_label(time.strftime('%H:%M'))
-            else:
-            # elif self.time_format == 1:
-                # self.clock_lbl.set_label(time.strftime('%I:%M%p'))
-                _am_pm = ""
-                try:
-                    ____what = int(time.strftime('%H'))
-                    if self.time_format == 1:
-                        if 11 < ____what < 23:
-                            _am_pm = " pm"
-                        else:
-                            _am_pm = " am"
-                    elif self.time_format == 2:
-                        if ____what > 12:
-                            _am_pm = " pm"
-                        else:
-                            _am_pm = " am"
-                except:
-                    _am_pm = ""
-                self.clock_lbl.set_label(time.strftime('%I:%M')+_am_pm)
+            self.set_on_clock()
         return self._timer
     
-    def on_set_clipboard(self, _pos):
-        self.clipbutton = Gtk.EventBox()
-        _icon_path = os.path.join(_curr_dir,"icons","clipboard.svg")
-        _pixbf = GdkPixbuf.Pixbuf.new_from_file_at_size(_icon_path, self.win_height,self.win_height)
-        _img = Gtk.Image.new_from_pixbuf(_pixbf)
-        self.clipbutton.add(_img)
-        self.clipbutton.connect('button-press-event', self.on_clipboard_button)
-        self.right_box.pack_end(self.clipbutton,False,False,4)
-        # reorder
-        if _pos != None:
-            self.right_box.reorder_child(self.clipbutton, _pos)
-            self.right_box.show_all()
-        
-    
-    def on_set_clock2(self, _pos):
-        self.temp_clock = None
-        self._timer = True
-        self.clock_lbl = Gtk.Label(label="")
+    def set_on_clock(self):
         if self.time_format == 0:
             self.clock_lbl.set_label(time.strftime('%H:%M'))
         else:
@@ -1746,6 +1710,26 @@ class MyWindow(Gtk.Window):
             except:
                 _am_pm = ""
             self.clock_lbl.set_label(time.strftime('%I:%M')+_am_pm)
+    
+    def on_set_clipboard(self, _pos):
+        self.clipbutton = Gtk.EventBox()
+        _icon_path = os.path.join(_curr_dir,"icons","clipboard.svg")
+        _pixbf = GdkPixbuf.Pixbuf.new_from_file_at_size(_icon_path, self.win_height,self.win_height)
+        _img = Gtk.Image.new_from_pixbuf(_pixbf)
+        self.clipbutton.add(_img)
+        self.clipbutton.connect('button-press-event', self.on_clipboard_button)
+        self.right_box.pack_end(self.clipbutton,False,False,4)
+        # reorder
+        if _pos != None:
+            self.right_box.reorder_child(self.clipbutton, _pos)
+            self.right_box.show_all()
+        
+    
+    def on_set_clock2(self, _pos):
+        self.temp_clock = None
+        self._timer = True
+        self.clock_lbl = Gtk.Label(label="")
+        self.set_on_clock()
         self.clock_lbl_style_context = self.clock_lbl.get_style_context()
         self.clock_lbl_style_context.add_class("clocklabel")
         self.center_box.pack_start(self.clock_lbl,False,False,10)
@@ -1773,7 +1757,9 @@ class MyWindow(Gtk.Window):
             if self.clock_use == 0:
                 self._timer = False
                 self.center_box.remove(self.clock_lbl)
-                GLib.source_remove(self._t_id)
+                if self._t_id:
+                    GLib.source_remove(self._t_id)
+                    self._t_id = None
             elif self.clock_use == 1:
                 self.on_set_clock2(0)
         
@@ -2109,28 +2095,10 @@ class MyWindow(Gtk.Window):
             if self.clock_use:
                 self._configuration["panel"]["time_format"] = self.time_format
                 self._timer = False
-                GLib.source_remove(self._t_id)
-                if self.time_format == 0:
-                    self.clock_lbl.set_label(time.strftime('%H:%M'))
-                else:
-                # elif self.time_format == 1:
-                    # self.clock_lbl.set_label(str(time.strftime('%I:%M%p')))
-                    _am_pm = ""
-                    try:
-                        ____what = int(time.strftime('%H'))
-                        if self.time_format == 1:
-                            if 11 < ____what < 23:
-                                _am_pm = " pm"
-                            else:
-                                _am_pm = " am"
-                        elif self.time_format == 2:
-                            if ____what > 12:
-                                _am_pm = " pm"
-                            else:
-                                _am_pm = " am"
-                    except:
-                        _am_pm = ""
-                    self.clock_lbl.set_label(time.strftime('%I:%M')+_am_pm)
+                if self._t_id:
+                    GLib.source_remove(self._t_id)
+                    self._t_id = None
+                self.set_on_clock()
                 self._t_id = GLib.timeout_add(60000, self.on_clock)
             # volume application
             if self.volume_command_tmp != self.volume_command:
@@ -3100,12 +3068,24 @@ class clipboardWin(Gtk.Window):
                 _tmp_lbl = Gtk.Label(label=_ctext.decode().replace("\n"," "))
                 # _tmp_box.set_halign(0)
                 # _tmp_lbl.set_halign(1)
-                # _tmp_lbl.set_xalign(0)
+                _tmp_lbl.set_xalign(0)
                 # _tmp_lbl.set_hexpand(True)
                 if is_x11:
-                    _tmp_lbl.set_tooltip_text(_ctext.decode())
+                    _PREV = ""
+                    if len(_ctext.decode()) > CLIP_CHAR_PREVIEW:
+                        _PREV = _ctext.decode()[0:CLIP_CHAR_PREVIEW]+"..."
+                    else:
+                        _PREV = _ctext.decode()
+                    _tmp_lbl.set_tooltip_text(_PREV)
+                elif is_wayland:
+                    _PREV = ""
+                    if len(_ctext.decode()) > CLIP_CHAR_PREVIEW:
+                        _PREV = _ctext.decode()[0:CLIP_CHAR_PREVIEW]+"..."
+                    else:
+                        _PREV = _ctext.decode()
+                    _tmp_lbl.set_tooltip_text(_PREV)
                 _tmp_lbl.set_ellipsize(Pango.EllipsizeMode.END)
-                _tmp_box.pack_start(_tmp_lbl,True,False,2)
+                _tmp_box.pack_start(_tmp_lbl,True,True,2)
                 _tmp_btn = Gtk.Button()
                 # _tmp_btn.set_halign(2)
                 try:
@@ -3149,6 +3129,7 @@ class clipboardWin(Gtk.Window):
                 subprocess.Popen("wl-copy --clear",shell=True)
                 # subprocess.Popen(f"wl-copy {_text}",shell=True)
                 subprocess.Popen("wl-copy '{}'".format(_text),shell=True)
+                # subprocess.Popen("echo '{}' | wl-copy -t text".format(_text),shell=True)
             except:
                 pass
             if self._parent.CW:
@@ -3275,6 +3256,7 @@ class otherWin(Gtk.Window):
         
         for el in _not_list:
             row = Gtk.ListBoxRow()
+            row.set_name("notrow")
             hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=2)
             row.add(hbox)
             
@@ -3300,7 +3282,7 @@ class otherWin(Gtk.Window):
             _summ_lbl.set_use_markup(True)
             _summ_lbl.set_markup(_app+"\n"+f"<b>{_summ}</b>")
             _summ_lbl.set_xalign(0)
-            hbox.pack_start(_summ_lbl,True,False,0)
+            hbox.pack_start(_summ_lbl,True,True,4)
             
             _remove_btn = Gtk.Button()
             try:
@@ -4343,6 +4325,7 @@ class notificationWin(Gtk.Window):
             self.second_box.pack_start(_lbl_body,True,True,_pad)
         
         self.close_btn = Gtk.Button.new()
+        self.close_btn.set_name("closebtn")
         conf_img = Gtk.Image.new_from_icon_name("stock_close", 1)
         self.close_btn.set_image(conf_img)
         self.close_btn.set_relief(Gtk.ReliefStyle.NONE)
@@ -4352,9 +4335,8 @@ class notificationWin(Gtk.Window):
         # self.conf_btn.halign = Gtk.Align.FILL
         # self.conf_btn.valign = Gtk.Align.START
         self.close_btn.connect('clicked', self.on_close_btn)
-        self.btn_icon_box.pack_start(self.close_btn,False,False,_pad)
+        self.btn_icon_box.pack_start(self.close_btn,False,False,0)
         self.main_box.set_margin_start(_pad)
-        # self.main_box.set_margin_start(_pad)
         # self.main_box.set_margin_end(_pad)
         
         # action buttons in main_box
@@ -4714,7 +4696,7 @@ class daemonClipW():
         except:
             pass
         # cmd = "/usr/bin/wl-paste -t text/plain -w ./wclipboard.sh".split()
-        cmd = "/usr/bin/wl-paste -t text/plain -w ./wclipboard.py".split()
+        cmd = "/usr/bin/wl-paste -t text -w ./wclipboard.py".split()
         (self.clipboardpid, _in, _out, _err) = GLib.spawn_async(cmd,flags=GLib.SpawnFlags.DEFAULT, standard_output=True, standard_error=True)
     
     def _stop(self):
