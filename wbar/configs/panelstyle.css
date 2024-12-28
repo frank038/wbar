@@ -72,6 +72,14 @@
   margin: 2px;
 }
 
+.servicewin #notrow {
+  border-radius: 6px;
+  border: solid;
+  border-width: 1px;
+  border-color: #7F7F7F;
+  margin: 2px;
+}
+
 /* the notification window */
 .notificationwin { 
   border-radius: 10px 10px 10px 10px;
@@ -80,7 +88,7 @@
   border-style: solid;
 }
 
-.notificationwin button {
+.notificationwin button ~#closebtn {
   border-radius: 6px;
   border: solid;
   border-width: 1px;
