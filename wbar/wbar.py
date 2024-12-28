@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 0.9.3
+# V. 0.9.4
 
 import os,sys,shutil,stat
 import gi
@@ -560,15 +560,15 @@ class MyWindow(Gtk.Window):
             self.chars_preview = self.clipboard_conf["chars_preview"]
             self.chars_preview_tmp = 0
             self.ClipDaemon = None
-            if is_wayland:
-                _ret = self.clipboard_ready()
-                if _ret:
-                    self.ClipDaemon = daemonClipW(self.clips_path, self)
-                    self.ClipDaemon._start()
-                else:
-                    _error_log("Something wrong with wl-paste or wclipboard.py or something else.")
-            elif is_x11:
-                daemonClip(self.clips_path, self)
+            # if is_wayland:
+                # _ret = self.clipboard_ready()
+                # if _ret:
+                    # self.ClipDaemon = daemonClipW(self.clips_path, self)
+                    # self.ClipDaemon._start()
+                # else:
+                    # _error_log("Something wrong with wl-paste or wclipboard.py or something else.")
+            # elif is_x11:
+                # daemonClip(self.clips_path, self)
         
         self._display = _display
         # self._display.connect('', self.on_monitor_connected)
@@ -624,6 +624,16 @@ class MyWindow(Gtk.Window):
         self.time_format = _panel_conf["time_format"]
         self.volume_command = _panel_conf["volume_command"]
         self.volume_command_tmp = None
+        
+        if is_wayland and self.clipboard_use:
+            _ret = self.clipboard_ready()
+            if _ret:
+                self.ClipDaemon = daemonClipW(self.clips_path, self)
+                self.ClipDaemon._start()
+            else:
+                _error_log("Something wrong with wl-paste or wclipboard.py or something else.")
+        elif is_x11:
+            daemonClip(self.clips_path, self)
         
         self.script1_id = None
         self.script2_id = None
@@ -1770,6 +1780,11 @@ class MyWindow(Gtk.Window):
             if self.clipboard_use == 0:
                 self.right_box.remove(self.clipbutton)
                 del self.clipbutton
+                if is_wayland:
+                    try:
+                        os.system("killall wl-paste")
+                    except:
+                        pass
             elif self.clipboard_use == 1:
                 self.on_set_clipboard(5)
         
@@ -2071,6 +2086,10 @@ class MyWindow(Gtk.Window):
                 if self.ClipDaemon:
                     self.ClipDaemon._stop()
                     self.ClipDaemon = None
+                try:
+                    os.system("killall wl-paste")
+                except:
+                    pass
             elif self.temp_clip == True:
                 if self.ClipDaemon == None:
                     _ret = self.clipboard_ready()
