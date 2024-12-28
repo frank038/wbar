@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 0.9.4
+# V. 0.9.5
 
 import os,sys,shutil,stat
 import gi
@@ -3081,6 +3081,7 @@ class clipboardWin(Gtk.Window):
         if CLIP_STORAGE:
             for _clip,_ctext in CLIP_STORAGE.items():
                 __row = Gtk.ListBoxRow()
+                __row.set_name("cliprow")
                 __row.iid = _clip
                 _tmp_box = Gtk.Box.new(0,0)
                 __row.add(_tmp_box)
