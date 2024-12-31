@@ -7,6 +7,8 @@ Wbar is a panel to be used under wayland, if the display server support
 the layer-shell protocols. All the lroots based window managers should 
 support wbar.
 
+There is a porting of wbar to the Gtk4 gui in the releases page, because the gtk3 version freeze completely for unknown reasons. Some features haven't been implemented: the tray section do not work; no bookmarks unless setting them manually in the favorites file (just write the full path of the desktop files), no notes, no timer, and other things. Requirements: gtk4-layer-shell + python3 binding + other if the case (see below).
+
 Features:
 - application menu (at left)
 - clock
@@ -77,7 +79,7 @@ name of the applications you may want not to be stored in the history list.
 ------------------------------
 
 Known issue:
-- maybe the tray could freeze without any reason from time to time, and the only solution is to terminate the program; if you experience this bug, please disable the tray section in the configurator.
+- the gtk3 version completely freeze randomly; I've started a porting to the gtk4 gui.
 
 ![My image](https://github.com/frank038/wbar/blob/main/wbar_01.jpg)
 
