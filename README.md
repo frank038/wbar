@@ -7,7 +7,7 @@ Wbar is a panel to be used under wayland, if the display server support
 the layer-shell protocols. All the lroots based window managers should 
 support wbar.
 
-There is a porting of wbar to the Gtk4 gui in the releases page, because the gtk3 version freeze completely for unknown reasons. Some features haven't been implemented: the tray section do not work; no bookmarks unless setting them manually in the favorites file (just write the full path of the desktop files), no notes, no timer, and other things. Requirements: gtk4-layer-shell + python3 binding + other if the case (see below).
+There is a porting of wbar to the Gtk4 gui in the releases page, because the gtk3 version freeze completely for unknown reasons. Some features haven't been implemented: no notes, no timer, and no other things. Requirements: gtk4-layer-shell + python3 binding + other if the case (see below).
 
 Features:
 - application menu (at left)
