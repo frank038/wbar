@@ -3,7 +3,7 @@
 # COMANDO: 
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar.py
 
-# V. 0.9.10
+# V. 0.9.11
 
 import os,sys,shutil,stat
 import gi
@@ -731,6 +731,7 @@ class MyWindow(Gtk.ApplicationWindow):
         
         GtkLayerShell.init_for_window(self)
         GtkLayerShell.auto_exclusive_zone_enable(self)
+        GtkLayerShell.set_layer(self, GtkLayerShell.Layer.TOP)
         GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.NONE)
         self.on_set_win_position(self.win_position)
         
@@ -1327,7 +1328,7 @@ class MyWindow(Gtk.ApplicationWindow):
                     menu.append(expander)
                     for el in _submenu_data:
                         self.on_create_menu(sub_menu, el)
-                    expander.show()
+                    # expander.show()
                     # menu_item.set_submenu(sub_menu)
             else:
                 menu.append(menu_item)
@@ -1374,7 +1375,7 @@ class MyWindow(Gtk.ApplicationWindow):
         btn_i.add_controller(self.gesture_tray2)
         self.gesture_tray2.connect('pressed', self.on_tray_gesture2, [name,path,menu])
         
-        btn_i.show()
+        # btn_i.show()
         
     def on_tray_gesture(self, gesture, _n , x, y, args):
         self._item_event(gesture.get_widget(), args, 3)
@@ -1395,7 +1396,8 @@ class MyWindow(Gtk.ApplicationWindow):
         self._scroll.set_propagate_natural_width(True)
         self._scroll.set_overlay_scrolling(False)
         self._scroll.set_placement(0)
-        self._scroll.set_policy(Gtk.PolicyType.NEVER,Gtk.PolicyType.NEVER)
+        # self._scroll.set_policy(Gtk.PolicyType.NEVER,Gtk.PolicyType.NEVER)
+        self._scroll.set_policy(Gtk.PolicyType.NEVER,Gtk.PolicyType.AUTOMATIC)
         self._scroll.set_min_content_height(200)
         #
         self._stack = Gtk.Stack.new()
