@@ -1,0 +1,207 @@
+/* the window border colour */
+@define-color border_color #00B300;
+@define-color stickynote_color #F3C000;
+
+* {
+  font-size: 24px;
+}
+
+/* the panel */
+.mywindow {
+  border-radius: 30px 30px 30px 30px;
+  border-bottom-width: 2px;
+  border-color: @border_color;
+  border-style: solid;
+  font-size: 24px;
+}
+
+/* the menu window */
+.menuwin { 
+  border-radius: 10px 10px 10px 10px;
+  border-width: 2px;
+  border-color: @border_color;
+  border-style: solid;
+  font-size: 24px;
+}
+
+.menuwin button {
+  border-radius: 6px;
+  border: solid;
+  border-width: 1px;
+  border-color: #7F7F7F;
+  margin: 2px;
+  font-size: 24px;
+}
+
+/* the shutdown/reboot/logout dialog */
+.commandwin { 
+  border-radius: 10px 10px 10px 10px;
+  border-width: 2px;
+  border-color: @border_color;
+  border-style: solid;
+  font-size: 24px;
+}
+
+.commandwin button {
+  border-radius: 6px;
+  border: solid;
+  border-width: 1px;
+  border-color: #7F7F7F;
+  margin: 2px;
+  font-size: 24px;
+}
+
+/* the clipboard window */
+.clipboardwin { 
+  border-radius: 10px 10px 10px 10px;
+  border-width: 2px;
+  border-color: @border_color;
+  border-style: solid;
+  font-size: 24px;
+}
+
+.clipboardwin button {
+  border-radius: 6px;
+  border: solid;
+  border-width: 1px;
+  border-color: #7F7F7F;
+  margin: 2px;
+  font-size: 24px;
+}
+
+.clipboardwin #cliprow {
+  border-radius: 6px;
+  border: solid;
+  border-width: 1px;
+  border-color: #7F7F7F;
+  margin: 2px;
+  font-size: 24px;
+}
+
+/* the service window */
+.servicewin { 
+  border-radius: 10px 10px 10px 10px;
+  border-width: 2px;
+  border-color: @border_color;
+  border-style: solid;
+  font-size: 22px;
+  font-size: 24px;
+}
+.servicewin button {
+  border-radius: 6px;
+  border: solid;
+  border-width: 1px;
+  border-color: #7F7F7F;
+  margin: 2px;
+  font-size: 24px;
+}
+
+.servicewin #notrow {
+  border-radius: 6px;
+  border: solid;
+  border-width: 1px;
+  border-color: #7F7F7F;
+  margin: 2px;
+  font-size: 24px;
+}
+
+/* the notification window */
+.notificationwin { 
+  border-radius: 10px 10px 10px 10px;
+  border-width: 2px;
+  border-color: @border_color;
+  border-style: solid;
+  font-size: 24px;
+}
+
+.notificationwin button ~#closebtn {
+  border-radius: 6px;
+  border: solid;
+  border-width: 1px;
+  border-color: #7F7F7F;
+  margin: 2px;
+  font-size: 24px;
+}
+
+/* the volume meter */
+/*
+.vollevelbar trough, progress {
+  background-color: white;
+}*/
+
+/* the output command left label */
+.label1 {
+  font-size: 24px;
+}
+
+/* the output command center label */
+/*
+.label2 {
+  font-size: 24px;
+}*/
+
+/* the clock label */
+.clocklabel {
+  font-family: DIGITALDREAMFAT;
+  font-size: 21px;
+}
+
+/* the timer win */
+.timerwin button {
+  border-radius: 6px;
+  border: solid;
+  border-width: 1px;
+  border-color: #7F7F7F;
+  margin: 2px;
+  font-size: 24px;
+}
+
+/* the note window */
+.notewin * {
+  background-color: @stickynote_color;
+  font-size: 24px;
+}
+
+.notewin button {
+  border-radius: 6px;
+  border: solid;
+  border-width: 1px;
+  border-color: #7F7F7F;
+  margin: 2px;
+  font-size: 24px;
+}
+
+/*
+.notewin textview text {
+  color: black;
+  font-size: 24px;
+}*/
+
+.configuratorwin {
+  border-radius: 10px 10px 10px 10px;
+  border-width: 2px;
+  border-color: @border_color;
+  border-style: solid;
+  font-size: 24px;
+}
+
+#popovertray {
+  border-radius: 10px 10px 10px 10px;
+  border-width: 0px;
+  border-color: @border_color;
+  border-style: solid;
+  font-size: 24px;
+}
+
+#popovertray * {
+  border-width: 0px;
+  font-size: 24px;
+}
+
+#yndialog {
+  border-radius: 10px 10px 10px 10px;
+  border-width: 0px;
+  border-color: @border_color;
+  border-style: solid;
+  font-size: 24px;
+}

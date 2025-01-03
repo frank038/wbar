@@ -1,0 +1,4 @@
+#!/bin/bash
+# file.5s means the file file.5s will be executed every 5 seconds
+# file.5m means the file file.5m will be executed every 5 minutes
+echo " Hi 2 "

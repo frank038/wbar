@@ -1,0 +1,16 @@
+{
+    "panel": {
+        "height": 30,
+        "width": 10,
+        "corner-top": 0,
+        "corner-bottom": 0,
+        "position": 0,
+        "clipboard": 1,
+        "label1": 1,
+        "label2": 0,
+        "tasklist": 1,
+        "clock": 1,
+        "time_format": 0,
+        "volume_command": "pavucontrol"
+    }
+}
