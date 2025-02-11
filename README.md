@@ -25,7 +25,7 @@ Requirements:
 - a wayland display server with layer-shell support
 - python3
 - gtk3 python bindings
-- PIL for the tray section
+- PIL for the tray section (only for the gtk3 version)
 - wl-clipboard for the clipboard (wl-paste and wl-copy are needed)
 - pactl for volume applet (amixer is supported; read below for more)
 
