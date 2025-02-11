@@ -2,5 +2,7 @@
     "wwidth": 0,
     "wheight": 0,
     "sound-player": 0,
-    "player": ""
+    "player": "",
+    "tray-menu-width": 450,
+    "tray-menu-height": 400
 }

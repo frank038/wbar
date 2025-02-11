@@ -15,6 +15,19 @@
   font-size: 24px;
 }
 
+/* various widgets in the panel */
+/*
+.mywindow button {
+  background: #cecece;
+} */
+
+/* tray background colour */
+/*
+popover * {
+  background: ##FFA500;
+}*/
+
+
 /* the menu window */
 .menuwin { 
   border-radius: 10px 10px 10px 10px;
