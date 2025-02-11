@@ -3,7 +3,7 @@
 # COMANDO: 
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar.py
 
-# V. 0.9.11
+# V. 0.9.12
 
 import os,sys,shutil,stat
 import gi
@@ -25,12 +25,14 @@ import subprocess
 import time, datetime
 import dbus
 import dbus.service as Service
-_USE_PIL = 1
+
+# 0 for using internal method
+_USE_PIL = 0
 try:
     from PIL import Image
+    import io
 except:
     _USE_PIL = 0
-import io
 
 QUIT = False
 
@@ -156,7 +158,7 @@ else:
 
 _service_conf = None
 _service_config_file = os.path.join(_curr_dir,"configs","service.json")
-_starting_service_conf = {"wwidth":800,"wheight":600,"sound-player":0,"player":""}
+_starting_service_conf = {"wwidth":800,"wheight":600,"sound-player":0,"player":"","tray-menu-width":200,"tray-menu-height":200}
 if not os.path.exists(_service_config_file):
     try:
         _ff = open(_service_config_file,"w")
@@ -618,6 +620,8 @@ class MyWindow(Gtk.ApplicationWindow):
         self.service_player_tmp = ""
         self._is_timer_set = 0
         self.timer_id = None
+        self.service_tray_menu_width = self.service_conf["tray-menu-width"]
+        self.service_tray_menu_height = self.service_conf["tray-menu-height"]
         
         # json configuration
         self._configuration = None
@@ -1280,21 +1284,35 @@ class MyWindow(Gtk.ApplicationWindow):
                 menu_item.set_sensitive(_enabled)
             # menu.append(menu_item)
             #
-            if 'icon-data' in _dict and _USE_PIL:
+            if 'icon-data' in _dict:
+                img = None
                 _icon_data = _dict['icon-data']
-                pb = None
-                with Image.open(io.BytesIO(bytes(_icon_data))) as im:
-                    data = im.tobytes()
-                    w, h = im.size
-                    data = GLib.Bytes.new(data)
-                    pb = GdkPixbuf.Pixbuf.new_from_bytes(data, GdkPixbuf.Colorspace.RGB,
-                            True, 8, w, h, w * 4)
                 #
-                img = Gtk.Image.new_from_pixbuf(pb)
+                if _USE_PIL:
+                    pb = None
+                    with Image.open(io.BytesIO(bytes(_icon_data))) as im:
+                        data = im.tobytes()
+                        w, h = im.size
+                        data = GLib.Bytes.new(data)
+                        pb = GdkPixbuf.Pixbuf.new_from_bytes(data, GdkPixbuf.Colorspace.RGB,
+                                True, 8, w, h, w * 4)
+                #
+                else:
+                    input_stream = Gio.MemoryInputStream.new_from_data(_icon_data, None)
+                    pb = GdkPixbuf.Pixbuf.new_from_stream(input_stream, None)
+                    # ret should be None
+                    # ret = input_stream.close_async(2)
+                    # ret should be True if closed properly
+                    ret = input_stream.close(None)
+                #
+                if img:
+                    img = Gtk.Image.new_from_pixbuf(pb)
                 # menu_item = Gtk.ImageMenuItem.new_with_label(_label_name)
                 # menu_item.set_child(img)
                 _b = Gtk.Box.new(0,0)
-                _b.append(img)
+                if img:
+                    _b.append(img)
+                    _label_name = " "+_label_name
                 _l = Gtk.Label(label=_label_name)
                 _b.append(_l)
                 menu_item.set_child(_b)
@@ -1304,7 +1322,7 @@ class MyWindow(Gtk.ApplicationWindow):
                 img = Gtk.Image.new_from_icon_name(_icon_name)
                 _b = Gtk.Box.new(0,0)
                 _b.append(img)
-                _l = Gtk.Label(label=_label_name)
+                _l = Gtk.Label(label=" "+_label_name)
                 _b.append(_l)
                 menu_item.set_child(_b)
             else:
@@ -1398,7 +1416,8 @@ class MyWindow(Gtk.ApplicationWindow):
         self._scroll.set_placement(0)
         # self._scroll.set_policy(Gtk.PolicyType.NEVER,Gtk.PolicyType.NEVER)
         self._scroll.set_policy(Gtk.PolicyType.NEVER,Gtk.PolicyType.AUTOMATIC)
-        self._scroll.set_min_content_height(200)
+        self._scroll.set_min_content_width(self.service_tray_menu_width)
+        self._scroll.set_min_content_height(self.service_tray_menu_height)
         #
         self._stack = Gtk.Stack.new()
         #
@@ -1441,12 +1460,16 @@ class MyWindow(Gtk.ApplicationWindow):
     def _set_tooltip(self, _tooltip, path):
         btn = None
         #
-        for item1 in self.tray_box.get_children():
-            if isinstance(item1, Gtk.EventBox):
-                item = item1.get_children()[0]
-                if item.get_property('property_one') == path:
-                    btn = item
-                    break
+        item1 = self.tray_box.get_first_child()
+        while item1:
+            if isinstance(item1, Gtk.Button):
+                if hasattr(item1, 'property_one'):
+                    if item1.get_property('property_one') == path:
+                        btn = item1
+                        item1 = None
+                        break
+                else:
+                    item1 = self.tray_box.get_next_sibling()
         #
         if btn != None:
             btn.set_tooltip_text(_tooltip)
@@ -2086,6 +2109,14 @@ class MyWindow(Gtk.ApplicationWindow):
     
     def entry_timer_text(self, _text):
         self.service_player_tmp = _text
+    
+    def tray_menu_size(self, _type, _value):
+        if _type == "w":
+            self.service_conf["tray-menu-width"] = _value
+            self.service_tray_menu_width = _value
+        elif _type == "h":
+            self.service_conf["tray-menu-height"] = _value
+            self.service_tray_menu_height = _value
     
     def set_clip_window_size(self, _type, _value):
         if _type == "w":
@@ -4294,6 +4325,25 @@ class DialogConfiguration(Gtk.Dialog):
             timer_combo.set_active(1)
             self.entry_timer.set_text(self._parent.service_player)
         
+        # tray menu size
+        _tray_menu_width = Gtk.Label(label="Tray menu width")
+        _tray_menu_width.set_halign(1)
+        self.page3_box.attach(_tray_menu_width,0,4,1,1)
+        tray_w_spinbtn = Gtk.SpinButton.new_with_range(0,1000,1)
+        tray_w_spinbtn.set_value(self._parent.service_tray_menu_width)
+        self.page3_box.attach_next_to(tray_w_spinbtn,_tray_menu_width,1,1,1)
+        tray_w_spinbtn.connect('value-changed', self.on_tray_wh_spinbtn, "w")
+        tray_w_spinbtn.set_numeric(True)
+        
+        _tray_menu_height = Gtk.Label(label="Tray menu height")
+        _tray_menu_height.set_halign(1)
+        self.page3_box.attach(_tray_menu_height,0,5,1,1)
+        tray_h_spinbtn = Gtk.SpinButton.new_with_range(0,1000,1)
+        tray_h_spinbtn.set_value(self._parent.service_tray_menu_height)
+        self.page3_box.attach_next_to(tray_h_spinbtn,_tray_menu_height,1,1,1)
+        tray_h_spinbtn.connect('value-changed', self.on_tray_wh_spinbtn, "h")
+        tray_h_spinbtn.set_numeric(True)
+        
         ## CLIPBOARD
         if USE_CLIPBOARD and self._parent.clipboard_use:
             clip_lbl_w = Gtk.Label(label="Width")
@@ -4347,15 +4397,15 @@ class DialogConfiguration(Gtk.Dialog):
                 clip_cp_spinbtn.set_numeric(True)
         
         ## NOTIFICATIONS
-        # enable/disable
-        not_lbl_enabled = Gtk.Label(label="Enabled (need restart)")
-        self.page5_box.attach(not_lbl_enabled,0,0,1,1)
-        not_lbl_enabled.set_halign(1)
-        not_lbl_enabled_sw = Gtk.Switch.new()
-        not_lbl_enabled_sw.set_halign(1)
-        not_lbl_enabled_sw.set_active(self._parent.not_use)
-        not_lbl_enabled_sw.connect('notify::active', self.on_switch, "notification")
-        self.page5_box.attach_next_to(not_lbl_enabled_sw,not_lbl_enabled,1,1,1)
+        # # enable/disable
+        # not_lbl_enabled = Gtk.Label(label="Enabled (need restart)")
+        # self.page5_box.attach(not_lbl_enabled,0,0,1,1)
+        # not_lbl_enabled.set_halign(1)
+        # not_lbl_enabled_sw = Gtk.Switch.new()
+        # not_lbl_enabled_sw.set_halign(1)
+        # not_lbl_enabled_sw.set_active(self._parent.not_use)
+        # not_lbl_enabled_sw.connect('notify::active', self.on_switch, "notification")
+        # self.page5_box.attach_next_to(not_lbl_enabled_sw,not_lbl_enabled,1,1,1)
         # window width
         not_lbl_w = Gtk.Label(label="Width")
         self.page5_box.attach(not_lbl_w,0,1,1,1)
@@ -4467,8 +4517,25 @@ class DialogConfiguration(Gtk.Dialog):
         use_tray_combo.connect('changed', self.on_other_combo, "tray")
         self.page6_box.attach_next_to(use_tray_combo,_lbl_use_tray,1,1,1)
         
+        # try enable/disable
+        not_lbl_enabled = Gtk.Label(label="Use notification widget")
+        self.page6_box.attach(not_lbl_enabled,0,5,1,1)
+        not_lbl_enabled.set_halign(1)
+        # not_lbl_enabled_sw = Gtk.Switch.new()
+        # not_lbl_enabled_sw.set_halign(1)
+        # not_lbl_enabled_sw.set_active(self._parent.not_use)
+        # not_lbl_enabled_sw.connect('notify::active', self.on_switch, "notification")
+        # self.page6_box.attach_next_to(not_lbl_enabled_sw,not_lbl_enabled,1,1,1)
+        use_notif_combo = Gtk.ComboBoxText.new()
+        use_notif_combo.append_text("no")
+        use_notif_combo.append_text("yes")
+        use_notif_combo.set_active(self._parent.not_use)
+        use_notif_combo.connect('changed', self.on_other_combo, "notification")
+        self.page6_box.attach_next_to(use_notif_combo,not_lbl_enabled,1,1,1)
+        
+        
         _lbl_double_click = Gtk.Label(label="Double click to launch apps")
-        self.page6_box.attach(_lbl_double_click,0,5,1,1)
+        self.page6_box.attach(_lbl_double_click,0,6,1,1)
         _lbl_double_click.set_halign(1)
         double_click_combo = Gtk.ComboBoxText.new()
         double_click_combo.append_text("no")
@@ -4504,6 +4571,8 @@ class DialogConfiguration(Gtk.Dialog):
             _other_settings_conf["use-volume"] = cb.get_active()
         elif _type == "tray":
             _other_settings_conf["use-tray"] = cb.get_active()
+        elif _type == "notification":
+            self._parent.on_switch_btn("notification", cb.get_active())
         elif _type == "click":
             _other_settings_conf["double-click"] = cb.get_active()
         try:
@@ -4565,6 +4634,9 @@ class DialogConfiguration(Gtk.Dialog):
     
     def on_entry_timer(self, _entry):
         self._parent.entry_timer_text(_entry.get_text())
+        
+    def on_tray_wh_spinbtn(self, btn, _type):
+        self._parent.tray_menu_size(_type, btn.get_value_as_int())
     
     #### clipboard
     def on_clip_wh_spinbtn(self, btn, _type):
