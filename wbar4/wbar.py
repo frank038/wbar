@@ -3,7 +3,7 @@
 # COMANDO: 
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar.py
 
-# V. 0.9.12
+# V. 0.9.13
 
 import os,sys,shutil,stat
 import gi
@@ -806,7 +806,6 @@ class MyWindow(Gtk.ApplicationWindow):
         # self.otherbutton.connect('button-press-event', self.on_other_button)
         self.otherbutton.connect('clicked', self.on_other_button)
         # self.right_box.pack_end(self.otherbutton,False,False,10)
-        # vedo sotto print
         # self.right_box.append(self.otherbutton)
         
         # sticky notes list
@@ -1823,17 +1822,17 @@ class MyWindow(Gtk.ApplicationWindow):
         except:
             pass
             
-    def _close_prog_by_pid1(self, _pid):
-        try:
-            list_pid = subprocess.check_output(f"pstree -p {_pid} | grep -oP '\(\K[^\)]+'", shell=True, universal_newlines=True).split("\n")
-            list_pid.remove('')
-        except:
-            return
-        for _p in list_pid:
-            try:
-                os.system(f"kill -9 {_p}")
-            except:
-                continue
+    # def _close_prog_by_pid1(self, _pid):
+        # try:
+            # list_pid = subprocess.check_output(f"pstree -p {_pid} | grep -oP '\(\K[^\)]+'", shell=True, universal_newlines=True).split("\n")
+            # list_pid.remove('')
+        # except:
+            # return
+        # for _p in list_pid:
+            # try:
+                # os.system(f"kill -9 {_p}")
+            # except:
+                # continue
     
     def terminate_thread(self,_t):
         if _t == 1 or _t == None:
@@ -4865,7 +4864,11 @@ class notificationWin(Gtk.Window):
         
         # the geometry of this window
         self._value = None
-       
+        
+        self.surface_id_connect = None
+        self.old_width = None
+        self.old_height = None
+        
         self.show()
     
     # action button pressed
@@ -4889,9 +4892,18 @@ class notificationWin(Gtk.Window):
         self.close()
         
     def on_show(self, widget):
-        # self._value = self.get_window().get_geometry()
-        pass
-
+        self._surface = self.get_surface()
+        self.surface_id_connect = self._surface.connect("layout",self.on_surface)
+    
+    def on_surface(self, _srf,ww,hh):
+        self.old_width = self.get_width()
+        self.old_height = self.get_height()
+        self._value = [self.old_width,self.old_height]
+        _srf.disconnect(self.surface_id_connect)
+        self.surface_id_connect = None
+    
+    def on_get_height(self):
+        return self.get_height()
 
 class NotSave():
     nname = None
@@ -4908,6 +4920,7 @@ class Notifier(Service.Object):
         self._parent = _parent
         self.list_notifications = []
         self._not_path = os.path.join(_curr_dir,"mynots")
+        self._y = 0
     
     @Service.method("org.freedesktop.Notifications", out_signature="as")
     def GetCapabilities(self):
@@ -4978,27 +4991,41 @@ class Notifier(Service.Object):
         _not_name =  str(int(time.time()))
         _notification_path = os.path.join(self._not_path, _not_name)
         _pix = self._find_icon(ret_icon, _icon, _hints, _ICON_SIZE)
-        _y = 0
+        # _y = 0
+        __y = -1
         # _nw_to_close = None
         _y_error = 0
         if _replaceid != 0:
             for _el in self.list_notifications:
                 if _el[1] == _replaceid:
-                    try:
-                        _yy = _el[2]
-                        _nw_height = _el[0].get_window().get_geometry().height
-                        _y = _yy-_nw_height-2
-                        _el[0].close()
-                        # _nw_to_close = _el[0]
-                    except:
-                        _y = 0
-                        if self.list_notifications:
-                            _last_y = self.list_notifications[-1][2]
-                            _y += _last_y+2
+                    # try:
+                        # _yy = _el[2]
+                        # _nw_height = _el[0].get_window().get_geometry().height
+                        # _y = _yy-_nw_height-2
+                        # _el[0].close()
+                        # # _nw_to_close = _el[0]
+                    # except:
+                        # _y = 0
+                        # if self.list_notifications:
+                            # _last_y = self.list_notifications[-1][2]
+                            # _y += _last_y+2
+                    #
+                    _el[0].close()
+                    break
         else:
             if self.list_notifications:
-                _last_y = self.list_notifications[-1][2]
-                _y += _last_y+2
+                # _last_y = self.list_notifications[-1][2]
+                _last_y = self.list_notifications[-1][0]._value[1]
+                # _y += _last_y+2
+                self._y += _last_y+4
+            else:
+                # _y = 0
+                self._y = 0
+        
+        # if _y > self._parent.screen_height - 200:
+            # _y = 0
+        if self._y > self._parent.screen_height - 200:
+            self._y = 0
         
         # 0 low - 1 normal - 2 critical
         _urgency = _on_hints(_hints, "urgency")
@@ -5007,20 +5034,36 @@ class Notifier(Service.Object):
         _dnd_file = os.path.join(_curr_dir,"do_not_disturb_mode")
         if self.not_dnd == 0 or (self.not_dnd == 1 and _urgency == 2):
             if not os.path.exists(_dnd_file):
-                NW = notificationWin(self, (0, _y, _appname, _pix, _summ, _body, _timeout, _hints, _actions, _replaceid))
+                # if __y:
+                    # nw_y = __y
+                # else:
+                    # nw_y = _y
+                # NW = notificationWin(self, (0, _y, _appname, _pix, _summ, _body, _timeout, _hints, _actions, _replaceid))
+                NW = notificationWin(self, (0, self._y, _appname, _pix, _summ, _body, _timeout, _hints, _actions, _replaceid))
+                
+                # del nw_y
                 # if _nw_to_close:
                     # _nw_to_close.close()
                 
-                # # needed to get the size of each notification window 
-                # # all at the same position at the moment
-                # _nw_values = NW._value
-                # _nheight = _nw_values.height
-                # _y += _nheight+2
-                # if _y > self._parent.screen_height - 400:
+                # # _h = NW.on_get_height()
+
+                # # # needed to get the size of each notification window 
+                # # # all at the same position at the moment
+                # # _nw_values = NW._value
+                # # _nheight = _nw_values.height
+                # # _y += _nheight+2
+                # # if _y > self._parent.screen_height - 400:
+                    # # _y = 0
+                # else:
                     # _y = 0
-                _y = 0
                 
-                self.list_notifications.append([NW,_replaceid, _y])
+                # if __y == -1:
+                    # self.list_notifications.append([NW,_replaceid, _y])
+                # else:
+                    # __y = -1
+                
+                # self.list_notifications.append([NW,_replaceid, _y])
+                self.list_notifications.append([NW,_replaceid, self._y])
                 
                 self._close_notification(_timeout,NW)
         
