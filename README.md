@@ -10,21 +10,21 @@ support wbar.
 There is a porting of wbar to the Gtk4 gui in the releases page, because the gtk3 version freeze completely for unknown reasons. Some features haven't been implemented: no notes, no timer, and no other things. Requirements: gtk4-layer-shell + python3 binding + other if the case (see below).
 
 Features:
-- application menu (at left)
+- application menu
 - clock
 - clipboard (with history)
 - tray
 - volume
 - notifications (with history)
-- a simple timer
+- a simple timer (gtk3 version)
 - command outputs
-- a graphical configurator (at right)
-- sticky notes
+- a graphical configurator
+- sticky notes (gtk3 version)
 
 Requirements:
 - a wayland display server with layer-shell support
 - python3
-- gtk3 python bindings
+- gtk3/gtk4 python bindings
 - PIL for the tray section (only for the gtk3 version)
 - wl-clipboard for the clipboard (wl-paste and wl-copy are needed)
 - pactl for volume applet (amixer is supported; read below for more)
@@ -39,7 +39,7 @@ contain the right commands for most distros.
 
 Options and configurations
 
-Wbar has a graphical configurator for many options. Other options have 
+Wbar has a graphical configurator for many options. Other very few options have 
 to be changed manually.
 
 The bash scripts volume_SOMENAME.sh use the command pactl for their 
