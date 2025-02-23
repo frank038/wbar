@@ -147,6 +147,11 @@ grid {
   background-color: white;
 }*/
 
+.vollerbar, slider {
+  background: #00000000;
+}
+
+
 /* the output command left label */
 .label1 {
   font-size: 24px;
