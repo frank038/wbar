@@ -3,7 +3,7 @@
 # COMANDO: 
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar.py
 
-# V. 0.9.14
+# V. 0.9.15
 
 import os,sys,shutil,stat
 import gi
@@ -44,17 +44,6 @@ def _error_log(_error):
     # _ff = open(os.path.join(_curr_dir, "error.log"), "a")
     # _ff.write(_now+": "+_error+"\n\n")
     # _ff.close()
-
-# ## MORE OPTIONS
-# # the pad inside the windows
-# _pad = 4
-# # the audio level at startup: 0 disabled - 1 to 100 usable values
-# _AUDIO_START_LEVEL = 0
-# # enable the volume widget
-# USE_VOLUME=1
-# # enable the tray widget
-# USE_TRAY = 1
-# ##
 
 _HOME = Path.home()
 
@@ -180,6 +169,14 @@ if not os.path.exists(_menu_favorites):
     _f = open(_menu_favorites,"w")
     _f.write("\n")
     _f.close()
+
+# check files are executable
+_file_to_check_exec = ["wclipboard.py","volume_set.sh","volume_volume.sh","volume_up.sh","volume_toggle.sh","volume_mute.sh","volume_down.sh","restart.sh","poweroff.sh","menu_editor","logout.sh"]
+for _ff in _file_to_check_exec:
+    if os.path.exists(os.path.join(_curr_dir, _ff)):
+        if not os.access(_ff,os.X_OK):
+            st = os.stat(_ff)
+            os.chmod(_ff, st.st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
 
 
 qq = queue.Queue(maxsize=1)
@@ -581,12 +578,14 @@ class MyWindow(Gtk.ApplicationWindow):
             self.chars_preview = self.clipboard_conf["chars_preview"]
             self.chars_preview_tmp = 0
             self.ClipDaemon = None
-            self.clip_do_not_disturb = 0
+            self.clip_do_not_track = 0
             if os.path.exists(os.path.join(_curr_dir,"donotdisturb.mode")):
-                try:
-                    os.remove(os.path.join(_curr_dir,"donotdisturb.mode"))
-                except:
-                    pass
+                self.clip_do_not_track = True
+                # try:
+                    # os.remove(os.path.join(_curr_dir,"donotdisturb.mode"))
+                # except:
+                    # pass
+            
             # if is_wayland:
                 # _ret = self.clipboard_ready()
                 # if _ret:
@@ -875,10 +874,38 @@ class MyWindow(Gtk.ApplicationWindow):
             # self.volume_btn = Gtk.Button()
             # self.volume_btn.set_size_request(60,-1)
             # self.volume_btn.set_valign(3)
-
-            self.volume_bar = Gtk.ProgressBar()
-            # self.volume_btn.add(self.volume_bar)
-            # self.volume_bar.props.expand = True
+            
+            # #
+            # self.volume_bar = Gtk.ProgressBar()
+            # # self.volume_btn.add(self.volume_bar)
+            # # self.volume_bar.props.expand = True
+            # self.volume_bar.set_valign(3)
+            # self.volume_bar.set_size_request(100,-1)
+            # # self.volume_btn.set_events(Gdk.EventMask.BUTTON_PRESS_MASK | Gdk.EventMask.SCROLL_MASK)
+            # self.vol_style_context = self.volume_bar.get_style_context()
+            # self.vol_style_context.add_class("vollevelbar")
+            
+            # # self.vol_box.pack_start(self.volume_btn,False,True,0)
+            # self.vol_box.append(self.volume_bar)
+            # # self.volume_btn.connect('button-press-event', self.on_volume_bar)
+            # # self.volume_btn.connect('scroll-event', self.on_volume_bar2)
+            
+            # # self.vol_gesture = Gtk.GestureClick.new()
+            # # self.vol_gesture.set_button(3)
+            # # self.volume_bar.add_controller(self.vol_gesture)
+            # # self.vol_gesture.connect('pressed', self.on_vol_gesture)
+            
+            # # self.vol_controller = Gtk.EventControllerScroll.new(Gtk.EventControllerScrollFlags.BOTH_AXES)
+            # # self.volume_bar.add_controller(self.vol_controller)
+            # # self.vol_controller.connect('scroll', self.on_vol_gesture)
+            
+            ########
+            self.volume_bar = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL,0.0,1.0,0.005)
+            self.volume_bar.set_draw_value(False)
+            self.volume_bar.set_slider_size_fixed(True)
+            # self.volume_bar.set_round_digits(2)
+            self.volume_bar.connect("change-value", self.on_volume_bar)
+            # self.volume_bar.props.vexpand = True
             self.volume_bar.set_valign(3)
             self.volume_bar.set_size_request(100,-1)
             # self.volume_btn.set_events(Gdk.EventMask.BUTTON_PRESS_MASK | Gdk.EventMask.SCROLL_MASK)
@@ -887,8 +914,14 @@ class MyWindow(Gtk.ApplicationWindow):
             
             # self.vol_box.pack_start(self.volume_btn,False,True,0)
             self.vol_box.append(self.volume_bar)
-            # self.volume_btn.connect('button-press-event', self.on_volume_bar)
-            # self.volume_btn.connect('scroll-event', self.on_volume_bar2)
+            
+            self.vol_gesture = Gtk.GestureClick.new()
+            self.vol_gesture.set_button(3)
+            self.volume_bar.add_controller(self.vol_gesture)
+            self.vol_gesture.connect('pressed', self.on_vol_gesture)
+            self.right_click_setted = 0
+            
+            #########
             
             # the stored sink in the file
             self.start_sink_name = None
@@ -969,7 +1002,6 @@ class MyWindow(Gtk.ApplicationWindow):
         
         self.q2 = None
         self.set_timer_label2()
-        
     
     # def on_get_text(self, clipboard, res, data):
         # _text = clipboard.read_text_finish(res)
@@ -1074,40 +1106,69 @@ class MyWindow(Gtk.ApplicationWindow):
         
         self._set_volume()
     
-    
-    def on_volume_bar(self, btn, event):
-        if event.button == 3:
-            if self.volume_command != "":
-                if shutil.which(self.volume_command):
-                    try:
-                        subprocess.Popen(self.volume_command, shell=True)
-                    except:
-                        pass
-        elif event.button == 2:
+    def on_vol_gesture(self, o,n,x,y):
+        try:
+            self.right_click_setted = 1
+            subprocess.Popen(self.volume_command, shell=True)
+        except:
             pass
-        elif event.button == 1:
-            _volume_toggle = os.path.join(_curr_dir,"volume_toggle.sh")
-            if os.path.exists(_volume_toggle):
-                if not os.access(_volume_toggle,os.X_OK):
-                    os.chmod(_volume_toggle, 0o740)
-                try:
-                    os.system(f"{_volume_toggle} &")
-                except:
-                    pass
+        return
     
-    def on_volume_bar2(self, btn, event):
-        if event.direction == Gdk.ScrollDirection.UP:
-            _vol_up_file_path = os.path.join(_curr_dir, "volume_up.sh")
-            if os.path.exists(_vol_up_file_path):
-                if not os.access(_vol_up_file_path, os.X_OK):
-                    os.chmod(_vol_up_file_path, 0o740)
-                subprocess.Popen(_vol_up_file_path,shell=True)
-        elif event.direction == Gdk.ScrollDirection.DOWN:
-            _vol_down_file_path = os.path.join(_curr_dir, "volume_down.sh")
-            if os.path.exists(_vol_down_file_path):
-                if not os.access(_vol_down_file_path, os.X_OK):
-                    os.chmod(_vol_down_file_path, 0o740)
-                subprocess.Popen(_vol_down_file_path,shell=True)
+    
+    def on_volume_bar(self, obj, scroll, value):
+        if self.right_click_setted:
+            self.right_click_setted = 0
+            return
+        
+        _value = round(value,2)
+        if _value < 0:
+            _value = 0.0
+        elif _value > 1.0:
+            _value = 1.0
+        
+        if round(obj.get_value(),2) == _value:
+            return
+        
+        try:
+            volume_command = [os.path.join(_curr_dir,"volume_set.sh"), str(int(_value*100))]
+            subprocess.Popen(volume_command, shell=False)
+        except:
+            pass
+        
+    
+    # def on_volume_bar(self, btn, event):
+        # if event.button == 3:
+            # if self.volume_command != "":
+                # if shutil.which(self.volume_command):
+                    # try:
+                        # subprocess.Popen(self.volume_command, shell=True)
+                    # except:
+                        # pass
+        # elif event.button == 2:
+            # pass
+        # elif event.button == 1:
+            # _volume_toggle = os.path.join(_curr_dir,"volume_toggle.sh")
+            # if os.path.exists(_volume_toggle):
+                # if not os.access(_volume_toggle,os.X_OK):
+                    # os.chmod(_volume_toggle, 0o740)
+                # try:
+                    # os.system(f"{_volume_toggle} &")
+                # except:
+                    # pass
+    
+    # def on_volume_bar2(self, btn, event):
+        # if event.direction == Gdk.ScrollDirection.UP:
+            # _vol_up_file_path = os.path.join(_curr_dir, "volume_up.sh")
+            # if os.path.exists(_vol_up_file_path):
+                # if not os.access(_vol_up_file_path, os.X_OK):
+                    # os.chmod(_vol_up_file_path, 0o740)
+                # subprocess.Popen(_vol_up_file_path,shell=True)
+        # elif event.direction == Gdk.ScrollDirection.DOWN:
+            # _vol_down_file_path = os.path.join(_curr_dir, "volume_down.sh")
+            # if os.path.exists(_vol_down_file_path):
+                # if not os.access(_vol_down_file_path, os.X_OK):
+                    # os.chmod(_vol_down_file_path, 0o740)
+                # subprocess.Popen(_vol_down_file_path,shell=True)
     
     def on_microphone_changed(self):
         return
@@ -1139,10 +1200,11 @@ class MyWindow(Gtk.ApplicationWindow):
         _file_volume = os.path.join(_curr_dir, "volume_volume.sh")
         ret1 = None
         if os.path.exists(_file_volume):
-            if not os.access(_file_volume, os.X_OK):
-                os.chmod(_file_volume, 0o740)
+            # if not os.access(_file_volume, os.X_OK):
+                # os.chmod(_file_volume, 0o740)
             try:
                 ret1 = subprocess.check_output(_file_volume,shell=True)
+                ret1 = ret1.decode().strip("%").strip("\n")
             except:
                 pass
         
@@ -1150,8 +1212,8 @@ class MyWindow(Gtk.ApplicationWindow):
         _file_mute = os.path.join(_curr_dir, "volume_mute.sh")
         ret2 = None
         if os.path.exists(_file_mute):
-            if not os.access(_file_mute, os.X_OK):
-                os.chmod(_file_mute, 0o740)
+            # if not os.access(_file_mute, os.X_OK):
+                # os.chmod(_file_mute, 0o740)
             try:
                 ret2 = subprocess.check_output(_file_mute,shell=True)
             except:
@@ -1159,19 +1221,20 @@ class MyWindow(Gtk.ApplicationWindow):
         
         _level = -1
         if ret1:
-            _level = round(int(ret1.decode().strip("\n"))/100,2)
+            _level = round(int(ret1)/100,2)
         _mute = -1
         if ret2:
             _mute = int(ret2.decode())
         
         if 0 <= _level <= 1:
-            self.volume_bar.set_fraction(_level)
+            # self.volume_bar.set_fraction(_level)
+            self.volume_bar.set_value(_level)
         # self.volume_image.set_visible(False)
         self.volume_bar.set_sensitive(True)
-        if _mute == 0:
+        if _mute == 1:
             self.volume_bar.set_sensitive(False)
             # self.volume_image.set_visible(False)
-        elif _mute == 1:
+        elif _mute == 0:
             self.volume_bar.set_sensitive(True)
             # self.volume_image.set_visible(True)
     
@@ -2159,8 +2222,8 @@ class MyWindow(Gtk.ApplicationWindow):
             self.chars_preview_tmp = _value
     
     def onclip_do_not_disturb(self, _state):
-        self.clip_do_not_disturb = _state
-        if self.clip_do_not_disturb:
+        self.clip_do_not_track = _state
+        if self.clip_do_not_track:
             try:
                 _file = os.path.join(_curr_dir,"donotdisturb.mode")
                 f = open(_file, "w")
@@ -3409,7 +3472,19 @@ class ynDialog(Gtk.Dialog):
         super().__init__(title=_type, transient_for=parent)
         
         self.add_buttons("OK", Gtk.ResponseType.OK, "Cancel", Gtk.ResponseType.CANCEL)
-        self.set_name("yndialog")
+        self.set_name("Info")
+        # self.set_default_size(150, 100)
+        label = Gtk.Label(label=_title1)
+        box = self.get_content_area()
+        box.append(label)
+        self.set_visible(True)
+
+class infoDialog(Gtk.Dialog):
+    def __init__(self, parent, _title1, _type):
+        super().__init__(title=_type, transient_for=parent)
+        
+        self.add_buttons(" Close ", Gtk.ResponseType.OK)
+        self.set_name("Info")
         # self.set_default_size(150, 100)
         label = Gtk.Label(label=_title1)
         box = self.get_content_area()
@@ -3493,8 +3568,8 @@ class clipboardWin(Gtk.Window):
         self.list_box_items = []
         self.populate_clips()
         
-        donotdisturb_btn = Gtk.ToggleButton(label="Do not disturb")
-        donotdisturb_btn.set_active(self._parent.clip_do_not_disturb)
+        donotdisturb_btn = Gtk.ToggleButton(label="Do not track")
+        donotdisturb_btn.set_active(self._parent.clip_do_not_track)
         donotdisturb_btn.connect("clicked",self.on_donotdisturb)
         self.main_box.append(donotdisturb_btn)
         

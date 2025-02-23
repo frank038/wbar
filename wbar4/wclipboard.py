@@ -44,7 +44,7 @@ if MAX_CHARS:
         _not_path = 1
 
 if _not_path == 0:
-    if not os.path.exists(os.path.join(os.getcwd(),"donotdisturb.mode")):
+    if not os.path.exists(os.path.join(_curr_dir,"donotdisturb.mode")):
         time_now = str(int(time.time()))
         while os.path.exists(os.path.join(clips_path, time_now)):
             sleep(0.1)
