@@ -4,5 +4,7 @@
     "sound-player": 0,
     "player": "",
     "tray-menu-width": 450,
-    "tray-menu-height": 400
+    "tray-menu-height": 400,
+    "note-show-start": 0,
+    "note-size": 200
 }
