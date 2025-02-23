@@ -3,7 +3,7 @@
 # COMANDO: 
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar.py
 
-# V. 0.9.15
+# V. 0.9.16
 
 import os,sys,shutil,stat
 import gi
@@ -107,7 +107,7 @@ if USE_VOLUME:
 # default configuration
 _starting_conf = {"panel":{"height":30,"width":0,"corner-top":30,\
     "corner-bottom":0,"position":1,"clipboard":1,\
-    "label1":0,"label2":0,"tasklist":1,"clock":1,"time_format":0,\
+    "label1":0,"label2":0,"tasklist":1,"clock":2,"time_format":0,\
     "volume_command":""} }
 
 if is_wayland:
@@ -125,7 +125,7 @@ _panelconf = os.path.join(_curr_dir, "configs/panelconfg.json")
 
 _menu_conf = None
 _menu_config_file = os.path.join(_curr_dir,"configs","menu.json")
-# live_search: num. of chars to perform a seeking; win_position: 0 left - 1 center
+# live_search: num. of chars to perform a seeking; win_position: 0 left - 1 right; num_items: number of items per row in the menu window
 _starting_menu_conf = {"wwidth":880,"wheight":600,"terminal":"xfce4-terminal",\
 "cat_icon_size":64,"item_icon_size":64,"live_search":3,"win_position":0,"num_items":3}
 
@@ -147,7 +147,7 @@ else:
 
 _service_conf = None
 _service_config_file = os.path.join(_curr_dir,"configs","service.json")
-_starting_service_conf = {"wwidth":800,"wheight":600,"sound-player":0,"player":"","tray-menu-width":200,"tray-menu-height":200}
+_starting_service_conf = {"wwidth":800,"wheight":600,"sound-player":0,"player":"","tray-menu-width":200,"tray-menu-height":200,"note-show-start":0,"note-size":200}
 if not os.path.exists(_service_config_file):
     try:
         _ff = open(_service_config_file,"w")
@@ -162,6 +162,8 @@ else:
     _ff = open(_service_config_file, "r")
     _service_conf = json.load(_ff)
     _ff.close()
+    if int(_service_conf["note-size"]) < 50:
+        _service_conf["note-size"] = 50
 
 
 _menu_favorites = os.path.join(_curr_dir,"favorites")
@@ -178,6 +180,13 @@ for _ff in _file_to_check_exec:
             st = os.stat(_ff)
             os.chmod(_ff, st.st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
 
+def MyDialog(data1, data2, parent):
+    dialog = Gtk.AlertDialog()
+    dialog.set_message(data1)
+    dialog.set_detail(data2)
+    dialog.set_modal(True)
+    dialog.set_buttons(["Close"])
+    dialog.show(parent)
 
 qq = queue.Queue(maxsize=1)
 USER_THEME=0
@@ -555,6 +564,7 @@ class MyWindow(Gtk.ApplicationWindow):
         
         # self.load_css('main.css')
         
+        self.set_decorated(False)
         self.connect("destroy", self._to_close)
         
         # for menu rebuild
@@ -629,7 +639,13 @@ class MyWindow(Gtk.ApplicationWindow):
         self._is_timer_set = 0
         self.timer_id = None
         self.service_tray_menu_width = self.service_conf["tray-menu-width"]
+        self.service_tray_menu_width_tmp = None
         self.service_tray_menu_height = self.service_conf["tray-menu-height"]
+        self.service_tray_menu_height_tmp = None
+        self.note_show_at_start = int(self.service_conf["note-show-start"])
+        self.note_show_at_start_tmp = None
+        self.note_size = self.service_conf["note-size"]
+        self.note_size_tmp = None
         
         # json configuration
         self._configuration = None
@@ -652,6 +668,7 @@ class MyWindow(Gtk.ApplicationWindow):
         self.task_use = _panel_conf["tasklist"]
         self.clock_use = _panel_conf["clock"]
         self.time_format = _panel_conf["time_format"]
+        self.time_format_tmp = None
         self.volume_command = _panel_conf["volume_command"]
         self.volume_command_tmp = None
         
@@ -798,11 +815,6 @@ class MyWindow(Gtk.ApplicationWindow):
         self.main_box.append(self.center_box)
         self.center_box.set_halign(3)
         
-        # clock
-        if self.clock_use:
-            self._t_id = None
-            self.on_set_clock2(None)
-            
         # # tasklist
         # if self.task_use:
             # self.on_set_tasklist(None)
@@ -837,6 +849,8 @@ class MyWindow(Gtk.ApplicationWindow):
                         _note = ffile.read()
                         _notedialog = noteDialog(self, _note, el)
                         self.list_notes.append(_notedialog)
+                        if self.note_show_at_start:
+                            _notedialog.set_visible(True)
         except:
             pass
         
@@ -961,7 +975,12 @@ class MyWindow(Gtk.ApplicationWindow):
         # self.temp_clip = None
         # if self.clipboard_use and USE_CLIPBOARD:
             # self.on_set_clipboard(None)
-            
+        
+        # clock
+        if self.clock_use:
+            self._t_id = None
+            self.on_set_clock2(self.clock_use)
+        
         # menu/other window
         self.right_box.append(self.otherbutton)
         
@@ -1956,7 +1975,25 @@ class MyWindow(Gtk.ApplicationWindow):
         if self.ClipDaemon:
             self.ClipDaemon._stop()
         self._app.quit()
-        
+    
+    def on_set_clipboard(self, _pos):
+        # self.clipbutton = Gtk.EventBox()
+        self.clipbutton = Gtk.Button()
+        _icon_path = os.path.join(_curr_dir,"icons","clipboard.svg")
+        _pixbf = GdkPixbuf.Pixbuf.new_from_file_at_size(_icon_path, self.win_height,self.win_height)
+        # _img = Gtk.Image.new_from_pixbuf(_pixbf)
+        _pb = Gdk.Texture.new_for_pixbuf(_pixbf)
+        _img = Gtk.Image.new_from_paintable(_pb)
+        _img.set_pixel_size(self.win_height-4)
+        self.clipbutton.set_child(_img)
+        self.clipbutton.connect('clicked', self.on_clipboard_button)
+        # self.right_box.pack_end(self.clipbutton,False,False,4)
+        self.right_box.append(self.clipbutton)
+        # # reorder
+        # if _pos != None:
+            # self.right_box.reorder_child(self.clipbutton, _pos)
+            # self.right_box.show_all()
+    
     def on_clock(self):
         if self._timer:
             self.set_on_clock()
@@ -1984,26 +2021,8 @@ class MyWindow(Gtk.ApplicationWindow):
             except:
                 _am_pm = ""
             self.clock_lbl.set_label(time.strftime('%I:%M')+_am_pm)
-    
-    def on_set_clipboard(self, _pos):
-        # self.clipbutton = Gtk.EventBox()
-        self.clipbutton = Gtk.Button()
-        _icon_path = os.path.join(_curr_dir,"icons","clipboard.svg")
-        _pixbf = GdkPixbuf.Pixbuf.new_from_file_at_size(_icon_path, self.win_height,self.win_height)
-        # _img = Gtk.Image.new_from_pixbuf(_pixbf)
-        _pb = Gdk.Texture.new_for_pixbuf(_pixbf)
-        _img = Gtk.Image.new_from_paintable(_pb)
-        _img.set_pixel_size(self.win_height-4)
-        self.clipbutton.set_child(_img)
-        self.clipbutton.connect('clicked', self.on_clipboard_button)
-        # self.right_box.pack_end(self.clipbutton,False,False,4)
-        self.right_box.append(self.clipbutton)
-        # reorder
-        if _pos != None:
-            self.right_box.reorder_child(self.clipbutton, _pos)
-            self.right_box.show_all()
         
-    
+    # _pos: 0 off - 1 center - 2 right
     def on_set_clock2(self, _pos):
         self.temp_clock = None
         self._timer = True
@@ -2011,13 +2030,36 @@ class MyWindow(Gtk.ApplicationWindow):
         self.set_on_clock()
         self.clock_lbl_style_context = self.clock_lbl.get_style_context()
         self.clock_lbl_style_context.add_class("clocklabel")
-        # self.center_box.pack_start(self.clock_lbl,False,False,10)
-        self.center_box.append(self.clock_lbl)
+        if _pos == 1:
+            self.center_box.append(self.clock_lbl)
+        elif _pos == 2:
+            if USE_NOTIFICATIONS:
+                self.right_box.insert_child_after(self.clock_lbl, self.notification_box)
+            elif USE_VOLUME:
+                self.right_box.insert_child_after(self.clock_lbl, self.vol_box)
+            elif USE_TRAY:
+                self.right_box.insert_child_after(self.clock_lbl, self.tray_box)
+            elif self.clipboard_use and USE_CLIPBOARD:
+                self.right_box.insert_child_after(self.clock_lbl, self.clipbutton)
+            else:
+                self.right_box.append(self.clock_lbl)
         self._t_id = GLib.timeout_add(60000, self.on_clock)
-        # reorder
-        if _pos != None:
-            self.center_box.reorder_child(self.clock_lbl, _pos)
-            self.center_box.show_all()
+        # # reorder
+        # if _pos != None:
+            # # if self.win_position == 0 and self.label2.get_text() != "":
+            # if self.win_position == 0:
+                # self.center_box.append(self.clock_lbl)
+            # elif self.win_position == 1:
+                # if USE_NOTIFICATIONS:
+                    # self.right_box.insert_child_after(self.clock_lbl, self.notification_box)
+                # elif USE_VOLUME:
+                    # self.right_box.insert_child_after(self.clock_lbl, self.vol_box)
+                # elif USE_TRAY:
+                    # self.right_box.insert_child_after(self.clock_lbl, self.tray_box)
+                # else:
+                    # self.right_box.append(self.clock_lbl)
+            # # self.center_box.reorder_child(self.clock_lbl, _pos)
+            # # self.center_box.show_all()
     
     def load_conf(self):
         if not os.path.exists(_panelconf):
@@ -2029,52 +2071,55 @@ class MyWindow(Gtk.ApplicationWindow):
         self._configuration = json.load(_ff)
         _ff.close()
     
-    def on_save_optional_widget_state(self):
-        if self.temp_clock != None:
-            self._configuration["panel"]["clock"] = int(self.temp_clock)
-            self.clock_use = self.temp_clock
-            self.temp_clock = None
-            if self.clock_use == 0:
-                self._timer = False
-                self.center_box.remove(self.clock_lbl)
-                if self._t_id:
-                    GLib.source_remove(self._t_id)
-                    self._t_id = None
-            elif self.clock_use == 1:
-                self.on_set_clock2(0)
+    # def on_save_optional_widget_state(self):
+        # if self.temp_clock != None:
+            # self._configuration["panel"]["clock"] = int(self.temp_clock)
+            # self.clock_use = self.temp_clock
+            # self.temp_clock = None
+            # if self.clock_use == 0:
+                # self._timer = False
+                # if self.win_position == 0:
+                    # self.center_box.remove(self.clock_lbl)
+                # elif self.win_position == 1:
+                    # self.right_box.remove(self.clock_lbl)
+                # if self._t_id:
+                    # GLib.source_remove(self._t_id)
+                    # self._t_id = None
+            # elif self.clock_use == 1:
+                # self.on_set_clock2(0)
         
-        if self.temp_clip != None:
-            self._configuration["panel"]["clipboard"] = int(self.temp_clip)
-            self.clipboard_use = self.temp_clip
-            self.temp_clip = None
-            if self.clipboard_use == 0:
-                self.right_box.remove(self.clipbutton)
-                del self.clipbutton
-                if is_wayland:
-                    try:
-                        os.system("killall wl-paste")
-                    except:
-                        pass
-            elif self.clipboard_use == 1:
-                self.on_set_clipboard(5)
+        # if self.temp_clip != None:
+            # self._configuration["panel"]["clipboard"] = int(self.temp_clip)
+            # self.clipboard_use = self.temp_clip
+            # self.temp_clip = None
+            # if self.clipboard_use == 0:
+                # self.right_box.remove(self.clipbutton)
+                # del self.clipbutton
+                # if is_wayland:
+                    # try:
+                        # os.system("killall wl-paste")
+                    # except:
+                        # pass
+            # elif self.clipboard_use == 1:
+                # self.on_set_clipboard(5)
         
-        if self.temp_out1 != None:
-            self._configuration["panel"]["label1"] = int(self.temp_out1)
-            self.label1_use = self.temp_out1
-            self.temp_out1 = None
-            if self.label1_use == 0:
-                self.label1.set_label("")
-            elif self.label1_use == 1:
-                self.label1.set_label("label1")
+        # if self.temp_out1 != None:
+            # self._configuration["panel"]["label1"] = int(self.temp_out1)
+            # self.label1_use = self.temp_out1
+            # self.temp_out1 = None
+            # if self.label1_use == 0:
+                # self.label1.set_label("")
+            # elif self.label1_use == 1:
+                # self.label1.set_label("label1")
         
-        if self.temp_out2 != None:
-            self._configuration["panel"]["label2"] = int(self.temp_out2)
-            self.label2_use = self.temp_out2
-            self.temp_out2 = None
-            if self.label2_use == 0:
-                self.label2.set_label("")
-            elif self.label2_use == 1:
-                self.label2.set_label("label2")
+        # if self.temp_out2 != None:
+            # self._configuration["panel"]["label2"] = int(self.temp_out2)
+            # self.label2_use = self.temp_out2
+            # self.temp_out2 = None
+            # if self.label2_use == 0:
+                # self.label2.set_label("")
+            # elif self.label2_use == 1:
+                # self.label2.set_label("label2")
         
     def save_conf(self):
         # panel
@@ -2157,9 +2202,12 @@ class MyWindow(Gtk.ApplicationWindow):
             self.win_position = int(_pos)
             self.on_set_win_position(self.win_position)
     
+    def on_time_combo_use(self, _value):
+        self.clock_use_tmp = _value
+    
     def on_time_combo(self, _type):
         if self.clock_use:
-            self.time_format = _type
+            self.time_format_tmp = _type
     
     def set_volume_entry(self, _text):
         self.volume_command_tmp = _text
@@ -2173,6 +2221,8 @@ class MyWindow(Gtk.ApplicationWindow):
             self.temp_out1 = _state
         elif _n == "out2":
             self.temp_out2 = _state
+        elif _n == "note":
+            self.note_show_at_start_tmp = int(_state)
         elif _n == "task":
             self.temp_task = _state
         elif _n == "notification":
@@ -2199,13 +2249,14 @@ class MyWindow(Gtk.ApplicationWindow):
     def entry_timer_text(self, _text):
         self.service_player_tmp = _text
     
+    def on_note_size(self, _value):
+        self.note_size_tmp = _value
+    
     def tray_menu_size(self, _type, _value):
         if _type == "w":
-            self.service_conf["tray-menu-width"] = _value
-            self.service_tray_menu_width = _value
+            self.service_tray_menu_width_tmp = _value
         elif _type == "h":
-            self.service_conf["tray-menu-height"] = _value
-            self.service_tray_menu_height = _value
+            self.service_tray_menu_height_tmp = _value
     
     def set_clip_window_size(self, _type, _value):
         if _type == "w":
@@ -2259,9 +2310,9 @@ class MyWindow(Gtk.ApplicationWindow):
     # the menu window
     # def on_button1_clicked(self, widget, event):
     def on_button1_clicked(self, widget):
-        if self.menu_win_position in [0,1]:
+        if self.menu_win_position == 0:
             self.open_menu_win()
-        elif self.menu_win_position == 2:
+        elif self.menu_win_position == 1:
             self.open_service_win()
     
     def open_menu_win(self):
@@ -2427,15 +2478,57 @@ class MyWindow(Gtk.ApplicationWindow):
                 self._configuration["panel"]["label2"] = self.label2_use
                 self.terminate_thread(2)
                 self.set_timer_label2()
+            if self.service_tray_menu_width_tmp != None:
+                self.service_tray_menu_width = self.service_tray_menu_width_tmp
+                self.service_conf["tray-menu-width"] = self.service_tray_menu_width_tmp
+                self.service_tray_menu_width_tmp = None
+            if self.service_tray_menu_height_tmp != None:
+                self.service_tray_menu_height = self.service_tray_menu_height_tmp
+                self.service_conf["tray-menu-height"] = self.service_tray_menu_height
+                self.service_tray_menu_height_tmp = None
+            if self.note_show_at_start_tmp != None:
+                self.note_show_at_start = self.note_show_at_start_tmp
+                self.service_conf["note-show-start"] = self.note_show_at_start_tmp
+                self.note_show_at_start_tmp = None
+            if self.note_size_tmp != None:
+                self.note_size = self.note_size_tmp
+                self.service_conf["note-size"] = self.note_size_tmp
+                self.note_size_tmp = None
             # time format
-            if self.clock_use:
-                self._configuration["panel"]["time_format"] = self.time_format
+            if self.clock_use_tmp != None:
+                if self.clock_use_tmp != self.clock_use:
+                    if self.clock_use_tmp == 0:
+                        if self._t_id:
+                            GLib.source_remove(self._t_id)
+                            self._t_id = None
+                        if self.clock_lbl in self.center_box:
+                            self.center_box.remove(self.clock_lbl)
+                        elif self.clock_lbl in self.right_box:
+                            self.right_box.remove(self.clock_lbl)
+                    else:
+                        if self.clock_use_tmp == 1:
+                            if self.clock_lbl in self.right_box:
+                                self.right_box.remove(self.clock_lbl)
+                        elif self.clock_use_tmp == 2:
+                            if self.clock_lbl in self.center_box:
+                                self.center_box.remove(self.clock_lbl)
+                        self.on_set_clock2(self.clock_use_tmp)
+                        self._t_id = GLib.timeout_add(60000, self.on_clock)
+                    self.clock_use = self.clock_use_tmp
+                    self._configuration["panel"]["clock"] = self.clock_use_tmp
+                self.clock_use_tmp = None
+            if self.clock_use in [1,2]:
+                if self.time_format_tmp:
+                    self.timer_format = self.timer_format_tmp
+                    self._configuration["panel"]["time_format"] = self.time_format_tmp
+                    self.timer_format_tmp = None
                 self._timer = False
                 if self._t_id:
                     GLib.source_remove(self._t_id)
                     self._t_id = None
                 self.set_on_clock()
                 self._t_id = GLib.timeout_add(60000, self.on_clock)
+                
             # volume application
             if self.volume_command_tmp != self.volume_command:
                 if self.volume_command_tmp == None:
@@ -2520,7 +2613,7 @@ class MyWindow(Gtk.ApplicationWindow):
                 self.notification_conf["bottom_limit"] = self.not_bottom_limit_tmp
                 self.not_bottom_limit_tmp = None
             
-            self.on_save_optional_widget_state()
+            # self.on_save_optional_widget_state()
             self.save_conf()
         # elif response == Gtk.ResponseType.CANCEL:
         else:
@@ -2532,46 +2625,52 @@ class MyWindow(Gtk.ApplicationWindow):
         if old_pos != self.win_position:
             self.win_position = old_pos
             self.on_set_win_position(self.win_position)
-            self.temp_clip = None
-            self.temp_clock = None
-            self.temp_out1 = None
-            self.temp_out2 = None
-            self.temp_task = None
-            if self.clock_use:
-                self.time_format = self._configuration["panel"]["time_format"]
-            
-            self.volume_command_tmp = None
-            
-            self.menu_width_tmp = 0
-            self.menu_height_tmp = 0
-            self.menu_terminal_tmp = None
-            self.menu_cat_icon_size_tmp = 0
-            self.menu_item_icon_size_tmp = 0
-            self.menu_live_search_tmp = None
-            self.menu_win_position_tmp = None
-            
-            self.service_width_tmp = 0
-            self.service_height_tmp = 0
-            self.service_sound_player_tmp = None
-            self.service_player_tmp = ""
-            
-            self.clip_width_tmp = 0
-            self.clip_height_tmp = 0
-            self.clip_max_chars_tmp = 0
-            self.clip_max_clips_tmp = 0
-            self.chars_preview_tmp = 0
-            self.not_width_tmp = 0
-            self.not_height_tmp = 0
-            self.not_icon_size_tmp = 0
-            self.not_dnd_tmp = -1
-            self.not_max_chars_tmp = None
-            self.not_sounds_tmp = -1
+        self.temp_clip = None
+        self.temp_clock = None
+        self.temp_out1 = None
+        self.temp_out2 = None
+        self.temp_task = None
+        self.service_tray_menu_width_tmp = None
+        self.service_tray_menu_height_tmp = None
+        self.note_show_at_start_tmp = None
+        self.note_size_tmp = None
+        if self.clock_use:
+            self.timer_format_tmp = None
+        self.clock_use_tmp = None
+        
+        self.volume_command_tmp = None
+        
+        self.menu_width_tmp = 0
+        self.menu_height_tmp = 0
+        self.menu_terminal_tmp = None
+        self.menu_cat_icon_size_tmp = 0
+        self.menu_item_icon_size_tmp = 0
+        self.menu_live_search_tmp = None
+        self.menu_win_position_tmp = None
+        self.menu_n_items_tmp = None
+        
+        self.service_width_tmp = 0
+        self.service_height_tmp = 0
+        self.service_sound_player_tmp = None
+        self.service_player_tmp = ""
+        
+        self.clip_width_tmp = 0
+        self.clip_height_tmp = 0
+        self.clip_max_chars_tmp = 0
+        self.clip_max_clips_tmp = 0
+        self.chars_preview_tmp = 0
+        self.not_width_tmp = 0
+        self.not_height_tmp = 0
+        self.not_icon_size_tmp = 0
+        self.not_dnd_tmp = -1
+        self.not_max_chars_tmp = None
+        self.not_sounds_tmp = -1
     
     # def on_other_button(self, btn, event):
     def on_other_button(self, btn):
-        if self.menu_win_position in [0,1]:
+        if self.menu_win_position == 0:
             self.open_service_win()
-        elif self.menu_win_position == 2:
+        elif self.menu_win_position == 1:
             self.open_menu_win()
     
     def open_service_win(self):
@@ -2731,7 +2830,7 @@ class menuWin(Gtk.Window):
             if self._parent.menu_win_position == 0:
                 GtkLayerShell.set_margin(self, GtkLayerShell.Edge.LEFT, 10)
                 GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.LEFT, 1)
-            elif self._parent.menu_win_position == 2:
+            elif self._parent.menu_win_position == 1:
                 GtkLayerShell.set_margin(self, GtkLayerShell.Edge.RIGHT, 10)
                 GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.RIGHT, 1)
             GtkLayerShell.set_margin(self, GtkLayerShell.Edge.BOTTOM, 10)
@@ -2740,7 +2839,7 @@ class menuWin(Gtk.Window):
             if self._parent.menu_win_position == 0:
                 GtkLayerShell.set_margin(self, GtkLayerShell.Edge.LEFT, 10)
                 GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.LEFT, 1)
-            elif self._parent.menu_win_position == 2:
+            elif self._parent.menu_win_position == 1:
                 GtkLayerShell.set_margin(self, GtkLayerShell.Edge.RIGHT, 10)
                 GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.RIGHT, 1)
             GtkLayerShell.set_margin(self, GtkLayerShell.Edge.TOP, 10)
@@ -3475,7 +3574,7 @@ class ynDialog(Gtk.Dialog):
         self.set_name("Info")
         # self.set_default_size(150, 100)
         label = Gtk.Label(label=_title1)
-        box = self.get_content_area()
+        box = self.get_child()
         box.append(label)
         self.set_visible(True)
 
@@ -3487,7 +3586,7 @@ class infoDialog(Gtk.Dialog):
         self.set_name("Info")
         # self.set_default_size(150, 100)
         label = Gtk.Label(label=_title1)
-        box = self.get_content_area()
+        box = self.get_child()
         box.append(label)
         self.set_visible(True)
 
@@ -3722,19 +3821,19 @@ class otherWin(Gtk.Window):
         if _win_pos == 1:
             GtkLayerShell.set_margin(self, GtkLayerShell.Edge.BOTTOM, 10)
             GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.BOTTOM, 1)
-            if self._parent.menu_win_position in [0,1]:
+            if self._parent.menu_win_position == 0:
                 GtkLayerShell.set_margin(self, GtkLayerShell.Edge.RIGHT, 10)
                 GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.RIGHT, 1)
-            elif self._parent.menu_win_position == 2:
+            elif self._parent.menu_win_position == 1:
                 GtkLayerShell.set_margin(self, GtkLayerShell.Edge.LEFT, 10)
                 GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.LEFT, 1)
         else:
             GtkLayerShell.set_margin(self, GtkLayerShell.Edge.TOP, 10)
             GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.TOP, 1)
-            if self._parent.menu_win_position in [0,1]:
+            if self._parent.menu_win_position == 0:
                 GtkLayerShell.set_margin(self, GtkLayerShell.Edge.RIGHT, 10)
                 GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.RIGHT, 1)
-            elif self._parent.menu_win_position == 2:
+            elif self._parent.menu_win_position == 1:
                 GtkLayerShell.set_margin(self, GtkLayerShell.Edge.LEFT, 10)
                 GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.LEFT, 1)
         
@@ -3766,8 +3865,8 @@ class otherWin(Gtk.Window):
         # _stack_vbox2.set_homogeneous(True)
         self._stack.add_titled(_stack_vbox2,"Notifications","Notifications")
         
-        # _stack_vbox3 = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=0)
-        # self._stack.add_titled(_stack_vbox3,"Notes","Notes")
+        _stack_vbox3 = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=0)
+        self._stack.add_titled(_stack_vbox3,"Notes","Notes")
         
         self._stacksw = Gtk.StackSwitcher()
         self._stacksw.set_stack(self._stack)
@@ -3897,17 +3996,15 @@ class otherWin(Gtk.Window):
             
             self.list_box.append(row)
         
-        # ## STICKY NOTES
-        # self.path_notes = os.path.join(_curr_dir,"notes")
-        # self.add_note = Gtk.Button(label="New sticky note")
-        # self.add_note.set_relief(Gtk.ReliefStyle.NONE)
-        # self.add_note.connect('clicked', self.on_add_note)
-        # _stack_vbox3.add(self.add_note)
+        ## STICKY NOTES
+        self.path_notes = os.path.join(_curr_dir,"notes")
+        self.add_note = Gtk.Button(label="New sticky note")
+        self.add_note.connect('clicked', self.on_add_note)
+        _stack_vbox3.append(self.add_note)
         
-        # self.show_hide_notes = Gtk.Button(label="Show/hide all notes")
-        # self.show_hide_notes.set_relief(Gtk.ReliefStyle.NONE)
-        # self.show_hide_notes.connect('clicked', self.on_show_hide_notes)
-        # _stack_vbox3.add(self.show_hide_notes)
+        self.show_hide_notes = Gtk.Button(label="Show/hide all notes")
+        self.show_hide_notes.connect('clicked', self.on_show_hide_notes)
+        _stack_vbox3.append(self.show_hide_notes)
         
         ##############
         
@@ -3974,19 +4071,18 @@ class otherWin(Gtk.Window):
                 break
             return
         
-        for el in self._parent.list_notes:
-            el.show_all()
+        # for el in self._parent.list_notes:
+            # el.set_visible(True)
         
-        _notedialog = noteDialog(self, "", time_now)
-        _notedialog.show_all()
+        _notedialog = noteDialog(self._parent, "", time_now)
+        _notedialog.set_visible(True)
     
     def on_show_hide_notes(self, btn):
         for el in self._parent.list_notes:
-            # if el.get_realized():
             if el.get_property("visible"):
                 el.set_visible(False)
             elif not el.get_property("visible"):
-                el.show_all()
+                el.set_visible(True)
         
     def on_remove_btn(self, btn, el, row):
         try:
@@ -4079,83 +4175,73 @@ class noteDialog(Gtk.Window):
         self._id = _id
         self.path_notes = os.path.join(_curr_dir,"notes")
         
-        # GtkLayerShell.init_for_window(self)
-        # GtkLayerShell.set_namespace(self, "notewin")
-        # GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.ON_DEMAND)
-        # # GtkLayerShell.set_layer(self, GtkLayerShell.Layer.TOP)
-        
         self.set_title("Note")
         self.set_decorated(False)
         # self.set_transient_for(self._parent)
         
-        # self.connect('delete-event', self.delete_event)
-        # self.connect('destroy-event', self.delete_event)
-        # self.connect('destroy', self.delete_event)
-        self.connect('close-request', self.delete_event)
         self.connect('destroy', self.delete_event)
-        self.connect('unmap-event', self.on_unmap_event)
-        self.connect('hide', self.on_unmap_event)
+        self.connect('close-request', self.delete_event)
         
         self.self_style_context = self.get_style_context()
         self.self_style_context.add_class("notewin")
         
-        # self.set_default_size(300, 300)
-        self.set_size_request(300, 300)
+        self.set_size_request(int(self._parent.note_size)+50, int(self._parent.note_size))
         
         box = Gtk.Box.new(orientation=Gtk.Orientation.VERTICAL,spacing=0)
-        self.add(box)
+        self.set_child(box)
         
         _scrolledwin = Gtk.ScrolledWindow()
         _scrolledwin.set_overlay_scrolling(True)
         _scrolledwin.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        box.pack_start(_scrolledwin, True, True, 0)
+        _scrolledwin.set_hexpand(True)
+        _scrolledwin.set_vexpand(True)
+        box.append(_scrolledwin)
         
         self.text_view = Gtk.TextView()
         self.text_view.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
-        # self.text_view.override_background_color(Gtk.StateFlags.NORMAL, Gdk.RGBA(10, 8, 0, 1))
-        _scrolledwin.add(self.text_view)
+        _scrolledwin.set_child(self.text_view)
         
         # button box
         btn_box = Gtk.Box.new(orientation=Gtk.Orientation.HORIZONTAL,spacing=0)
-        box.add(btn_box)
+        box.append(btn_box)
         
         delete_btn = Gtk.Button(label="Delete")
-        delete_btn.set_relief(Gtk.ReliefStyle.NONE)
+        delete_btn.set_hexpand(True)
         delete_btn.connect('clicked', self.on_delete)
-        btn_box.pack_start(delete_btn,True,True,0)
+        btn_box.append(delete_btn)
         
         accept_btn = Gtk.Button(label="Accept")
-        accept_btn.set_relief(Gtk.ReliefStyle.NONE)
+        accept_btn.set_hexpand(True)
         accept_btn.connect('clicked', self.on_accept)
-        btn_box.pack_start(accept_btn,True,True,0)
+        btn_box.append(accept_btn)
+        
+        close_btn = Gtk.Button(label="Close")
+        box.append(close_btn)
+        close_btn.connect("clicked", lambda x: self.close())
         
         self.text_buffer = self.text_view.get_buffer()
         self.text_buffer.set_text(_text)
         
-        # _data = self._id.split("_")
-        # if _data and len(_data) == 2:
-            # _x,_y = _data[1].split("-")
-            # self.move(_x,_y)
+        # self.connect('show', self.on_show)
         
-        # self.connect('hide', self.on_hide)
+        self.set_visible(False)
         
-        # self.set_events(Gdk.EventMask.PROPERTY_CHANGE_MASK)
-        # self.connect('property-notify-event', self.on_move)
-        
-        # self.show_all()
-        
-    # def on_move(self,widget,event):
-        # pass
+    # def on_show(self, widget):
+        # self._surface = self.get_surface()
+        # self.surface_id_connect = self._surface.connect("layout",self.on_surface)
     
-    # def on_hide(self, widget):
-        # _position = self.get_position()
+    # def on_surface(self, _srf,ww,hh):
+        # self.old_width = self.get_width()
+        # self.old_height = self.get_height()
+        # self._value = [self.old_width,self.old_height]
+        # _srf.disconnect(self.surface_id_connect)
+        # self.surface_id_connect = None
     
-    def on_unmap_event(self, widget, event=None):
-        if self.get_property("visible"):
-            return False
-    
-    def delete_event(self, widget, event=None):
-        return True
+    def delete_event(self, widget=None, event=None):
+        if self.get_textview_text() == "" or self.get_textview_text() == None:
+            self.destroy()
+        else:
+            self.set_visible(False)
         
     def get_textview_text(self):
         text_view_text = self.text_buffer.get_text(self.text_buffer.get_start_iter(),self.text_buffer.get_end_iter(),False)
@@ -4169,8 +4255,8 @@ class noteDialog(Gtk.Window):
             try:
                 with open(os.path.join(self.path_notes,self._id),"w") as ffile:
                     ffile.write(textview_text)
-                if not self._id in self._parent._parent.list_notes:
-                    self._parent._parent.list_notes.append(self)
+                if not self._id in self._parent.list_notes:
+                    self._parent.list_notes.append(self)
             except:
                 pass
     
@@ -4197,7 +4283,7 @@ class timerDialog(Gtk.Dialog):
         self.self_style_context.add_class("timerwin")
         
         self.set_default_size(100, 100)
-        box = self.get_content_area()
+        box = self.get_child()
         self.set_decorated(False)
         
         for el in box.get_children()[0].get_children()[0].get_children():
@@ -4249,7 +4335,7 @@ class DialogConfiguration(Gtk.Dialog):
         self.self_style_context = self.get_style_context()
         self.self_style_context.add_class("configuratorwin")
         
-        box = self.get_content_area()
+        box = self.get_child()
         
         self.set_modal(True)
         self.set_transient_for(self._parent)
@@ -4383,10 +4469,17 @@ class DialogConfiguration(Gtk.Dialog):
         clock_lbl = Gtk.Label(label="Clock")
         self.page1_box.attach(clock_lbl,0,9,1,1)
         clock_lbl.set_halign(1)
-        clock_sw = Gtk.Switch.new()
+        # clock_sw = Gtk.Switch.new()
+        # clock_sw.set_active(self._parent.clock_use)
+        # clock_sw.set_halign(1)
+        # clock_sw.connect('notify::active', self.on_switch, "clock")
+        # self.page1_box.attach_next_to(clock_sw,clock_lbl,1,1,1)
+        clock_sw = Gtk.ComboBoxText.new()
+        clock_sw.append_text("Off")
+        clock_sw.append_text("Center")
+        clock_sw.append_text("Right")
         clock_sw.set_active(self._parent.clock_use)
-        clock_sw.set_halign(1)
-        clock_sw.connect('notify::active', self.on_switch, "clock")
+        clock_sw.connect('changed', self.on_time_combo_use)
         self.page1_box.attach_next_to(clock_sw,clock_lbl,1,1,1)
         # 
         _time_format = Gtk.ComboBoxText.new()
@@ -4465,7 +4558,6 @@ class DialogConfiguration(Gtk.Dialog):
         menu_lbl_wp.set_halign(1)
         menu_combo_p = Gtk.ComboBoxText.new()
         menu_combo_p.append_text("Left")
-        menu_combo_p.append_text("Center")
         menu_combo_p.append_text("Right")
         menu_combo_p.set_active(self._parent.menu_win_position)
         menu_combo_p.connect('changed', self.on_menu_combo, "pos")
@@ -4521,6 +4613,24 @@ class DialogConfiguration(Gtk.Dialog):
         elif self._parent.service_sound_player == 1:
             timer_combo.set_active(1)
             self.entry_timer.set_text(self._parent.service_player)
+        
+        lbl_note_show = Gtk.Label(label="Show all notes at start")
+        lbl_note_show.set_halign(1)
+        self.page3_box.attach(lbl_note_show,0,6,1,1)
+        note_sw = Gtk.Switch.new()
+        note_sw.set_active(self._parent.note_show_at_start)
+        note_sw.set_halign(1)
+        note_sw.connect('notify::active', self.on_switch, "note")
+        self.page3_box.attach_next_to(note_sw,lbl_note_show,1,1,1)
+        
+        lbl_note_size = Gtk.Label(label="Size of all notes")
+        lbl_note_size.set_halign(1)
+        self.page3_box.attach(lbl_note_size,0,7,1,1)
+        note_size_spinbtn = Gtk.SpinButton.new_with_range(50,1000,1)
+        note_size_spinbtn.set_value(self._parent.note_size)
+        self.page3_box.attach_next_to(note_size_spinbtn,lbl_note_size,1,1,1)
+        note_size_spinbtn.connect('value-changed', self.on_note_size)
+        note_size_spinbtn.set_numeric(True)
         
         # tray menu size
         _tray_menu_width = Gtk.Label(label="Tray menu width")
@@ -4749,19 +4859,17 @@ class DialogConfiguration(Gtk.Dialog):
         use_notif_combo.connect('changed', self.on_other_combo, "notification")
         self.page6_box.attach_next_to(use_notif_combo,not_lbl_enabled,1,1,1)
         
-        
-        _lbl_double_click = Gtk.Label(label="Double click to launch apps")
-        self.page6_box.attach(_lbl_double_click,0,6,1,1)
-        _lbl_double_click.set_halign(1)
-        double_click_combo = Gtk.ComboBoxText.new()
-        double_click_combo.append_text("no")
-        double_click_combo.append_text("yes")
-        double_click_combo.set_active(DOUBLE_CLICK)
-        double_click_combo.connect('changed', self.on_other_combo, "click")
-        self.page6_box.attach_next_to(double_click_combo,_lbl_double_click,1,1,1)
+        # _lbl_double_click = Gtk.Label(label="Double click to launch apps")
+        # self.page6_box.attach(_lbl_double_click,0,6,1,1)
+        # _lbl_double_click.set_halign(1)
+        # double_click_combo = Gtk.ComboBoxText.new()
+        # double_click_combo.append_text("no")
+        # double_click_combo.append_text("yes")
+        # double_click_combo.set_active(DOUBLE_CLICK)
+        # double_click_combo.connect('changed', self.on_other_combo, "click")
+        # self.page6_box.attach_next_to(double_click_combo,_lbl_double_click,1,1,1)
         
         ###########
-        # self.show_all()
         self.set_visible(True)
     
     def delete_event(self, widget, event=None):
@@ -4828,6 +4936,9 @@ class DialogConfiguration(Gtk.Dialog):
     def on_switch(self, btn, _state, _n):
         self._parent.on_switch_btn(_n, btn.get_active())
         
+    def on_time_combo_use(self, cb):
+        self._parent.on_time_combo_use(cb.get_active())
+        
     def on_time_combo(self, cb):
         self._parent.on_time_combo(cb.get_active())
         
@@ -4851,6 +4962,9 @@ class DialogConfiguration(Gtk.Dialog):
     def on_entry_timer(self, _entry):
         self._parent.entry_timer_text(_entry.get_text())
         
+    def on_note_size(self, btn):
+        self._parent.on_note_size(btn.get_value_as_int())
+    
     def on_tray_wh_spinbtn(self, btn, _type):
         self._parent.tray_menu_size(_type, btn.get_value_as_int())
     
