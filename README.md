@@ -7,7 +7,7 @@ Wbar is a panel to be used under wayland, if the display server support
 the layer-shell protocols. All the lroots based window managers should 
 support wbar.
 
-There is a porting of wbar to the Gtk4 gui in the releases page, because the gtk3 version freeze completely for unknown reasons. Some features haven't been implemented: no notes, no timer, and no other things. Requirements: gtk4-layer-shell + python3 binding + other if the case (see below).
+This is a porting of wbar to the Gtk4 gui, because the gtk3 version freeze completely for unknown reasons. The gtk3 version is developed no more. Requirements: gtk4-layer-shell + python3 binding + other if the case (see below).
 
 Features:
 - application menu
@@ -19,7 +19,7 @@ Features:
 - a simple timer (gtk3 version)
 - command outputs
 - a graphical configurator
-- sticky notes (gtk3 version)
+- sticky notes
 
 Requirements:
 - a wayland display server with layer-shell support
@@ -39,8 +39,7 @@ contain the right commands for most distros.
 
 Options and configurations
 
-Wbar has a graphical configurator for many options. Other very few options have 
-to be changed manually.
+Wbar has a graphical configurator for many options.
 
 The bash scripts volume_SOMENAME.sh use the command pactl for their 
 actions. amixer can also be used: switch the commands in those files.
@@ -79,7 +78,7 @@ name of the applications you may want not to be stored in the history list.
 ------------------------------
 
 Known issue:
-- the gtk3 version completely freeze randomly; I've started a porting to the gtk4 gui.
+- the gtk3 version completely freeze randomly; it is now deprecated.
 
 ![My image](https://github.com/frank038/wbar/blob/main/wbar_01.jpg)
 
