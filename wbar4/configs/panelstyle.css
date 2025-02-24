@@ -221,6 +221,11 @@ grid {
   font-size: 24px;
 }
 
+/*
+#mysearchentry {
+  background: white;
+}*/
+
 #yndialog {
   border-radius: 10px 10px 10px 10px;
   border-width: 0px;
