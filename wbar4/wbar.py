@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-# COMANDO: 
+# COMMAND: 
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar.py
 
-# V. 0.9.16
+# V. 0.9.17
 
 import os,sys,shutil,stat
 import gi
@@ -125,9 +125,9 @@ _panelconf = os.path.join(_curr_dir, "configs/panelconfg.json")
 
 _menu_conf = None
 _menu_config_file = os.path.join(_curr_dir,"configs","menu.json")
-# live_search: num. of chars to perform a seeking; win_position: 0 left - 1 right; num_items: number of items per row in the menu window
+# live_search: num. of chars to perform a seeking; win_position: 0 left - 1 right; num_items: number of items per row in the menu window; the menu editor command
 _starting_menu_conf = {"wwidth":880,"wheight":600,"terminal":"xfce4-terminal",\
-"cat_icon_size":64,"item_icon_size":64,"live_search":3,"win_position":0,"num_items":3}
+"cat_icon_size":64,"item_icon_size":64,"live_search":3,"win_position":0,"num_items":3,"menu_editor":""}
 
 if not os.path.exists(_menu_config_file):
     try:
@@ -189,7 +189,7 @@ def MyDialog(data1, data2, parent):
     dialog.show(parent)
 
 qq = queue.Queue(maxsize=1)
-USER_THEME=0
+# USER_THEME=0
 
 # add a monitor after adding a new path
 app_dirs_user = [os.path.join(os.path.expanduser("~"), ".local/share/applications")]
@@ -626,6 +626,8 @@ class MyWindow(Gtk.ApplicationWindow):
         self.menu_win_position_tmp = None
         self.menu_n_items = self.menu_conf["num_items"]
         self.menu_n_items_tmp = None
+        self.menu_editor = self.menu_conf["menu_editor"]
+        self.menu_editor_tmp = None
         
         self.service_conf = _service_conf
         self.service_width = self.service_conf["wwidth"]
@@ -667,6 +669,7 @@ class MyWindow(Gtk.ApplicationWindow):
         self.label2_use = _panel_conf["label2"]
         self.task_use = _panel_conf["tasklist"]
         self.clock_use = _panel_conf["clock"]
+        self.clock_use_tmp = None
         self.time_format = _panel_conf["time_format"]
         self.time_format_tmp = None
         self.volume_command = _panel_conf["volume_command"]
@@ -2158,8 +2161,11 @@ class MyWindow(Gtk.ApplicationWindow):
         elif _type == "n_item":
             self.menu_n_items_tmp = _value
         
-    def entry_menu(self, _type, _value):
-        self.menu_terminal_tmp = _value
+    # def entry_menu(self, _type, _value):
+        # self.menu_terminal_tmp = _value
+    
+    def on_menu_editor(self, _text):
+        self.menu_editor_tmp = _text
     
     def on_menu_win_position(self, _type, _value):
         if _type == "pos":
@@ -2430,6 +2436,10 @@ class MyWindow(Gtk.ApplicationWindow):
                 self.menu_n_items = self.menu_n_items_tmp
                 self.menu_conf["num_items"] = self.menu_n_items
                 self.menu_n_items_tmp = None
+            if self.menu_editor_tmp != None:
+                self.menu_editor = self.menu_editor_tmp
+                self.menu_conf["menu_editor"] = self.menu_editor_tmp
+                self.menu_editor_tmp = None
             
             ## SERVICE
             if self.service_width_tmp != self.service_width:
@@ -2648,6 +2658,7 @@ class MyWindow(Gtk.ApplicationWindow):
         self.menu_live_search_tmp = None
         self.menu_win_position_tmp = None
         self.menu_n_items_tmp = None
+        self.menu_editor_tmp = None
         
         self.service_width_tmp = 0
         self.service_height_tmp = 0
@@ -2889,7 +2900,6 @@ class menuWin(Gtk.Window):
         self.ivbox.set_homogeneous(True)
         self.ivbox.set_hexpand(True)
         self.ivbox.set_vexpand(True)
-        # self.main_box.pack_start(self.ivbox, True, True, 0)
         self.main_box.append(self.ivbox)
         
         # scrolled window
@@ -2898,43 +2908,7 @@ class menuWin(Gtk.Window):
         self.scrolledwindow.set_vexpand(True)
         self.scrolledwindow.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         self.scrolledwindow.set_placement(Gtk.CornerType.TOP_LEFT)
-        # self.ivbox.pack_start(self.scrolledwindow, True, True, 0)
         self.ivbox.append(self.scrolledwindow)
-        
-        # # icon name comment exec path appinfo
-        # self.liststore = Gtk.ListStore(GdkPixbuf.Pixbuf, str, str, str, str, object)
-        
-        # self.iconview = Gtk.IconView.new()
-        # self.iconview.set_model(self.liststore)
-        # self.iconview.set_pixbuf_column(0)
-        # self.iconview.set_text_column(1)
-        # self.iconview.set_tooltip_column(2)
-        # self.iconview.set_selection_mode(Gtk.SelectionMode.SINGLE)
-        # if DOUBLE_CLICK == 0:
-            # self.iconview.set_activate_on_single_click(True)
-        # self.iconview.set_name("myiconview")
-        # #
-        # # target_entry = Gtk.TargetEntry.new('calculon', 1, 999)
-        # # # self.DRAG_ACTION = Gdk.DragAction.MOVE
-        # # self.DRAG_ACTION = Gdk.DragAction.COPY
-        # # self._start_path = None
-        # # self.iconview.enable_model_drag_source(Gdk.ModifierType.BUTTON1_MASK, [target_entry], self.DRAG_ACTION)
-        # # self.iconview.enable_model_drag_dest([target_entry], self.DRAG_ACTION)
-        # # self.iconview.connect("drag-data-get", self.on_drag_data_get)
-        # # self.iconview.connect("drag-data-received", self.on_drag_data_received)
-        # #
-        # self.iconview.connect("item-activated", self.on_iv_item_activated)
-        # # self.iconview.connect("button_press_event", self.mouse_event)
-        # # self.scrolledwindow.add(self.iconview)
-        # self.scrolledwindow.set_child(self.iconview)
-        ##############
-        # self.gridview = Gtk.GridView()
-        # self.scrolledwindow.set_child(self.gridview)
-        
-        # # icon name comment exec path appinfo
-        # self.liststore = Gio.ListStore()
-        # self.selection_model = Gtk.SingleSelection.new(self.liststore)
-        # self.gridview.set_model(self.selection_model)
         
         ##############
         self.iconview = Gtk.FlowBox()
@@ -2950,42 +2924,39 @@ class menuWin(Gtk.Window):
         self.gesture_iv.set_button(3)
         self.iconview.add_controller(self.gesture_iv)
         self.gesture_iv.connect('pressed', self.on_iv_gesture)
+        
+        drop_controller = Gtk.DropTarget.new(
+            type=GObject.TYPE_NONE, actions=Gdk.DragAction.COPY
+        )
+        drop_controller.set_gtypes([str])
+        drop_controller.connect('drop', self.on_drop)
+        self.iconview.add_controller(drop_controller)
+        
         ##############
         # separator
         separator = Gtk.Separator()
         separator.set_orientation(Gtk.Orientation.HORIZONTAL)
         # self.main_box.pack_start(separator, False, False, 4)
         self.main_box.append(separator)
-        # search box
-        self.scbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
-        self.scbox.set_homogeneous(True)
-        # #
-        # self.search_bar = Gtk.SearchBar()
-        # self.search_bar.set_search_mode(True)
-        # self.searchentry = Gtk.SearchEntry()
+        
+        ### SEARCH BAR
+        self.search_bar = Gtk.SearchBar()
+        self.search_bar.set_search_mode(True)
+        self.searchentry = Gtk.SearchEntry()
         # self.searchentry.connect('icon-press', self.on_icon_press)
-        # self.searchentry.connect('activate', self.on_search_return)
-        # self.searchentry.set_name("mysearchentry")
-        # if self._parent.menu_live_search > 0 :
-            # self.searchentry.connect('changed', self.on_search)
+        self.searchentry.set_name("mysearchentry")
+        # if self._parent.menu_live_search > 2 :
+            # 'search'?
+        self.searchentry.connect('search-changed', self.on_search)
+        # else:
+        self.searchentry.connect('activate', self.on_search_return)
         # self.search_bar.connect_entry(self.searchentry)
-        # # Get the correct children into the right variables
-        # _search_main_box = self.search_bar.get_children()[0].get_children()[0]
-        # box1, box2, box3 = _search_main_box.get_children()
-        # # 
-        # box2.props.hexpand = True
-        # box2.props.halign = Gtk.Align.FILL
-        # _search_main_box.remove(box1)
-        # box3.props.hexpand = False
-        # ###########
-        # self.search_bar.add(self.searchentry)
-        # self.search_bar.set_show_close_button(False)
-        # self.search_bar.set_visible(True)
-        # self.search_bar.set_search_mode(True)
-        # # self.scbox.pack_start(self.search_bar, False, True, 0)
-        # self.scbox.append(self.search_bar)
-        # # self.main_box.pack_start(self.scbox, False, True, 0)
-        # self.main_box.append(self.scbox)
+        self.searchentry.props.hexpand = True
+        self.search_bar.set_child(self.searchentry)
+        self.search_bar.set_show_close_button(False)
+        self.search_bar.set_visible(True)
+        self.search_bar.set_search_mode(True)
+        self.main_box.append(self.search_bar)
         
         # # separator
         # separator = Gtk.Separator()
@@ -2997,63 +2968,46 @@ class menuWin(Gtk.Window):
         # self.main_box.pack_start(self.btn_box,False,True,0)
         self.main_box.append(self.btn_box)
         
-        self.prog_modify_menu = None
-        # _prog_modify_menu_path = os.path.join(_curr_dir,"menu_editor")
-        # if os.path.exists(_prog_modify_menu_path):
-            # self.prog_modify_menu = _prog_modify_menu_path
-            # self.modify_menu = Gtk.Button()
-            # pix = GdkPixbuf.Pixbuf.new_from_file_at_size(os.path.join(_curr_dir,"icons","modify_menu.svg"), int(self.BTN_ICON_SIZE/2), int(self.BTN_ICON_SIZE/2))
-            # # _image = Gtk.Image.new_from_pixbuf(pix)
-            # _pb = Gdk.Texture.new_for_pixbuf(pix)
-            # _image = Gtk.Image.new_from_paintable(_pb)
-            # # self.modify_menu.set_image(_image)
-            # self.modify_menu.set_child(_image)
-            # # self.modify_menu.set_relief(Gtk.ReliefStyle.NONE)
-            # self.modify_menu.set_tooltip_text("Modify the menu")
-            # self.modify_menu.connect('clicked', self.on_modify_menu)
-            # # self.btn_box.pack_start(self.modify_menu,True,False,0)
-            # self.btn_box.append(self.modify_menu)
+        ## menu editor button
+        if self._parent.menu_editor:
+            self.modify_menu_btn = Gtk.Button()
+            self.modify_menu_btn.set_tooltip_text("Modify the menu")
+            self.modify_menu_btn.connect('clicked', self.on_modify_menu)
+            pix = GdkPixbuf.Pixbuf.new_from_file_at_size(os.path.join(_curr_dir,"icons","modify_menu.svg"), int(self.BTN_ICON_SIZE/2), int(self.BTN_ICON_SIZE/2))
+            _pb = Gdk.Texture.new_for_pixbuf(pix)
+            _image = Gtk.Image.new_from_paintable(_pb)
+            _image.set_pixel_size(int(self.BTN_ICON_SIZE/2))
+            self.modify_menu_btn.set_child(_image)
+            self.btn_box.append(self.modify_menu_btn)
         
         self.logout_btn = Gtk.Button()
         pix = GdkPixbuf.Pixbuf.new_from_file_at_size(os.path.join(_curr_dir,"icons","system-logout.svg"), int(self.BTN_ICON_SIZE/2), int(self.BTN_ICON_SIZE/2))
-        # _image = Gtk.Image.new_from_pixbuf(pix)
         _pb = Gdk.Texture.new_for_pixbuf(pix)
         _image = Gtk.Image.new_from_paintable(_pb)
         _image.set_pixel_size(int(self.BTN_ICON_SIZE/2))
-        # self.logout_btn.set_image(_image)
         self.logout_btn.set_child(_image)
-        # self.logout_btn.set_relief(Gtk.ReliefStyle.NONE)
         self.logout_btn.set_tooltip_text("Logout")
         self.logout_btn.connect('clicked', self.on_service_btn, "logout")
-        # self.btn_box.pack_start(self.logout_btn,True,False,0)
         self.btn_box.append(self.logout_btn)
         
         self.reboot_btn = Gtk.Button()
         pix = GdkPixbuf.Pixbuf.new_from_file_at_size(os.path.join(_curr_dir,"icons","system-restart.svg"), int(self.BTN_ICON_SIZE/2), int(self.BTN_ICON_SIZE/2))
-        # _image = Gtk.Image.new_from_pixbuf(pix)
         _pb = Gdk.Texture.new_for_pixbuf(pix)
         _image = Gtk.Image.new_from_paintable(_pb)
         _image.set_pixel_size(int(self.BTN_ICON_SIZE/2))
-        # self.reboot_btn.set_image(_image)
         self.reboot_btn.set_child(_image)
-        # self.reboot_btn.set_relief(Gtk.ReliefStyle.NONE)
         self.reboot_btn.set_tooltip_text("Restart")
         self.reboot_btn.connect('clicked', self.on_service_btn, "restart")
-        # self.btn_box.pack_start(self.reboot_btn,True,False,0)
         self.btn_box.append(self.reboot_btn)
         
         self.shutdown_btn = Gtk.Button()
         pix = GdkPixbuf.Pixbuf.new_from_file_at_size(os.path.join(_curr_dir,"icons","system-shutdown.svg"), int(self.BTN_ICON_SIZE/2), int(self.BTN_ICON_SIZE/2))
-        # _image = Gtk.Image.new_from_pixbuf(pix)
         _pb = Gdk.Texture.new_for_pixbuf(pix)
         _image = Gtk.Image.new_from_paintable(_pb)
         _image.set_pixel_size(int(self.BTN_ICON_SIZE/2))
-        # self.shutdown_btn.set_image(_image)
         self.shutdown_btn.set_child(_image)
         self.shutdown_btn.set_tooltip_text("Shutdown")
-        # self.shutdown_btn.set_relief(Gtk.ReliefStyle.NONE)
         self.shutdown_btn.connect('clicked', self.on_service_btn, "shutdown")
-        # self.btn_box.pack_start(self.shutdown_btn,True,False,0)
         self.btn_box.append(self.shutdown_btn)
         
         # the bookmark button
@@ -3070,9 +3024,71 @@ class menuWin(Gtk.Window):
         ###########
         self.connect("close-request", self.on_menu_close)
         ###########
+        self.connect("hide", self.on_hide)
         self.set_visible(True)
-        # self.iconview.unselect_all()
         
+    def on_hide(self, widget):
+        self.empty_iconview()
+        if self._btn_toggled:
+            self._btn_toggled.set_active(False)
+        self._btn_toggled = self.btn_bookmark
+        self.populate_bookmarks()
+        self._btn_toggled.set_active(True)
+        self.searchentry.set_text("")
+    
+    def empty_iconview(self):
+        try:
+            self.iconview.remove_all()
+            self.list_elements = []
+        except:
+            try:
+                for el in self.list_elements:
+                    self.iconview.remove(el)
+                self.list_elements = []
+            except:
+                pass
+    
+    # value is the path of the dragged item
+    def on_drop(self, _ctrl, value, _x, _y):
+        if value == None:
+            return
+        if isinstance(value, str):
+            # _w is flowbox or image or label
+            _w = self.iconview.pick(_x,_y,0)
+            # the path in self.bookmarks to substitute with value
+            _found = None
+            if isinstance(_w, Gtk.Image):
+                for el in self.list_elements:
+                    if _w in el:
+                        _found = el._path
+                        break
+            elif isinstance(_w, Gtk.FlowBox):
+                _found = "__flowbox"
+            
+            if _found == value:
+                return
+            
+            if _found != None:
+                if _found != "__flowbox":
+                    item = _found
+                    self.bookmarks.remove(value)
+                    idx = self.bookmarks.index(item)
+                    self.bookmarks.insert(idx+1, value)
+                elif _found == "__flowbox":
+                    self.bookmarks.remove(value)
+                    self.bookmarks.append(value)
+                try:
+                    with open(_menu_favorites, "w") as _f:
+                        for el in self.bookmarks:
+                            _f.write(el+"\n")
+                    # emptry the iconview
+                    self.empty_iconview()
+                    # rebuild bookmarks
+                    self.populate_bookmarks_at_start()
+                    self.populate_category("Bookmarks")
+                except Exception as E:
+                    self.msg_simple("Error\n"+str(E))
+    
     def on_menu_close(self, w):
         if self._parent.MW:
             self._parent.MW.close()
@@ -3123,6 +3139,7 @@ class menuWin(Gtk.Window):
                     with open(_menu_favorites, "a") as _f:
                         _f.write(_item)
                         _f.write("\n")
+                    self.bookmarks.append(_item)
                     # rebuild bookmarks
                     self.populate_bookmarks_at_start()
                     self.populate_category("Bookmarks")
@@ -3140,7 +3157,13 @@ class menuWin(Gtk.Window):
             # self._parent.MW = None
             # self.close()
     
-    # def on_modify_menu(self, btn):
+    def on_modify_menu(self, btn):
+        try:
+            subprocess.Popen(f"{self._parent.menu_editor}",shell=True)
+        except Exception as E:
+            self.msg_simple("Error\n"+str(E))
+        self.on_focus_out(None)
+        #
         # _l = self.iconview.get_selected_items()
         # if _l == []:
             # try:
@@ -3171,47 +3194,6 @@ class menuWin(Gtk.Window):
         except:
             pass
     
-    # deactvated
-    # def on_drag_data_get(self, widget, drag_context, data, info, time):
-        # #
-        # if self.get_cat_btn_name(self._btn_toggled) == "Bookmarks":
-            # selected_path = widget.get_selected_items()[0]
-            # self._start_path = selected_path
-    
-    # deactivated
-    # def on_drag_data_received(self, widget, drag_context, x, y, data, info, time):
-        # _dest_path = widget.get_path_at_pos(x,y)
-        # #
-        # if _dest_path == None or self._start_path == None:
-            # return
-        # if _dest_path != self._start_path:
-            # _l = list(range(len(self.liststore)))
-            # _row1 = widget.get_item_row(self._start_path)
-            # _row2 = widget.get_item_row(_dest_path)
-            # _l.pop(_row2)
-            # if _row2 > _row1:
-                # _l.insert(_row1+1, _row2)
-            # elif _row2 < _row1:
-                # _l.insert(_row1, _row2)
-            # #
-            # self.liststore.reorder(_l)
-            # # reset
-            # self.bookmarks = []
-            # # rewrite the favorites file
-            # with open(os.path.join(main_dir, "favorites"), "w") as _f:
-                # for row in self.liststore:
-                    # _item = row[6]
-                    # _f.write(_item)
-                    # _f.write("\n")
-                    # self.bookmarks.append(_item)
-        # #
-        # self._start_path = None
-        # #
-        # return True
-    
-    def on_search_return(self, widget):
-        self.on_button_search(widget)
-    
     def on_populate_menu(self):
         _f_populate_menu()
     
@@ -3221,36 +3203,52 @@ class menuWin(Gtk.Window):
             self._parent.MW = None
         _f_populate_menu()
     
-    # clear icon pressed in the search entry
-    def on_icon_press(self, w, p, e):
-        if self._btn_toggled.icat == "Bookmarks":
-            self.liststore.clear()
-            self.populate_bookmarks()
+    # # clear icon pressed in the search entry
+    # def on_icon_press(self, w, p, e):
+        # if self._btn_toggled.icat == "Bookmarks":
+            # self.empty_iconview()
+            # self.populate_bookmarks()
     
     # application searching by pressing enter in the search entry
-    def on_button_search(self, button=None):
-        if len(self.searchentry.get_text()) < self._parent.menu_live_search:
+    def on_search_return(self, widget, _text=None):
+        _text = self.searchentry.get_text().lower()
+        self.on_on_searching(_text)
+        
+    # application live searching in the search entry
+    def on_search(self, widget, _text=None):
+        # wheather not live searching
+        if self._parent.menu_live_search < 3:
+            if self.searchentry.get_text() == "":
+                self.empty_iconview()
+                self._btn_toggled = self.btn_bookmark
+                self.populate_bookmarks()
+                self._btn_toggled.set_active(True)
+                return
+            return
+        _text = self.searchentry.get_text().lower()
+        self.on_on_searching(_text)
+    
+    def on_on_searching(self, _text):
+        _n_chars_search = max(3, self._parent.menu_live_search)
+        if len(_text) == 0:
+            self.empty_iconview()
+            self._btn_toggled = self.btn_bookmark
+            self.populate_bookmarks()
+            self._btn_toggled.set_active(True)
+            return
+        if len(_text) < _n_chars_search:
             return
         else:
             if self._btn_toggled:
-                if USER_THEME == 0:
-                    self._btn_toggled.set_active(False)
+                # if USER_THEME == 0:
+                self._btn_toggled.set_active(False)
                 self._btn_toggled = None
-            self.perform_searching(self.searchentry.get_text().lower())
-        
-    # application live searching in the search entry
-    def on_search(self, _):
-        if len(self.searchentry.get_text()) >= self._parent.menu_live_search:
-            self.perform_searching(self.searchentry.get_text().lower())
-        elif len(self.searchentry.get_text()) == 0:
-            if self._btn_toggled.icat != None and self._btn_toggled.icat == "Bookmarks":
-                self.liststore.clear()
-                self.populate_bookmarks()
+            self.perform_searching(_text)
     
     def perform_searching(self, _text):
-        # not used
-        if USER_THEME == 1 and USE_LABEL_CATEGORY == 1:
-            self.clabel.set_label("Searching...")
+        # # not used
+        # if USER_THEME == 1 and USE_LABEL_CATEGORY == 1:
+            # self.clabel.set_label("Searching...")
         _cat = ["Development", "Game", "Education", "Graphics", "Multimedia", "Network", "Office", "Utility", "Settings", "System", "Other"]
         _list = []
         # [_el_name,_el_cat,_el_exec,_el_icon,_el_comment,_el_path,_el])
@@ -3269,13 +3267,11 @@ class menuWin(Gtk.Window):
                     if not _text in _list:
                         _list.append(_el[5])
                         continue
-        
         if _list:
             self.f_on_pop_iv(_list)
     
-    
     def f_on_pop_iv(self, _list):
-        self.liststore.clear()
+        self.empty_iconview()
         for _item in _list:
             self.f_menu_item(_item)
         
@@ -3286,55 +3282,44 @@ class menuWin(Gtk.Window):
         _cat = ["Bookmarks", "Development", "Game", "Education", "Graphics", "Multimedia", "Network", "Office", "Utility", "Settings", "System", "Other"]
         _icon = ["Bookmark.svg", "Development.svg", "Game.svg", "Education.svg", "Graphics.svg", "Multimedia.svg", "Network.svg", "Office.svg", "Utility.svg", "Settings.svg", "System.svg", "Other.svg",]
         for i,el in enumerate(_cat):
-            # not used
-            if USER_THEME == 1:
-                _btn = Gtk.Button()
-                _btn.connect('clicked', self.on_toggle_toggled)
-                _btn.connect('focus-in-event', self.on_toggle_toggled)
-            elif USER_THEME == 0:
-                _btn = Gtk.ToggleButton()
-                _btn.set_can_focus(False)
-                # _btn.connect('button-release-event', self.on_toggle_toggled)
-                _btn.connect('clicked', self.on_toggle_toggled)
+            # # not used
+            # if USER_THEME == 1:
+                # _btn = Gtk.Button()
+                # _btn.connect('clicked', self.on_toggle_toggled)
+                # _btn.connect('focus-in-event', self.on_toggle_toggled)
+            # elif USER_THEME == 0:
+            _btn = Gtk.ToggleButton()
+            _btn.set_can_focus(False)
+            _btn.connect('clicked', self.on_toggle_toggled)
             _btn.set_name("mybutton")
             _btn.icat = el
             _btn.set_tooltip_text(el)
             pix = GdkPixbuf.Pixbuf.new_from_file_at_size("icons"+"/"+_icon[i], self.BTN_ICON_SIZE, self.BTN_ICON_SIZE)
-            # _image = Gtk.Image.new_from_pixbuf(pix)
             _pb = Gdk.Texture.new_for_pixbuf(pix)
             _image = Gtk.Image.new_from_paintable(_pb)
-            # _btn.set_image(_image)
             _image.set_pixel_size(self.BTN_ICON_SIZE)
             _btn.set_child(_image)
-            # _btn.set_image_position(Gtk.PositionType.TOP)
-            # _btn.set_always_show_image(True)
-            # _btn.set_events(Gdk.EventMask.BUTTON_RELEASE_MASK)
-            # self.cbox.add(_btn)
             self.cbox.append(_btn)
             #
             if i == 0:
-                if USER_THEME == 0:
-                    _btn.set_active(True)
+                # if USER_THEME == 0:
+                _btn.set_active(True)
                 self._btn_toggled = _btn
                 self.btn_bookmark = _btn
                 self.populate_bookmarks_at_start()
                 self.populate_category(el)
-                if USER_THEME == 1 and USE_LABEL_CATEGORY == 1:
-                    self.clabel.set_label("Bookmarks")
+                # if USER_THEME == 1 and USE_LABEL_CATEGORY == 1:
+                    # self.clabel.set_label("Bookmarks")
     
     def on_toggle_toggled(self, btn, e=None):
+        self.searchentry.set_text("")
+        
         if btn == self._btn_toggled:
             btn.set_active(True)
             return
         
-        # empty the flowbox
-        # self.iconview.remove_all()
-        try:
-            for el in self.list_elements:
-                self.iconview.remove(el)
-            self.list_elements = []
-        except:
-            pass
+        # emptry the iconview
+        self.empty_iconview()
         
         # self.searchentry.delete_text(0,-1)
         # if btn.icat != "Bookmarks":
@@ -3343,12 +3328,12 @@ class menuWin(Gtk.Window):
             # self.search_bar.set_visible(True)
         
         self.scrolledwindow.get_vadjustment().set_value(0)
-        if USER_THEME == 1:
-            self.populate_category(btn.icat)
-            self._btn_toggled = btn
-            if USE_LABEL_CATEGORY == 1:
-                self.clabel.set_label(btn.icat)
-            return
+        # if USER_THEME == 1:
+            # self.populate_category(btn.icat)
+            # self._btn_toggled = btn
+            # if USE_LABEL_CATEGORY == 1:
+                # self.clabel.set_label(btn.icat)
+            # return
         if self._btn_toggled:
             if btn == self._btn_toggled:
                 if e:
@@ -3369,18 +3354,44 @@ class menuWin(Gtk.Window):
         _content = None
         with open(_menu_favorites, "r") as _f:
             _content = _f.readlines()
-        #
+        not_found = 0
         self.bookmarks = []
         for el in _content:
             if el == "\n" or el == "" or el == None:
                 continue
+            if not os.path.exists(el.strip("\n")):
+                not_found +=1
+                continue
             self.bookmarks.append(el.strip("\n"))
+        if not_found:
+            try:
+                _f = open(_menu_favorites, "w")
+                for el in self.bookmarks:
+                    _f.write(el+"\n")
+                _f.close()
+            except Exception as E:
+                self.msg_simple("Error\n"+str(E))
         #
         # self.populate_bookmarks()
     
     def populate_bookmarks(self):
         for eel in self.bookmarks:
             self.f_menu_item(eel)
+    
+    def on_drag_prepare(self, _ctrl, _x, _y):
+        value = None
+        _w = _ctrl.get_widget()
+        if isinstance(_w, Gtk.Image):
+            for el in self.list_elements:
+                if _w in el:
+                    value = el._path
+                    break
+        return Gdk.ContentProvider.new_for_value(value)
+    
+    def on_drag_begin(self, ctrl, _drag):
+        icon = Gtk.WidgetPaintable.new(ctrl.get_widget())
+        _xpad = max(0,int(ctrl.get_widget().get_width()-self.ICON_SIZE)/2)
+        ctrl.set_icon(icon, 0+_xpad-4, -4)
     
     def f_menu_item(self, _item):
         try:
@@ -3406,20 +3417,16 @@ class menuWin(Gtk.Window):
             
             pixbuf = None
             if _icon != None:
-                # pixbuf = self._find_the_icon(_icon)
                 _i = self._find_the_icon(_icon)
-            # # icon name comment exec path appinfo
-            # # self.liststore.append([ pixbuf, _name, _description, _exec, _path, _ap ])
-            # # self.liststore.splice(0,0,[ pixbuf, _object(_name), _object(_description), _object(_exec), _object(_path), _ap ])
             _b = Gtk.Box.new(1,0)
-            # _b.set_vexpand(True)
+            _b.set_tooltip_text(_description)
             if _i != None:
-                # # _i = Gtk.Image.new_from_pixbuf(pixbuf)
-                # _pb = Gdk.Texture.new_for_pixbuf(pixbuf)
-                # _i = Gtk.Image.new_from_paintable(_pb)
                 _i.set_pixel_size(self.ICON_SIZE)
-                # _i.set_hexpand(True)
                 _b.append(_i)
+                drag_controller = Gtk.DragSource()
+                drag_controller.connect('prepare', self.on_drag_prepare)
+                drag_controller.connect('drag-begin', self.on_drag_begin)
+                _i.add_controller(drag_controller)
             _l = Gtk.Label(label=_name)
             # _l.set_valign(2)
             _b.append(_l)
@@ -3428,7 +3435,6 @@ class menuWin(Gtk.Window):
             _b._path = _path
             _b._ap = _ap
             self.iconview.append(_b)
-            # children of the flowbox
             self.list_elements.append(_b)
         except:
             return
@@ -3448,18 +3454,9 @@ class menuWin(Gtk.Window):
         for el in the_menu:
             if el[1] == cat_name:
                 _i = self._find_the_icon(el[3])
-                # icon name comment exec path appinfo
-                # self.liststore.append([ pixbuf, el[0], el[4], el[2], el[5], el[6] ])
-                # self.liststore.splice(0,0,[ pixbuf, el[0], el[4], el[2], el[5], el[6] ])
-                #
                 _b = Gtk.Box.new(1,0)
-                # _b.set_vexpand(True)
                 if _i != None:
-                    # # _i = Gtk.Image.new_from_pixbuf(pixbuf)
-                    # _pb = Gdk.Texture.new_for_pixbuf(pixbuf)
-                    # _i = Gtk.Image.new_from_paintable(_pb)
                     _i.set_pixel_size(self.ICON_SIZE)
-                    # _i.set_hexpand(True)
                     _b.append(_i)
                 _l = Gtk.Label(label=el[0])
                 _l.set_wrap(True)
@@ -3471,6 +3468,7 @@ class menuWin(Gtk.Window):
                 _b._exec = el[3]
                 _b._path = el[5]
                 _b._ap = el[6]
+                _b.set_tooltip_text(el[4])
                 self.iconview.append(_b)
                 self.list_elements.append(_b)
     
@@ -3479,7 +3477,6 @@ class menuWin(Gtk.Window):
         try:
             if os.path.exists(_icon):
                 pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(_icon, self.ICON_SIZE, self.ICON_SIZE, True)
-                # _i = Gtk.Image.new_from_pixbuf(pixbuf)
                 _pb = Gdk.Texture.new_for_pixbuf(pixbuf)
                 _i = Gtk.Image.new_from_paintable(_pb)
         except:
@@ -3503,21 +3500,13 @@ class menuWin(Gtk.Window):
         #
         _b = widget.get_child()
         app_to_exec = _b._ap
-        # #
-        # if self.iconview.get_selected_items() != None:
-            # rrow = self.iconview.get_selected_items()[0]
-        
-        # # _ctx = Gio.AppLaunchContext.new()
-        # # _ctx.setenv("PWD",f"{_HOME}".encode())
-        # app_to_exec = self.liststore[rrow][5]
+        #
         os.chdir(_HOME)
         ret=app_to_exec.launch()
         os.chdir(_curr_dir)
         if ret == False:
-            # _exec_name = self.liststore[rrow][3]
             _exec_name = _b._exec
             self.msg_simple(f"{_exec_name} not found or not setted.")
-        # self.on_focus_out(None, None)
         self.on_focus_out(None)
     
     def sigtype_handler(self, sig, frame):
@@ -3543,28 +3532,27 @@ class menuWin(Gtk.Window):
     def on_conf_btn(self, btn):
         pass
     
-    # def on_focus_out(self, win, event):
     def on_focus_out(self, event):
         self.iconview.unselect_all()
-        # self.searchentry.delete_text(0,-1)
         # open bookmarks next time
-        if USER_THEME == 0:
-            if self._btn_toggled == self.btn_bookmark:
-                self.set_visible(False)
-                return
-            self.btn_bookmark.set_active(True)
-            self.on_toggle_toggled(self.btn_bookmark, None)
-        elif USER_THEME == 1:
-            self._btn_toggled = self.btn_bookmark
-            self.btn_bookmark.clicked()
-            self.btn_bookmark.grab_focus()
-            if USE_LABEL_CATEGORY == 1:
-                self.clabel.set_label("Bookmarks")
+        # if USER_THEME == 0:
+        if self._btn_toggled == self.btn_bookmark:
+            self.set_visible(False)
+            return
+        self.btn_bookmark.set_active(True)
+        self.on_toggle_toggled(self.btn_bookmark, None)
+        # elif USER_THEME == 1:
+            # self._btn_toggled = self.btn_bookmark
+            # self.btn_bookmark.clicked()
+            # self.btn_bookmark.grab_focus()
+            # if USE_LABEL_CATEGORY == 1:
+                # self.clabel.set_label("Bookmarks")
         #
         self.set_visible(False)
         
     # def on_show(self, widget):
         # pass
+
 
 class ynDialog(Gtk.Dialog):
     def __init__(self, parent, _title1, _type):
@@ -3636,9 +3624,6 @@ class clipboardWin(Gtk.Window):
         GtkLayerShell.set_layer(self, GtkLayerShell.Layer.OVERLAY)
         GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.ON_DEMAND)
         
-        # self.connect('focus-out-event', self.on_focus_out)
-        # # self.connect('show', self.on_show)
-        
         self.event_controller = Gtk.EventControllerFocus.new()
         self.event_controller.connect('leave', self.on_focus_out)
         
@@ -3650,10 +3635,8 @@ class clipboardWin(Gtk.Window):
         self.main_box.set_margin_end(_pad)
         
         scroll_win = Gtk.ScrolledWindow.new()
-        # self.main_box.pack_start(scroll_win, True, True, _pad)
         scroll_win.set_vexpand(True)
         self.main_box.append(scroll_win)
-        # scroll_win.set_overlay_scrolling(True)
         scroll_win.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
 
         self.list_box = Gtk.ListBox.new()
@@ -3673,9 +3656,7 @@ class clipboardWin(Gtk.Window):
         self.main_box.append(donotdisturb_btn)
         
         empty_btn = Gtk.Button(label="Remove all")
-        # empty_btn.set_relief(Gtk.ReliefStyle.NONE)
         empty_btn.connect('clicked', self.on_empty_btn)
-        # self.main_box.pack_start(empty_btn,False,True,_pad)
         self.main_box.append(empty_btn)
         
         self.connect("close-request", self.on_menu_close)
@@ -4544,14 +4525,14 @@ class DialogConfiguration(Gtk.Dialog):
         # self.page2_box.attach_next_to(self.entry_menu_t,menu_lbl_t,1,1,1)
         # self.entry_menu_t.set_text(self._parent.menu_terminal)
         
-        # menu_lbl_ls = Gtk.Label(label="Live search characters")
-        # self.page2_box.attach(menu_lbl_ls,0,5,1,1)
-        # menu_lbl_ls.set_halign(1)
-        # menu_ls_spinbtn = Gtk.SpinButton.new_with_range(0,20,1)
-        # menu_ls_spinbtn.set_value(self._parent.menu_live_search)
-        # self.page2_box.attach_next_to(menu_ls_spinbtn,menu_lbl_ls,1,1,1)
-        # menu_ls_spinbtn.connect('value-changed', self.on_menu_wh_spinbtn, "ls")
-        # menu_ls_spinbtn.set_numeric(True)
+        menu_lbl_ls = Gtk.Label(label="Live search characters (3 or more)")
+        self.page2_box.attach(menu_lbl_ls,0,5,1,1)
+        menu_lbl_ls.set_halign(1)
+        menu_ls_spinbtn = Gtk.SpinButton.new_with_range(0,20,1)
+        menu_ls_spinbtn.set_value(self._parent.menu_live_search)
+        self.page2_box.attach_next_to(menu_ls_spinbtn,menu_lbl_ls,1,1,1)
+        menu_ls_spinbtn.connect('value-changed', self.on_menu_wh_spinbtn, "ls")
+        menu_ls_spinbtn.set_numeric(True)
         
         menu_lbl_wp = Gtk.Label(label="Position")
         self.page2_box.attach(menu_lbl_wp,0,6,1,1)
@@ -4571,6 +4552,15 @@ class DialogConfiguration(Gtk.Dialog):
         self.page2_box.attach_next_to(menu_n_item_spinbtn,menu_n_item_lbl,1,1,1)
         menu_n_item_spinbtn.connect('value-changed', self.on_menu_wh_spinbtn, "n_item")
         menu_n_item_spinbtn.set_numeric(True)
+        
+        menu_editor_lbl = Gtk.Label(label="Menu editor")
+        self.page2_box.attach(menu_editor_lbl,0,8,1,1)
+        menu_editor_lbl.set_halign(1)
+        menu_editor_e = Gtk.Entry.new()
+        menu_editor_e.connect('changed', self.on_menu_editor)
+        self.page2_box.attach_next_to(menu_editor_e,menu_editor_lbl,1,1,1)
+        menu_editor_e.set_text(self._parent.menu_editor)
+        
         
         ## SERVICE MENU
         service_lbl_w = Gtk.Label(label="Width")
@@ -4911,11 +4901,14 @@ class DialogConfiguration(Gtk.Dialog):
     def on_menu_wh_spinbtn(self, btn, _type):
         self._parent.set_menu_cp(_type, btn.get_value_as_int())
     
-    def on_entry_menu(self, _entry, _type):
-        self._parent.entry_menu(_type, _entry.get_text())
+    # def on_entry_menu(self, _entry, _type):
+        # self._parent.entry_menu(_type, _entry.get_text())
         
     def on_menu_combo(self, btn, _type):
         self._parent.on_menu_win_position(_type, btn.get_active())
+    
+    def on_menu_editor(self, _entry):
+        self._parent.on_menu_editor(_entry.get_text())
     
     ### PANEL
     def on_width_spinbtn(self, btn):
