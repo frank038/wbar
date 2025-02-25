@@ -3,7 +3,7 @@
 # COMMAND: 
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar.py
 
-# V. 0.9.17
+# V. 0.9.18
 
 import os,sys,shutil,stat
 import gi
@@ -827,6 +827,20 @@ class MyWindow(Gtk.ApplicationWindow):
         self.main_box.append(self.right_box)
         self.right_box.set_halign(2)
         
+        # output2
+        self.temp_out2 = None
+        # self.label2button = Gtk.EventBox()
+        self.label2 = Gtk.Label(label="")
+        self.label2.set_use_markup(True)
+        # self.label2button.add(self.label2)
+        self.lbl2_style_context = self.label2.get_style_context()
+        self.lbl2_style_context.add_class("label2")
+        # self.label2button.connect('button-press-event', self.on_label2)
+        # if self.label2_use == 1:
+            # self.center_box.append(self.label2)
+        # elif self.label2_use == 2 or self.label2_use == 0:
+            # self.right_box.append(self.label2)
+        
         # self.otherbutton = Gtk.EventBox()
         self.otherbutton = Gtk.Button()
         _icon_path = os.path.join(_curr_dir,"icons","other_menu.svg")
@@ -986,18 +1000,6 @@ class MyWindow(Gtk.ApplicationWindow):
         
         # menu/other window
         self.right_box.append(self.otherbutton)
-        
-        # output2
-        self.temp_out2 = None
-        # self.label2button = Gtk.EventBox()
-        self.label2 = Gtk.Label(label="")
-        self.label2.set_use_markup(True)
-        # self.label2button.add(self.label2)
-        self.lbl2_style_context = self.label2.get_style_context()
-        self.lbl2_style_context.add_class("label2")
-        # self.label2button.connect('button-press-event', self.on_label2)
-        # self.center_box.pack_start(self.label2button,False,False,4)
-        self.center_box.append(self.label2)
         
         gdir1 = Gio.File.new_for_path(os.path.join(_HOME, ".local/share/applications"))
         self.monitor1 = gdir1.monitor_directory(Gio.FileMonitorFlags.SEND_MOVED, None)
@@ -1874,7 +1876,7 @@ class MyWindow(Gtk.ApplicationWindow):
     def set_timer_label2(self):
         self.event2 = None
         self.thread_label2 = None
-        if self.label2_use == 1:
+        if self.label2_use == 1 or self.label2_use == 2:
             _script2 = None
             self._script2_return = True
             _files = os.listdir(_curr_dir+"/scripts")
@@ -2034,7 +2036,7 @@ class MyWindow(Gtk.ApplicationWindow):
         self.clock_lbl_style_context = self.clock_lbl.get_style_context()
         self.clock_lbl_style_context.add_class("clocklabel")
         if _pos == 1:
-            self.center_box.append(self.clock_lbl)
+            self.center_box.insert_child_after(self.clock_lbl, None)
         elif _pos == 2:
             if USE_NOTIFICATIONS:
                 self.right_box.insert_child_after(self.clock_lbl, self.notification_box)
@@ -2225,8 +2227,8 @@ class MyWindow(Gtk.ApplicationWindow):
             self.temp_clock = _state
         elif _n == "out1":
             self.temp_out1 = _state
-        elif _n == "out2":
-            self.temp_out2 = _state
+        # elif _n == "out2":
+            # self.temp_out2 = _state
         elif _n == "note":
             self.note_show_at_start_tmp = int(_state)
         elif _n == "task":
@@ -2234,6 +2236,9 @@ class MyWindow(Gtk.ApplicationWindow):
         elif _n == "notification":
             self.notification_conf["use_this"] = int(_state)
             self.not_use = int(_state)
+    
+    def on_label2_combo(self, _state):
+        self.temp_out2 = _state
     
     def set_not_window_size(self, _type, _value):
         if _type == "w":
@@ -2483,11 +2488,25 @@ class MyWindow(Gtk.ApplicationWindow):
                 self.terminate_thread(1)
                 self.set_timer_label1()
             if self.temp_out2 != None and self.temp_out2 != self.label2_use:
+                label2_use_old = self.label2_use
                 self.label2_use = int(self.temp_out2)
+                if label2_use_old == 0 and self.temp_out2 == 1:
+                    self.center_box.append(self.label2)
+                    self.set_timer_label2()
+                elif label2_use_old == 0 and self.temp_out2 == 2:
+                    self.right_box.insert_child_after(self.label2, None)
+                    self.set_timer_label2()
+                elif label2_use_old == 1 and self.temp_out2 == 2:
+                    self.center_box.remove(self.label2)
+                    self.right_box.insert_child_after(self.label2, None)
+                elif label2_use_old == 2 and self.temp_out2 == 1:
+                    self.right_box.remove(self.label2)
+                    self.center_box.append(self.label2)
                 self.temp_out2 = None
                 self._configuration["panel"]["label2"] = self.label2_use
-                self.terminate_thread(2)
-                self.set_timer_label2()
+                if self.label2_use == 0:
+                    self.terminate_thread(2)
+                    self.set_timer_label2()
             if self.service_tray_menu_width_tmp != None:
                 self.service_tray_menu_width = self.service_tray_menu_width_tmp
                 self.service_conf["tray-menu-width"] = self.service_tray_menu_width_tmp
@@ -2740,6 +2759,7 @@ class commandWin(Gtk.Window):
         
         self.set_transient_for(self._parent._parent)
         self.set_modal(True)
+        self.set_decorated(False)
         
         GtkLayerShell.init_for_window(self)
         GtkLayerShell.set_namespace(self, "commandwin")
@@ -2831,6 +2851,7 @@ class menuWin(Gtk.Window):
         
         self.set_transient_for(self._parent)
         # self.set_modal(True)
+        self.set_decorated(False)
         
         _win_pos = self._parent.win_position
         
@@ -2862,8 +2883,9 @@ class menuWin(Gtk.Window):
         # self.connect('focus-out-event', self.on_focus_out)
         # self.connect('show', self.on_show)
         
-        self.event_controller = Gtk.EventControllerFocus.new()
-        self.event_controller.connect('leave', self.on_focus_out)
+        # self.event_controller = Gtk.EventControllerFocus.new()
+        # self.event_controller.connect('leave', self.on_focus_out)
+        # self.add_controller(self.event_controller)
         
         self.set_size_request(self._parent.menu_width, self._parent.menu_height)
         
@@ -2887,7 +2909,6 @@ class menuWin(Gtk.Window):
         # category box
         self.cbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
         self.cbox.set_homogeneous(True)
-        # self.main_box.pack_start(self.cbox, False, False, 4)
         self.main_box.append(self.cbox)
         
         # # separator
@@ -2925,6 +2946,9 @@ class menuWin(Gtk.Window):
         self.iconview.add_controller(self.gesture_iv)
         self.gesture_iv.connect('pressed', self.on_iv_gesture)
         
+        # when bookmark items reordering start
+        self.is_dragging = 0
+        
         drop_controller = Gtk.DropTarget.new(
             type=GObject.TYPE_NONE, actions=Gdk.DragAction.COPY
         )
@@ -2961,11 +2985,12 @@ class menuWin(Gtk.Window):
         # # separator
         # separator = Gtk.Separator()
         # separator.set_orientation(Gtk.Orientation.HORIZONTAL)
-        # self.main_box.pack_start(separator, False, False, 4)
+        # self.main_box.append(separator)
         
         # service buttons
         self.btn_box = Gtk.Box.new(0,0)
-        # self.main_box.pack_start(self.btn_box,False,True,0)
+        # self.btn_box.set_hexpand(True)
+        self.btn_box.props.halign = 2
         self.main_box.append(self.btn_box)
         
         ## menu editor button
@@ -2979,6 +3004,13 @@ class menuWin(Gtk.Window):
             _image.set_pixel_size(int(self.BTN_ICON_SIZE/2))
             self.modify_menu_btn.set_child(_image)
             self.btn_box.append(self.modify_menu_btn)
+            # self.modify_menu_btn.set_halign(1)
+        
+        # # separator
+        # separator = Gtk.Separator()
+        # separator.set_orientation(Gtk.Orientation.VERTICAL)
+        # separator.set_hexpand(True)
+        # self.main_box.append(separator)
         
         self.logout_btn = Gtk.Button()
         pix = GdkPixbuf.Pixbuf.new_from_file_at_size(os.path.join(_curr_dir,"icons","system-logout.svg"), int(self.BTN_ICON_SIZE/2), int(self.BTN_ICON_SIZE/2))
@@ -3050,6 +3082,7 @@ class menuWin(Gtk.Window):
     
     # value is the path of the dragged item
     def on_drop(self, _ctrl, value, _x, _y):
+        self.is_dragging = 0
         if value == None:
             return
         if isinstance(value, str):
@@ -3379,6 +3412,7 @@ class menuWin(Gtk.Window):
             self.f_menu_item(eel)
     
     def on_drag_prepare(self, _ctrl, _x, _y):
+        self.is_dragging = 1
         value = None
         _w = _ctrl.get_widget()
         if isinstance(_w, Gtk.Image):
@@ -3533,11 +3567,24 @@ class menuWin(Gtk.Window):
         pass
     
     def on_focus_out(self, event):
+        if not self.is_visible():
+            self.event_controller.reset()
+            return
+        # disabled when bookmarks items are been reordered
+        if self.is_dragging:
+            return
         self.iconview.unselect_all()
         # open bookmarks next time
+        # if self._btn_toggled != self.btn_bookmark:
+            # self.btn_bookmark.set_active(True)
+            # self.on_toggle_toggled(self.btn_bookmark, None)
+        # self.set_visible(False)
+        # self.event_controller.reset()
+        #
         # if USER_THEME == 0:
         if self._btn_toggled == self.btn_bookmark:
             self.set_visible(False)
+            self.event_controller.reset()
             return
         self.btn_bookmark.set_active(True)
         self.on_toggle_toggled(self.btn_bookmark, None)
@@ -3549,6 +3596,7 @@ class menuWin(Gtk.Window):
                 # self.clabel.set_label("Bookmarks")
         #
         self.set_visible(False)
+        self.event_controller.reset()
         
     # def on_show(self, widget):
         # pass
@@ -3599,6 +3647,7 @@ class clipboardWin(Gtk.Window):
         
         self.set_transient_for(self._parent)
         # self.set_modal(True)
+        self.set_decorated(False)
         
         _win_pos = self._parent.win_position
         
@@ -3793,6 +3842,7 @@ class otherWin(Gtk.Window):
         
         self.set_transient_for(self._parent)
         # self.set_modal(True)
+        self.set_decorated(False)
         
         _win_pos = self._parent.win_position
         
@@ -3824,8 +3874,8 @@ class otherWin(Gtk.Window):
         # self.connect('focus-out-event', self.on_focus_out)
         # # self.connect('show', self.on_show)
         
-        self.event_controller = Gtk.EventControllerFocus.new()
-        self.event_controller.connect('leave', self.on_focus_out)
+        # self.event_controller = Gtk.EventControllerFocus.new()
+        # self.event_controller.connect('leave', self.on_focus_out)
         
         self.set_size_request(self._parent.service_width, self._parent.service_height)
         
@@ -3835,7 +3885,6 @@ class otherWin(Gtk.Window):
         self.main_box = Gtk.Box.new(orientation=Gtk.Orientation.VERTICAL,spacing=0)
         self.main_box.set_margin_start(_pad)
         self.main_box.set_margin_end(_pad)
-        # self.add(self.main_box)
         self.set_child(self.main_box)
         
         self._stack = Gtk.Stack()
@@ -3852,9 +3901,7 @@ class otherWin(Gtk.Window):
         self._stacksw = Gtk.StackSwitcher()
         self._stacksw.set_stack(self._stack)
         
-        # self.main_box.pack_start(self._stacksw, False, True, _pad)
         self.main_box.append(self._stacksw)
-        # self.main_box.pack_start(self._stack, True, True, 0)
         self.main_box.append(self._stack)
         
         # Calendar
@@ -3875,19 +3922,16 @@ class otherWin(Gtk.Window):
         _scrolledwin0 = Gtk.ScrolledWindow()
         _scrolledwin0.set_overlay_scrolling(True)
         _scrolledwin0.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        # _stack_vbox2.pack_start(_scrolledwin0, True, True, 6)
         _stack_vbox2.append(_scrolledwin0)
         _scrolledwin0.set_child(self.list_box)
         # separator
         separator = Gtk.Separator()
         separator.set_orientation(Gtk.Orientation.HORIZONTAL)
-        # self.main_box.pack_start(separator, False, False, 0)
         self.main_box.append(separator)
         # body
         _scrolledwin = Gtk.ScrolledWindow()
         _scrolledwin.set_overlay_scrolling(True)
         _scrolledwin.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        # _stack_vbox2.pack_start(_scrolledwin, False, True, 0)
         _stack_vbox2.append(_scrolledwin)
         self.body_lbl = Gtk.Label()
         self.body_lbl.set_use_markup(True)
@@ -3915,11 +3959,9 @@ class otherWin(Gtk.Window):
             _image_path = os.path.join(_clip_dir,el,"image.png")
             if os.path.exists(_image_path):
                 _pix = GdkPixbuf.Pixbuf.new_from_file_at_scale(_image_path,64,64,True)
-                # _img = Gtk.Image.new_from_pixbuf(_pix)
                 _pb = Gdk.Texture.new_for_pixbuf(_pix)
                 _img = Gtk.Image.new_from_paintable(_pb)
                 _img.set_pixel_size(64)
-                # hbox.pack_start(_img,False,False,0)
                 hbox.append(_img)
             
             _datetime = datetime.datetime.fromtimestamp(int(el))
@@ -3958,21 +4000,16 @@ class otherWin(Gtk.Window):
             _summ_lbl.set_markup(_datetime2+"\n"+"<i>"+_app+"</i>"+"\n"+f"<b>{_summ}</b>")
             _summ_lbl.set_xalign(0)
             _summ_lbl.set_hexpand(True)
-            # hbox.pack_start(_summ_lbl,True,True,4)
             hbox.append(_summ_lbl)
             
             _remove_btn = Gtk.Button()
             try:
-                # pixbuf = Gtk.IconTheme().load_icon("gtk-delete", 24, Gtk.IconLookupFlags.FORCE_SVG)
-                # _img = Gtk.Image.new_from_pixbuf(pixbuf)
-                # _remove_btn.set_image(_img)
                 _pb = icon_theme.lookup_icon("gtk-delete", None, 24, 1, Gtk.TextDirection.NONE, Gtk.IconLookupFlags.FORCE_REGULAR)
                 _remove_btn.set_child(Gtk.Image.new_from_paintable(_pb))
             except:
                 _remove_btn.set_label("X")
             
             _remove_btn.connect('clicked', self.on_remove_btn, el, row)
-            # hbox.pack_start(_remove_btn,False,False,0)
             hbox.append(_remove_btn)
             
             self.list_box.append(row)
@@ -4000,33 +4037,25 @@ class otherWin(Gtk.Window):
         
         # separator = Gtk.Separator()
         separator.set_orientation(Gtk.Orientation.HORIZONTAL)
-        # self.main_box.pack_start(separator, False, False, 0)
         self.main_box.append(separator)
         
         self.btn_box = Gtk.Box.new(0,0)
         self.btn_box.set_margin_bottom(_pad)
-        # self.main_box.pack_start(self.btn_box,False,False,0)
         self.main_box.append(self.btn_box)
         
         conf_btn = Gtk.Button(label=" Configurator ")
-        # conf_btn.set_relief(Gtk.ReliefStyle.NONE)
         conf_btn.connect('clicked', self.on_conf_btn)
-        # self.btn_box.pack_start(conf_btn,False,False,0)
         self.btn_box.append(conf_btn)
         
         self.dnd_btn = Gtk.Button(label="Do not disturb")
         _dnd_file = os.path.join(_curr_dir,"do_not_disturb_mode")
         if os.path.exists(_dnd_file):
             self.dnd_btn.set_label("Do not disturb on")
-        # self.dnd_btn.set_relief(Gtk.ReliefStyle.NONE)
         self.dnd_btn.connect('clicked', self.on_dnd_btn)
-        # self.btn_box.pack_start(self.dnd_btn,True,False,0)
         self.btn_box.append(self.dnd_btn)
         
         exit_btn = Gtk.Button(label=" Exit ")
-        # exit_btn.set_relief(Gtk.ReliefStyle.NONE)
         exit_btn.connect('clicked', self.on_exit_btn)
-        # self.btn_box.pack_start(exit_btn,False,False,0)
         self.btn_box.append(exit_btn)
         
         self.connect("close-request", self.on_menu_close)
@@ -4428,15 +4457,22 @@ class DialogConfiguration(Gtk.Dialog):
         out1_sw.connect('notify::active', self.on_switch, "out1")
         self.page1_box.attach_next_to(out1_sw,label1_lbl,1,1,1)
         # label2
-        # label2_lbl = Gtk.Label(label="Output Right")
-        label2_lbl = Gtk.Label(label="Output center")
+        label2_lbl = Gtk.Label(label="Output Center/Right")
         self.page1_box.attach(label2_lbl,0,7,1,1)
         label2_lbl.set_halign(1)
-        out2_sw = Gtk.Switch.new()
-        out2_sw.set_active(self._parent.label2_use)
-        out2_sw.set_halign(1)
-        out2_sw.connect('notify::active', self.on_switch, "out2")
-        self.page1_box.attach_next_to(out2_sw,label2_lbl,1,1,1)
+        label2_combo = Gtk.ComboBoxText.new()
+        label2_combo.append_text("Off")
+        label2_combo.append_text("Center")
+        label2_combo.append_text("Right")
+        label2_combo.set_active(self._parent.label2_use)
+        self.page1_box.attach_next_to(label2_combo,label2_lbl,1,1,1)
+        label2_combo.connect('changed', self.on_label2_combo)
+        # out2_sw = Gtk.Switch.new()
+        # out2_sw.set_active(self._parent.label2_use)
+        # out2_sw.set_halign(1)
+        # out2_sw.connect('notify::active', self.on_switch, "out2")
+        # self.page1_box.attach_next_to(out2_sw,label2_lbl,1,1,1)
+        
         # # taskmanager
         # task_lbl = Gtk.Label(label="Task manager")
         # self.page1_box.attach(task_lbl,0,8,1,1)
@@ -4880,6 +4916,9 @@ class DialogConfiguration(Gtk.Dialog):
         except:
             pass
         
+    def on_label2_combo(self, cb):
+        self._parent.on_label2_combo(cb.get_active())
+    
     def on_other_combo(self, cb, _type):
         if _type == "volume":
             _other_settings_conf["use-volume"] = cb.get_active()
@@ -5122,7 +5161,6 @@ class notificationWin(Gtk.Window):
             self.btn_icon_box.append(_img)
         
         self.second_box = Gtk.Box.new(1,0)
-        # self.btn_icon_box.pack_start(self.second_box,True,True,0)
         self.btn_icon_box.append(self.second_box)
         self.second_box.set_hexpand(True)
         
@@ -5140,7 +5178,6 @@ class notificationWin(Gtk.Window):
                 # _lbl_summary.set_valign(2)
             # else:
                 # _lbl_summary.set_valign(3)
-            # self.second_box.pack_start(_lbl_summary,True,True,_pad)
             self.second_box.append(_lbl_summary)
         #
         if _body:
@@ -5156,7 +5193,6 @@ class notificationWin(Gtk.Window):
                 # _lbl_body.set_valign(1)
             # else:
                 # _lbl_body.set_valign(3)
-            # self.second_box.pack_start(_lbl_body,True,True,_pad)
             self.second_box.append(_lbl_body)
         
         self.close_btn = Gtk.Button.new()

@@ -2,14 +2,14 @@
 
 """
 This script skips texts that seem file path,
-end optionally clips whose lenght is great than MAX_CHARS.
+and optionally text whose lenght is greater than MAX_CHARS.
 """
-# wheather to skip file manager copy/cut operations on files/folders
+# whether to skip file manager copy/cut operations on files/folders
 # just a guess; set to 0 to disable this behaviour
 SKIP_FILES = 1
 
-# the clip will be stored if its lenght is less than MAX_CHARS
-# 0 means the clips will be always stored
+# the text will be stored if its lenght is less than MAX_CHARS
+# 0 means the text will be always stored
 MAX_CHARS = 0
 
 import sys,os,time
@@ -52,7 +52,6 @@ if _not_path == 0:
             i += 1
             if i == 10:
                 break
-
         try:
             with open(os.path.join(clips_path, time_now), "w") as ffile:
                 ffile.write(_text)
