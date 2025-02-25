@@ -185,13 +185,14 @@ grid {
   font-size: 24px;
 }
 
-.notewin button {
+.notewin button label {
   border-radius: 6px;
   border: solid;
   border-width: 1px;
   border-color: #7F7F7F;
   margin: 2px;
   font-size: 24px;
+  background-color: white;
 }
 
 /*
