@@ -3,7 +3,7 @@
 # COMMAND: 
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar.py
 
-# V. 0.9.18
+# V. 0.9.19
 
 import os,sys,shutil,stat
 import gi
@@ -3568,7 +3568,7 @@ class menuWin(Gtk.Window):
     
     def on_focus_out(self, event):
         if not self.is_visible():
-            self.event_controller.reset()
+            # self.event_controller.reset()
             return
         # disabled when bookmarks items are been reordered
         if self.is_dragging:
@@ -3584,7 +3584,7 @@ class menuWin(Gtk.Window):
         # if USER_THEME == 0:
         if self._btn_toggled == self.btn_bookmark:
             self.set_visible(False)
-            self.event_controller.reset()
+            # self.event_controller.reset()
             return
         self.btn_bookmark.set_active(True)
         self.on_toggle_toggled(self.btn_bookmark, None)
@@ -3596,7 +3596,7 @@ class menuWin(Gtk.Window):
                 # self.clabel.set_label("Bookmarks")
         #
         self.set_visible(False)
-        self.event_controller.reset()
+        # self.event_controller.reset()
         
     # def on_show(self, widget):
         # pass
@@ -3673,8 +3673,8 @@ class clipboardWin(Gtk.Window):
         GtkLayerShell.set_layer(self, GtkLayerShell.Layer.OVERLAY)
         GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.ON_DEMAND)
         
-        self.event_controller = Gtk.EventControllerFocus.new()
-        self.event_controller.connect('leave', self.on_focus_out)
+        # self.event_controller = Gtk.EventControllerFocus.new()
+        # self.event_controller.connect('leave', self.on_focus_out)
         
         self.set_size_request(self.wwidth, self.wheight)
         self.main_box = Gtk.Box.new(1,0)
@@ -5285,6 +5285,7 @@ class Notifier(Service.Object):
         self.list_notifications = []
         self._not_path = os.path.join(_curr_dir,"mynots")
         self._y = 0
+        self._not_counter = 1
     
     @Service.method("org.freedesktop.Notifications", out_signature="as")
     def GetCapabilities(self):
@@ -5299,8 +5300,16 @@ class Notifier(Service.Object):
         action_1 = dbus_to_python(actions)
         
         replacesId = dbus_to_python(replacesId)
-        if not replacesId:
-            replacesdId = 0
+        # if not replacesId:
+            # replacesdId = 0
+        
+        if self._not_counter == 4000:
+            self._not_counter = 1
+        if replacesId == 0 or not replacesId:
+            replacesdId = self._not_counter
+            self._not_counter +=1
+        elif replacesId == self._not_counter:
+            self._not_counter += 1
         
         if not dbus_to_python(appIcon):
             appIcon = ""
