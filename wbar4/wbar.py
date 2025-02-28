@@ -3,7 +3,7 @@
 # COMMAND: 
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar.py
 
-# V. 0.9.19
+# V. 0.9.20
 
 import os,sys,shutil,stat
 import gi
@@ -3191,8 +3191,12 @@ class menuWin(Gtk.Window):
             # self.close()
     
     def on_modify_menu(self, btn):
+        if not shutil.which(self._parent.menu_editor):
+            self.msg_simple("Error\n"+"Menu editor not found:\n{}".format(self._parent.menu_editor))
+            self.on_focus_out(None)
+            return
         try:
-            subprocess.Popen(f"{self._parent.menu_editor}",shell=True)
+            subprocess.Popen(self._parent.menu_editor, shell=True)
         except Exception as E:
             self.msg_simple("Error\n"+str(E))
         self.on_focus_out(None)
@@ -3937,6 +3941,7 @@ class otherWin(Gtk.Window):
         self.body_lbl.set_use_markup(True)
         self.body_lbl.set_markup(" ")
         self.body_lbl.set_selectable(True)
+        self.body_lbl.connect("activate-link", self.on_link_activate)
         self.body_lbl.set_xalign(0)
         self.body_lbl.set_wrap(True)
         self.body_lbl.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
@@ -4105,6 +4110,12 @@ class otherWin(Gtk.Window):
                 self.body_lbl.set_markup(" ")
         except:
             pass
+    
+    def on_link_activate(self, lbl, _url):
+        if _url:
+            _ul = Gtk.UriLauncher.new(_url)
+            _ul.launch(None,None,None,None)
+            return True
     
     def on_row_activated(self, box, row):
         try:
