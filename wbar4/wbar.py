@@ -3,7 +3,7 @@
 # COMMAND: 
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar.py
 
-# V. 0.9.20
+# V. 0.9.21
 
 import os,sys,shutil,stat
 import gi
@@ -3466,7 +3466,10 @@ class menuWin(Gtk.Window):
                 drag_controller.connect('drag-begin', self.on_drag_begin)
                 _i.add_controller(drag_controller)
             _l = Gtk.Label(label=_name)
-            # _l.set_valign(2)
+            _l.set_wrap(True)
+            _l.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
+            _l.set_xalign(0.5)
+            _l.set_justify(Gtk.Justification.CENTER)
             _b.append(_l)
             _b._description = _description
             _b._exec = _exec
