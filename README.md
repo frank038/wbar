@@ -1,7 +1,7 @@
 # wbar
 Bar for wayland
 
-No more developed.
+Almost no more developed.
 
 free to use and modify
 
