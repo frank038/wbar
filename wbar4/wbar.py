@@ -3,7 +3,7 @@
 # COMMAND: 
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar.py
 
-# V. 0.9.21
+# V. 0.9.22
 
 import os,sys,shutil,stat
 import gi
@@ -1209,11 +1209,24 @@ class MyWindow(Gtk.ApplicationWindow):
             self.on_list_audio(_list[1], 201)
         elif _list[0] == "new-source":
             self.on_list_audio(_list[1], 202)
+        elif _list[0] == "change-server":
+            self.on_list_audio(_list[1], 500)
     
     def on_list_audio(self, _el, _t):
         if _t == 103:
             self._set_volume()
+        # sever
+        elif _t == 500:
+            self.on_server_changed()
         return
+    
+    def on_server_changed(self):
+        try:
+            _server_info = self.pulse.server_info()
+            self.default_sink_name = _server_info.default_sink_name
+            self._set_volume()
+        except:
+            self._reload_pulse()
     
     def _reload_pulse(self):
         self.pulse = None
@@ -4348,7 +4361,7 @@ class timerDialog(Gtk.Dialog):
 
 class DialogConfiguration(Gtk.Dialog):
     def __init__(self, parent):
-        super().__init__(title="Settings", transient_for=parent)
+        super().__init__(title="Settings", transient_for=None)
         
         self.add_buttons("OK", Gtk.ResponseType.OK, "Cancel", Gtk.ResponseType.CANCEL)
         
@@ -5325,6 +5338,11 @@ class Notifier(Service.Object):
         elif replacesId == self._not_counter:
             self._not_counter += 1
         
+        # x-canonical-private-synchronous - e.g. volume
+        # replacesId = _on_hints(hints, "x-canonical-private-synchronous")
+        if "x-canonical-private-synchronous" in hints:
+            replacesId = 3000
+        
         if not dbus_to_python(appIcon):
             appIcon = ""
         if action_1:
@@ -5763,8 +5781,13 @@ class audioThread(Thread):
     def run(self):
         with self.pulse.pulsectl.Pulse('event-audio') as pulse:
             def audio_events(ev):
+                # server
+                if ev.facility == pulse.event_facilities[5]:
+                    # server change
+                    if ev.t == self.pulse.PulseEventTypeEnum.change:
+                        self._signal.propList = ["change-server", ev.index]
                 # sink
-                if ev.facility == pulse.event_facilities[6]:
+                elif ev.facility == pulse.event_facilities[6]:
                     # volume change
                     if ev.t == self.pulse.PulseEventTypeEnum.change:
                         self._signal.propList = ["change-sink", ev.index]
@@ -5782,7 +5805,9 @@ class audioThread(Thread):
                     # elif ev.t == self.pulse.PulseEventTypeEnum.new:
                         # self.sig.emit(["new-source", ev.index])
             # #
-            pulse.event_mask_set('sink', 'source')
+            # pulse.event_mask_set('sink', 'source')
+            # pulse.event_mask_set('sink', 'source', 'server')
+            pulse.event_mask_set('sink', 'server')
             pulse.event_callback_set(audio_events)
             # pulse.event_listen(timeout=10)
             pulse.event_listen()

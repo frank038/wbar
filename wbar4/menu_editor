@@ -1,7 +1,7 @@
 #!/bin/sh
 
 # EDITOR
-menulibre
+XDG_MENU_PREFIX="gnome-" /usr/bin/menulibre
 
 # for future use
 # $1 is the name of the desktop file to modify
