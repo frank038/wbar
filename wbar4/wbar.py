@@ -3,7 +3,7 @@
 # COMMAND: 
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar.py
 
-# V. 0.9.22
+# V. 0.9.23
 
 import os,sys,shutil,stat
 import gi
@@ -5269,7 +5269,7 @@ class notificationWin(Gtk.Window):
         self.close()
     
     def on_close(self,_replaceid):
-        self._notifier.NotificationClosed(_replaceid, 3)
+        self._notifier.NotificationClosed(_replaceid, 2)
         for el in self._notifier.list_notifications[:]:
             if el[0] == self:
                 self._notifier.list_notifications.remove(el)
@@ -5333,7 +5333,7 @@ class Notifier(Service.Object):
         if self._not_counter == 4000:
             self._not_counter = 1
         if replacesId == 0 or not replacesId:
-            replacesdId = self._not_counter
+            replacesId = self._not_counter
             self._not_counter +=1
         elif replacesId == self._not_counter:
             self._not_counter += 1
