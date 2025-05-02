@@ -1012,11 +1012,24 @@ class MyWindow(Gtk.Window):
             self.on_list_audio(_list[1], 201)
         elif _list[0] == "new-source":
             self.on_list_audio(_list[1], 202)
+        elif _list[0] == "change-server":
+            self.on_list_audio(_list[1], 500)
     
     def on_list_audio(self, _el, _t):
         if _t == 103:
             self._set_volume()
+        # sever
+        elif _t == 500:
+            self.on_server_changed()
         return
+
+    def on_server_changed(self):
+        try:
+            _server_info = self.pulse.server_info()
+            self.default_sink_name = _server_info.default_sink_name
+            self._set_volume()
+        except:
+            self._reload_pulse()
     
     def _reload_pulse(self):
         self.pulse = None
@@ -1027,8 +1040,8 @@ class MyWindow(Gtk.Window):
         _file_volume = os.path.join(_curr_dir, "volume_volume.sh")
         ret1 = None
         if os.path.exists(_file_volume):
-            if not os.access(_file_volume, os.X_OK):
-                os.chmod(_file_volume, 0o740)
+            # if not os.access(_file_volume, os.X_OK):
+                # os.chmod(_file_volume, 0o740)
             try:
                 ret1 = subprocess.check_output(_file_volume,shell=True)
             except:
@@ -1038,8 +1051,8 @@ class MyWindow(Gtk.Window):
         _file_mute = os.path.join(_curr_dir, "volume_mute.sh")
         ret2 = None
         if os.path.exists(_file_mute):
-            if not os.access(_file_mute, os.X_OK):
-                os.chmod(_file_mute, 0o740)
+            # if not os.access(_file_mute, os.X_OK):
+                # os.chmod(_file_mute, 0o740)
             try:
                 ret2 = subprocess.check_output(_file_mute,shell=True)
             except:
