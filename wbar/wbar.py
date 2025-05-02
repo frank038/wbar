@@ -4417,6 +4417,7 @@ class Notifier(Service.Object):
         self._parent = _parent
         self.list_notifications = []
         self._not_path = os.path.join(_curr_dir,"mynots")
+        self._not_counter = 1
     
     @Service.method("org.freedesktop.Notifications", out_signature="as")
     def GetCapabilities(self):
@@ -4431,8 +4432,18 @@ class Notifier(Service.Object):
         action_1 = dbus_to_python(actions)
         
         replacesId = dbus_to_python(replacesId)
-        if not replacesId:
-            replacesdId = 0
+        # if not replacesId:
+        #     replacesId = 0
+        if self._not_counter == 4000:
+            self._not_counter = 1
+        if replacesId == 0 or not replacesId:
+            replacesId = self._not_counter
+            self._not_counter +=1
+        elif replacesId == self._not_counter:
+            self._not_counter += 1
+
+        if "x-canonical-private-synchronous" in hints:
+            replacesId = 3000
         
         if not dbus_to_python(appIcon):
             appIcon = ""
