@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 0.9.5
+# V. 0.9.6
 
 import os,sys,shutil,stat
 import gi
@@ -4824,8 +4824,13 @@ class audioThread(Thread):
     def run(self):
         with self.pulse.pulsectl.Pulse('event-audio') as pulse:
             def audio_events(ev):
+                # server
+                if ev.facility == pulse.event_facilities[5]:
+                    # server change
+                    if ev.t == self.pulse.PulseEventTypeEnum.change:
+                        self._signal.propList = ["change-server", ev.index]
                 # sink
-                if ev.facility == pulse.event_facilities[6]:
+                elif ev.facility == pulse.event_facilities[6]:
                     # volume change
                     if ev.t == self.pulse.PulseEventTypeEnum.change:
                         self._signal.propList = ["change-sink", ev.index]
@@ -4843,7 +4848,9 @@ class audioThread(Thread):
                     # elif ev.t == self.pulse.PulseEventTypeEnum.new:
                         # self.sig.emit(["new-source", ev.index])
             # #
-            pulse.event_mask_set('sink', 'source')
+            # pulse.event_mask_set('sink', 'source')
+            # pulse.event_mask_set('sink', 'source', 'server')
+            pulse.event_mask_set('sink', 'server')
             pulse.event_callback_set(audio_events)
             # pulse.event_listen(timeout=10)
             pulse.event_listen()
