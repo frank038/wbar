@@ -43,11 +43,12 @@ if MAX_CHARS:
     if len(_text) > MAX_CHARS:
         _not_path = 1
 
-if _not_path == 0:
+i = 0
+if _not_path == 0 and _text:
     if not os.path.exists(os.path.join(_curr_dir,"donotdisturb.mode")):
         time_now = str(int(time.time()))
         while os.path.exists(os.path.join(clips_path, time_now)):
-            sleep(0.1)
+            time.sleep(0.1)
             time_now = str(int(time.time()))
             i += 1
             if i == 10:
