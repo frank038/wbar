@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-# COMMAND: 
+# COMMAND, maybe useless: 
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar.py
 
-# V. 0.9.23
+# V. 0.9.24
 
 import os,sys,shutil,stat
 import gi
@@ -25,6 +25,8 @@ import subprocess
 import time, datetime
 import dbus
 import dbus.service as Service
+
+app = None
 
 # 0 for using internal method
 _USE_PIL = 0
@@ -555,8 +557,8 @@ class SignalObject(GObject.Object):
 # class MyWindow(Gtk.Window):
 class MyWindow(Gtk.ApplicationWindow):
     # def __init__(self):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, app):
+        super(MyWindow, self).__init__(application=app)
         self._app = self.get_application()
         
         # super().__init__(title="mypanel")
@@ -4247,14 +4249,15 @@ class noteDialog(Gtk.Window):
         delete_btn.connect('clicked', self.on_delete)
         btn_box.append(delete_btn)
         
-        accept_btn = Gtk.Button(label="Accept")
+        # accept_btn = Gtk.Button(label="Accept")
+        accept_btn = Gtk.Button(label="Close")
         accept_btn.set_hexpand(True)
         accept_btn.connect('clicked', self.on_accept)
         btn_box.append(accept_btn)
         
-        close_btn = Gtk.Button(label="Close")
-        box.append(close_btn)
-        close_btn.connect("clicked", lambda x: self.close())
+        # close_btn = Gtk.Button(label="Close")
+        # box.append(close_btn)
+        # close_btn.connect("clicked", lambda x: self.close())
         
         self.text_buffer = self.text_view.get_buffer()
         self.text_buffer.set_text(_text)
@@ -4296,6 +4299,8 @@ class noteDialog(Gtk.Window):
                     self._parent.list_notes.append(self)
             except:
                 pass
+            # only if original close button is disabled
+            self.close()
     
     def on_delete(self, btn=None):
         if os.path.exists(os.path.join(self.path_notes,self._id)):
@@ -5328,7 +5333,7 @@ class Notifier(Service.Object):
         
         replacesId = dbus_to_python(replacesId)
         # if not replacesId:
-            # replacesdId = 0
+            # replacesId = 0
         
         if self._not_counter == 4000:
             self._not_counter = 1
@@ -5817,36 +5822,27 @@ class audioThread(Thread):
 
 owner_id = None
 
-class Application(Gtk.Application):
-    """ Main Aplication class """
-
-    def __init__(self):
-        super().__init__(application_id='org.example.wbar',
-                         flags=Gio.ApplicationFlags.FLAGS_NONE)
-
-    def do_activate(self):
-        win = self.props.active_window
-        if not win:
-            win = MyWindow(application=self)
-            
-            if USE_TRAY:
-                global owner_id
-                owner_id = Gio.bus_own_name(
-                        Gio.BusType.SESSION,
-                        NODE_INFO.interfaces[0].name,
-                        Gio.BusNameOwnerFlags.NONE,
-                        win.on_bus_acquired,
-                        None,
-                        win.on_name_lost,
-                        )
-            
-        win.present()
+def on_activate(app):
+    win = MyWindow(app)
+    
+    if USE_TRAY:
+        global owner_id
+        owner_id = Gio.bus_own_name(
+                Gio.BusType.SESSION,
+                NODE_INFO.interfaces[0].name,
+                Gio.BusNameOwnerFlags.NONE,
+                win.on_bus_acquired,
+                None,
+                win.on_name_lost,
+                )
         
+    win.present()
+
 
 def main():
-    """ Run the main application"""
-    app = Application()
-    return app.run()#sys.argv)
+    app = Gtk.Application(application_id='com.example.wbar4')
+    app.connect('activate', on_activate)
+    app.run(None)
 
 try:
     if __name__ == '__main__':
