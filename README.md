@@ -17,7 +17,7 @@ Features:
 - application menu
 - clock
 - clipboard (with history)
-- taskbar (only for the gtk4 version)
+- taskbar with scrolling support (only for the gtk4 version)
 - tray
 - volume
 - notifications (with history)
