@@ -1,12 +1,51 @@
 /* the window border colour */
-@define-color border_color #00B300;
+@define-color border_color #28A5DC;
 @define-color stickynote_color #F3C000;
+/*
+.window-frame, .window-frame:backdrop {
+ box-shadow: 0 0 0 black;
+ border-style: none;
+ margin: 0;
+ border-radius: 0;
+}
+
+.titlebar {
+ border-radius: 0;
+}
+
+.window-frame.csd.popup {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.13);
+}
+
+.header-bar {
+  background-image: none;
+  box-shadow: none;
+}*/
 
 /* the panel */
 .mywindow {
   border-bottom-width: 2px;
   border-color: @border_color;
   border-style: solid;
+}
+
+
+/* taskbar buttons - type togglebutton */ 
+/* .mywindow #btn-taskbar:checked {
+  background-color: yellow;
+}*/
+
+/* tasklist */
+/* #tasklist {
+  background-color: red;
+  border: 1px solid black;
+}*/
+
+#tasklist button:hover,
+#tasklist button:checked {
+  box-shadow: 0px 0px 5px rgba(128, 128, 128, 0.7) inset;
+  border: 1px solid #555555;
+  border-radius: 10px 10px 10px 10px;
 }
 
 /* the menu window */
@@ -124,6 +163,7 @@
 .clocklabel {
   font-family: DIGITALDREAMFAT;
   font-size: 21px;
+  color: black;
 }
 
 /* the timer win */
