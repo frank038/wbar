@@ -9,7 +9,7 @@ Wbar is a panel to be used under wayland, if the display server support
 the layer-shell protocols. All the lroots based window managers should 
 support wbar.
 
-There is a porting of wbar to the Gtk4 gui, because the gtk3 version freeze completely for unknown reasons. The gtk3 version is developed no more. Requirements: gtk4-layer-shell + python3 binding + other if the case (see below). Important: it seems that the lib libgtk4-layer-shell.so.1.0.4 must be preoladed before launching wbar.py (or just launch wbar.sh)
+There is a Gtk3 and a Gtk4 version of wbar (in the past the gtk3 version freeze(d) completely for unknown reasons). The gtk3 version has less priority in developing. Requirements: gtk3-layer-shell or gtk4-layer-shell + python3 binding + other if the case (see below). Important: it seems that the lib libgtk4-layer-shell.so.1.0.4 must be preoladed before launching wbar.py (or just launch wbar.sh of the gtk4 version).
 
 The command/env "dbus-update-activation-environment --systemd WAYLAND_DISPLAY DISPLAY XAUTHORITY" may improve the use of the gtk3/4 applications.
 
@@ -17,7 +17,7 @@ Features:
 - application menu
 - clock
 - clipboard (with history)
-- taskbar with scrolling support (only for the gtk4 version)
+- taskbar with scrolling support
 - tray
 - volume
 - notifications (with history)
@@ -25,6 +25,7 @@ Features:
 - two command outputs
 - a graphical configurator
 - sticky notes
+- a timer (gtk3 version)
 
 Requirements:
 - a wayland display server with layer-shell support
