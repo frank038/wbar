@@ -3,7 +3,7 @@
 @define-color stickynote_color #F3C000;
 
 * {
-  font-size: 24px;
+  font-size: 28px;
 }
 
 /* the panel */
@@ -15,23 +15,36 @@
   font-size: 24px;
 }
 
-/* various widgets in the panel */
-/*
 .mywindow button {
   background: #cecece;
-} */
+}
 
-/* tray background colour */
-/*
-popover * {
-  background: ##FFA500;
+/* taskbar buttons - type togglebutton */ 
+/* .mywindow #btn-taskbar:checked {
+  background-color: yellow;
 }*/
+
+/* tasklist */
+/* #tasklist {
+  background-color: red;
+  border: 1px solid black;
+}*/
+
+#tasklist button:hover,
+#tasklist button:checked {
+  box-shadow: 0px 0px 5px rgba(128, 128, 128, 0.7) inset;
+  border: 1px solid #555555;
+  border-radius: 10px 10px 10px 10px;
+}
+
+popover * {
+  background: #cecece;
+}
 
 /* grid widget */
-/*
 grid {
   background:#E0E0E0;
-}*/
+}
 
 /* the menu window */
 .menuwin { 
@@ -151,7 +164,6 @@ grid {
   background: #00000000;
 }
 
-
 /* the output command left label */
 .label1 {
   font-size: 24px;
@@ -183,6 +195,7 @@ grid {
 .notewin * {
   background-color: @stickynote_color;
   font-size: 24px;
+  margin: 0px;
 }
 
 .notewin button label {
@@ -190,7 +203,7 @@ grid {
   border: solid;
   border-width: 1px;
   border-color: #7F7F7F;
-  margin: 2px;
+  margin: 0px;
   font-size: 24px;
   background-color: white;
 }

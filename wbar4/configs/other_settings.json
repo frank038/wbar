@@ -3,5 +3,6 @@
     "audio-start-value": 25,
     "use-volume": 1,
     "use-tray": 0,
-    "double-click": 0
+    "double-click": 0,
+    "use-taskbar": 1
 }
