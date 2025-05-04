@@ -17,6 +17,7 @@ Features:
 - application menu
 - clock
 - clipboard (with history)
+- taskbar (only for the gtk4 version)
 - tray
 - volume
 - notifications (with history)
@@ -32,6 +33,8 @@ Requirements:
 - PIL for the tray section (only for the gtk3 version)
 - wl-clipboard for the clipboard (wl-paste and wl-copy are needed)
 - pactl for volume applet (amixer is supported; read below for more)
+
+The taskbar uses the framework wl_framework from Consolatis.
 
 How to use:
 - just unzip the archive and launch waybar.sh
