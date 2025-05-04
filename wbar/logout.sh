@@ -1,4 +1,5 @@
 #!/bin/bash
 
-# kill `pgrep -f WINDOWMANAGER`
-killall WINDOWMANAGER
+# kill `pgrep -f wayfire`
+# killall wayfire
+labwc -e

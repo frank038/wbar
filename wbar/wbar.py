@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 0.9.6
+# V. 0.9.7
 
 import os,sys,shutil,stat
 import gi
@@ -81,7 +81,7 @@ if not os.path.exists(os.path.join(_curr_dir,"notes")):
 # other options
 _other_settings_conf = None
 _other_settings_config_file = os.path.join(_curr_dir,"configs","other_settings.json")
-_starting_other_settings_conf = {"pad-value":4,"audio-start-value":0,"use-volume":0,"use-tray":0,"double-click":0}
+_starting_other_settings_conf = {"pad-value":4,"audio-start-value":0,"use-volume":0,"use-tray":0,"double-click":0,"use-taskbar":0}
 if not os.path.exists(_other_settings_config_file):
     try:
         _ff = open(_other_settings_config_file,"w")
@@ -103,6 +103,13 @@ _AUDIO_START_LEVEL = _other_settings_conf["audio-start-value"]
 USE_VOLUME = _other_settings_conf["use-volume"]
 USE_TRAY = _other_settings_conf["use-tray"]
 DOUBLE_CLICK = _other_settings_conf["double-click"]
+USE_TASKBAR = _other_settings_conf["use-taskbar"]
+
+_context = None
+#if USE_TASKBAR:
+from wl_framework.loop_integrations import GLibIntegration
+from wl_framework.network.connection import WaylandConnection
+from wl_framework.protocols.foreign_toplevel import ForeignTopLevel
 
 if USE_VOLUME:
     import pulsectl as _pulse
@@ -560,6 +567,10 @@ class MyWindow(Gtk.Window):
             self.chars_preview = self.clipboard_conf["chars_preview"]
             self.chars_preview_tmp = 0
             self.ClipDaemon = None
+            self.clip_do_not_track = 0
+            if os.path.exists(os.path.join(_curr_dir,"donotdisturb.mode")):
+                self.clip_do_not_track = True
+            #
             # if is_wayland:
                 # _ret = self.clipboard_ready()
                 # if _ret:
@@ -621,6 +632,9 @@ class MyWindow(Gtk.Window):
         self.label2_use = _panel_conf["label2"]
         self.task_use = _panel_conf["tasklist"]
         self.clock_use = _panel_conf["clock"]
+        global USE_TASKBAR
+        if USE_TASKBAR:
+            self.clock_use = 2
         self.time_format = _panel_conf["time_format"]
         self.volume_command = _panel_conf["volume_command"]
         self.volume_command_tmp = None
@@ -700,7 +714,8 @@ class MyWindow(Gtk.Window):
         
         # 0 horizontal 1 vertical - spacing
         self.main_box = Gtk.Box.new(0, 0)
-        self.main_box.set_homogeneous(True)
+        if USE_TASKBAR == 0:
+            self.main_box.set_homogeneous(True)
         _pad1 = max(self._corner_top,self._corner_bottom)
         self.main_box.set_margin_start(_pad1)
         self.main_box.set_margin_end(_pad1)
@@ -709,6 +724,9 @@ class MyWindow(Gtk.Window):
         self.left_box = Gtk.Box.new(0,0)
         self.main_box.pack_start(self.left_box, True, True, 0)
         self.left_box.set_halign(1)
+        
+        if USE_TASKBAR:
+            self.left_box.set_hexpand(False)
         
         self.menubutton = Gtk.EventBox()
         _icon_path = os.path.join(_curr_dir,"icons","menu.svg")
@@ -732,17 +750,31 @@ class MyWindow(Gtk.Window):
         self.set_timer_label1()
         
         self.center_box = Gtk.Box.new(0,0)
-        self.main_box.pack_start(self.center_box, True, False, 4)
-        self.center_box.set_halign(3)
+        self.main_box.pack_start(self.center_box, True, True, 4)
         
-        # clock
-        if self.clock_use:
-            self._t_id = None
-            self.on_set_clock2(None)
+        if USE_TASKBAR == 0:
+            self.center_box.set_halign(3)
+        elif USE_TASKBAR == 1:
+            self.center_box.set_halign(1)
+        elif USE_TASKBAR == 2:
+            self.center_box.set_halign(2)
             
-        # # tasklist
-        # if self.task_use:
-            # self.on_set_tasklist(None)
+        # clock at center
+        if self.clock_use == 1:
+            self._t_id = None
+            self.on_set_clock2(self.clock_use)
+        
+        # tasklist
+        global _context
+        if USE_TASKBAR:
+            try:
+                _context = taskbarContext()
+            except RuntimeError as e:
+                USE_TASKBAR = 0
+        if USE_TASKBAR:
+            self.context = _context
+            self.manager = self.context.manager
+            self.on_set_tasklist()
         
         self.right_box = Gtk.Box.new(0,0)
         self.main_box.pack_start(self.right_box, True, True, 0)
@@ -770,9 +802,10 @@ class MyWindow(Gtk.Window):
         except:
             pass
         
-        # # clock
-        # if self.clock_use:
-            # self.on_set_clock(None)
+        # clock at right
+        if self.clock_use == 2:
+            self._t_id = None
+            self.on_set_clock2(self.clock_use)
         
         # volume
         self.athread = None
@@ -847,7 +880,7 @@ class MyWindow(Gtk.Window):
         self.lbl2_style_context.add_class("label2")
         self.label2button.connect('button-press-event', self.on_label2)
         self.center_box.pack_start(self.label2button,False,False,4)
-        
+                
         gdir1 = Gio.File.new_for_path(os.path.join(_HOME, ".local/share/applications"))
         self.monitor1 = gdir1.monitor_directory(Gio.FileMonitorFlags.SEND_MOVED, None)
         self.monitor1.connect("changed", self.directory_changed)
@@ -867,6 +900,206 @@ class MyWindow(Gtk.Window):
         
         self.q2 = None
         self.set_timer_label2()
+        
+    
+    def on_set_tasklist(self):
+        self.box_taskbar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+        self.center_box.add(self.box_taskbar)
+        #
+        # self.tbox = Gtk.Box.new(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+        # self.tbox.set_name("tasklist")
+        # self._scroll = self._create_scroll()
+        # self.box_taskbar.pack_start(self._scroll, True, True, 0)
+        #
+        self.box_taskbar.pack_start(self._create_scroll(), True, True, 0)
+        #
+        self.active_button = None
+        self.context.connect('toplevel_new', self.on_toplevel_new)
+        self.context.connect('toplevel_synced', self.on_toplevel_synced)
+        self.context.connect('toplevel_closed', self.on_toplevel_closed)
+        #
+        self._create_tasklist_menu()
+        #
+        # self.scroll.show_all()
+        self.box_taskbar.show_all()
+        
+    # def find_label(self,widget):
+        # children = widget.get_children()
+        # for el in children:
+            # if isinstance(el, Gtk.Label):
+                # return el
+        # return None
+                    
+    # def set_text_and_ellipsize(self, button, text):
+        # b = self.find_label(button)
+        # # In case we fail...
+        # if b is None:
+            # return
+        # # setting ellipsize
+        # b.set_ellipsize(Pango.EllipsizeMode.END)
+    
+    def on_toplevel_new(self, context, toplevel):
+        self.tbutton = Gtk.ToggleButton()
+        self.tbutton.set_name("btn-taskbar")
+        self.tbutton.set_relief(Gtk.ReliefStyle.NONE)
+        self.tbutton.set_hexpand(False)
+        #
+        self.tbutton.connect('clicked', self.manager.app_toggle, toplevel)
+        self.tbutton.connect('button-press-event', self.handle_context_menu, toplevel)
+        # self.set_text_and_ellipsize(button, None)
+        #
+        self.tbutton.hide()
+        toplevel.button = self.tbutton
+        if not hasattr(self.tbutton, "_icon"):
+            self.tbutton._icon = None
+        self.tbox.pack_start(self.tbutton, True, True, 0)
+
+    def on_toplevel_synced(self, context, toplevel):
+        # # Obviously this should do a proper diff and only update if required
+        # toplevel.button.set_label(toplevel.title)
+        if toplevel.button._icon == None:
+            ICON_SIZE = self.win_height
+            ret_icon = self._on_desktop_entry(os.path.basename(toplevel.app_id))
+            _img = None
+            if ret_icon:
+                try:
+                    _img = Gtk.Image.new_from_icon_name(ret_icon, ICON_SIZE)
+                except:
+                    pass
+                #
+                if _img:
+                    _img.set_pixel_size(self.win_height)
+                    toplevel.button.set_image(_img)
+                    toplevel.button._icon = 1
+                    _img.set_halign(3)
+                    _img.set_valign(3)
+            if not ret_icon or not _img:
+                try:
+                    pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(os.path.join(_curr_dir,"icons","unknown2.svg"), ICON_SIZE, ICON_SIZE, 1)
+                    _img = Gtk.Image.new_from_pixbuf(pixbuf)
+                    toplevel.button.set_image(_img)
+                    toplevel.button._icon = 1
+                except Exception as E:
+                    toplevel.button.set_label(" A ")
+                    toplevel.button._icon = 1
+        #
+        # toplevel.button.set_size_request(toplevel.button.get_allocated_height(),self.win_height)
+        # toplevel.button.set_size_request(self.win_height,self.win_height)
+        toplevel.button.show()
+        toplevel.button.set_tooltip_text(toplevel.title)
+        #
+        if 'activated' in toplevel.states:
+            if toplevel.button != self.active_button:
+                if isinstance(self.active_button, Gtk.ToggleButton):
+                    # self.active_button.set_active(False)
+                    self.active_button.set_state_flags(Gtk.StateFlags.NORMAL,True)
+                self.active_button = toplevel.button
+                toplevel.button.set_state_flags(Gtk.StateFlags.CHECKED,True)
+        elif toplevel.button == self.active_button:
+            toplevel.button.set_state_flags(Gtk.StateFlags.NORMAL,True)
+        # 
+        # self.set_default_size(-1, self.win_height)
+    
+    def on_toplevel_closed(self, context, toplevel):
+        self.tbox.remove(toplevel.button)
+        # 
+        # self.set_default_size(-1,self.win_height)
+        
+    # find the icon from the desktop file
+    def _on_desktop_entry(self, _desktop):
+        app_dirs_user = [os.path.join(os.path.expanduser("~"), ".local/share/applications")]
+        app_dirs_system = ["/usr/share/applications", "/usr/local/share/applications"]
+        _ddir = app_dirs_user+app_dirs_system
+        _icon = None
+        for dd in _ddir:
+            if os.path.exists(dd):
+                for ff in os.listdir(dd):
+                    if os.path.basename(ff) == _desktop+".desktop":
+                        try:
+                            _ap = Gio.DesktopAppInfo.new_from_filename(os.path.join(dd,ff))
+                            _icon = _ap.get_icon()
+                            if _icon:
+                                if isinstance(_icon,Gio.ThemedIcon):
+                                    _icon = _icon.to_string()
+                                elif isinstance(_icon,Gio.FileIcon):
+                                    _icon = _icon.get_file().get_path()
+                                return _icon
+                            else:
+                                return None
+                        except:
+                            return None
+        
+        return None
+    
+    def _create_scroll(self):
+        self.scroll = Gtk.ScrolledWindow()
+        self.scroll.set_policy(
+            Gtk.PolicyType.EXTERNAL,
+            Gtk.PolicyType.NEVER
+        )
+        # self.scroll.set_hexpand(True)
+        # self.scroll.set_vexpand(True)
+        self.tbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+        self.tbox.set_name('tasklist')
+        self.tbox.set_hexpand(True)
+        self.scroll.add(self.tbox)
+        self.scroll.connect('scroll-event', self.handle_scroll)
+        
+        self.scroll.show_all()
+        return self.scroll
+    
+    def handle_scroll(self, scroll, event):
+        adj = scroll.get_hadjustment()
+        if adj.get_upper() <= adj.get_page_size():
+            return
+        val = adj.get_value()
+        if event.direction == Gdk.ScrollDirection.UP or event.delta_y < 0:
+            if val > adj.get_lower():
+                adj.set_value(val - adj.get_minimum_increment())
+        elif event.direction == Gdk.ScrollDirection.DOWN or event.delta_y > 0:
+            if val + adj.get_page_size() < adj.get_upper():
+                adj.set_value(val + adj.get_minimum_increment())
+    
+    def handle_context_menu(self, button, event, toplevel):
+        if event.button != Gdk.BUTTON_SECONDARY:
+            return False
+        for menu, func in (
+            (self._menu_maximize, self.manager.app_toggle_maximize),
+            (self._menu_minimize, self.manager.app_toggle_minimize),
+            # (self._menu_fullscreen, self.manager.app_toggle_fullscreen),
+            (self._menu_close, self.manager.app_close)
+        ):
+            try:
+                menu.disconnect_by_func(func)
+            except TypeError:
+                pass
+            menu.connect('activate', func, toplevel)
+        self._menu_maximize.set_label(
+            'UnMaximize' if 'maximized' in toplevel.states else 'Maximize')
+        self._menu_minimize.set_label(
+            'UnMinimize' if 'minimized' in toplevel.states else 'Minimize')
+        # self._menu_fullscreen.set_label(
+            # 'UnFullscreen' if 'fullscreen' in toplevel.states else 'Fullscreen')
+        self.menu.popup_at_widget(button, Gdk.Gravity.NORTH, Gdk.Gravity.SOUTH, event)
+        return True
+    
+    def _create_tasklist_menu(self):
+        menu = Gtk.Menu.new()
+        menu.set_name('panel_menu')
+        self._menu_maximize = Gtk.MenuItem.new_with_label('Maximize')
+        self._menu_minimize = Gtk.MenuItem.new_with_label('Minimize')
+        # self._menu_fullscreen = Gtk.MenuItem.new_with_label('Fullscreen')
+        self._menu_close = Gtk.MenuItem.new_with_label('Close')
+
+        menu.append(self._menu_maximize)
+        menu.append(self._menu_minimize)
+        # menu.append(self._menu_fullscreen)
+        menu.append(Gtk.SeparatorMenuItem())
+        menu.append(self._menu_close)
+
+        menu.show_all()
+        self.menu = menu
+        return menu
     
     def on_label1(self, btn, event):
         if event.button == 1:
@@ -1036,6 +1269,15 @@ class MyWindow(Gtk.Window):
         self.pulse = _pulse.Pulse()
     
     def _set_volume(self):
+        _sink = None
+        try:
+            for el in self.pulse.sink_list():
+                if el.name == self.default_sink_name:
+                    _sink = el
+                    break
+        except:
+            self._reload_pulse()
+            return
         # volume level
         _file_volume = os.path.join(_curr_dir, "volume_volume.sh")
         ret1 = None
@@ -1067,6 +1309,7 @@ class MyWindow(Gtk.Window):
         
         if 0 <= _level <= 1:
             self.volume_bar.set_fraction(_level)
+            self.volume_bar.set_tooltip_text("{}: {}".format(_sink.description, int(_level*100)))
         # self.volume_image.hide()
         self.volume_bar.set_sensitive(True)
         if _mute == 0:
@@ -1657,17 +1900,17 @@ class MyWindow(Gtk.Window):
         except:
             pass
             
-    def _close_prog_by_pid1(self, _pid):
-        try:
-            list_pid = subprocess.check_output(f"pstree -p {_pid} | grep -oP '\(\K[^\)]+'", shell=True, universal_newlines=True).split("\n")
-            list_pid.remove('')
-        except:
-            return
-        for _p in list_pid:
-            try:
-                os.system(f"kill -9 {_p}")
-            except:
-                continue
+    # def _close_prog_by_pid1(self, _pid):
+        # try:
+            # list_pid = subprocess.check_output("pstree -p {} | grep -oP '\(\K[^\)]+'".format(_pid), shell=True, universal_newlines=True).split("\n")
+            # list_pid.remove('')
+        # except:
+            # return
+        # for _p in list_pid:
+            # try:
+                # os.system(f"kill -9 {_p}")
+            # except:
+                # continue
     
     def terminate_thread(self,_t):
         if _t == 1 or _t == None:
@@ -1755,7 +1998,10 @@ class MyWindow(Gtk.Window):
         self.set_on_clock()
         self.clock_lbl_style_context = self.clock_lbl.get_style_context()
         self.clock_lbl_style_context.add_class("clocklabel")
-        self.center_box.pack_start(self.clock_lbl,False,False,10)
+        if _pos == 1:
+            self.center_box.pack_start(self.clock_lbl,False,False,10)
+        elif _pos == 2:
+            self.right_box.pack_end(self.clock_lbl,False,False,10)
         self._t_id = GLib.timeout_add(60000, self.on_clock)
         # reorder
         if _pos != None:
@@ -1953,6 +2199,22 @@ class MyWindow(Gtk.Window):
             self.clip_max_clips_tmp = _value
         elif _type == "cp":
             self.chars_preview_tmp = _value
+    
+    def onclip_do_not_disturb(self, _state):
+        self.clip_do_not_track = _state
+        if self.clip_do_not_track:
+            try:
+                _file = os.path.join(_curr_dir,"donotdisturb.mode")
+                f = open(_file, "w")
+                f.close()
+            except:
+                pass
+        else:
+            try:
+                _file = os.path.join(_curr_dir,"donotdisturb.mode")
+                os.remove(_file)
+            except:
+                pass
     
     # 0 not active - 1 not active for urgent - 2 always active
     def set_dnd_combo(self, _type):
@@ -2472,14 +2734,14 @@ class menuWin(Gtk.Window):
             self.iconview.set_activate_on_single_click(True)
         self.iconview.set_name("myiconview")
         #
-        # target_entry = Gtk.TargetEntry.new('calculon', 1, 999)
-        # # self.DRAG_ACTION = Gdk.DragAction.MOVE
-        # self.DRAG_ACTION = Gdk.DragAction.COPY
-        # self._start_path = None
-        # self.iconview.enable_model_drag_source(Gdk.ModifierType.BUTTON1_MASK, [target_entry], self.DRAG_ACTION)
-        # self.iconview.enable_model_drag_dest([target_entry], self.DRAG_ACTION)
-        # self.iconview.connect("drag-data-get", self.on_drag_data_get)
-        # self.iconview.connect("drag-data-received", self.on_drag_data_received)
+        target_entry = Gtk.TargetEntry.new('calculon', 1, 999)
+        # self.DRAG_ACTION = Gdk.DragAction.MOVE
+        self.DRAG_ACTION = Gdk.DragAction.COPY
+        self._start_path = None
+        self.iconview.enable_model_drag_source(Gdk.ModifierType.BUTTON1_MASK, [target_entry], self.DRAG_ACTION)
+        self.iconview.enable_model_drag_dest([target_entry], self.DRAG_ACTION)
+        self.iconview.connect("drag-data-get", self.on_drag_data_get)
+        self.iconview.connect("drag-data-received", self.on_drag_data_received)
         #
         self.iconview.connect("item-activated", self.on_iv_item_activated)
         self.iconview.connect("button_press_event", self.mouse_event)
@@ -2524,7 +2786,8 @@ class menuWin(Gtk.Window):
         
         # service buttons
         self.btn_box = Gtk.Box.new(0,0)
-        self.main_box.pack_start(self.btn_box,False,True,0)
+        self.main_box.pack_start(self.btn_box,False,False,0)
+        self.btn_box.set_halign(2)
         
         self.prog_modify_menu = None
         _prog_modify_menu_path = os.path.join(_curr_dir,"menu_editor")
@@ -2537,7 +2800,7 @@ class menuWin(Gtk.Window):
             self.modify_menu.set_relief(Gtk.ReliefStyle.NONE)
             self.modify_menu.set_tooltip_text("Modify the menu")
             self.modify_menu.connect('clicked', self.on_modify_menu)
-            self.btn_box.pack_start(self.modify_menu,True,False,0)
+            self.btn_box.pack_start(self.modify_menu,True,False,4)
         
         self.logout_btn = Gtk.Button()
         pix = GdkPixbuf.Pixbuf.new_from_file_at_size(os.path.join(_curr_dir,"icons","system-logout.svg"), int(self.BTN_ICON_SIZE/2), int(self.BTN_ICON_SIZE/2))
@@ -2546,7 +2809,7 @@ class menuWin(Gtk.Window):
         self.logout_btn.set_relief(Gtk.ReliefStyle.NONE)
         self.logout_btn.set_tooltip_text("Logout")
         self.logout_btn.connect('clicked', self.on_service_btn, "logout")
-        self.btn_box.pack_start(self.logout_btn,True,False,0)
+        self.btn_box.pack_start(self.logout_btn,True,False,4)
         
         self.reboot_btn = Gtk.Button()
         pix = GdkPixbuf.Pixbuf.new_from_file_at_size(os.path.join(_curr_dir,"icons","system-restart.svg"), int(self.BTN_ICON_SIZE/2), int(self.BTN_ICON_SIZE/2))
@@ -2555,7 +2818,7 @@ class menuWin(Gtk.Window):
         self.reboot_btn.set_relief(Gtk.ReliefStyle.NONE)
         self.reboot_btn.set_tooltip_text("Restart")
         self.reboot_btn.connect('clicked', self.on_service_btn, "restart")
-        self.btn_box.pack_start(self.reboot_btn,True,False,0)
+        self.btn_box.pack_start(self.reboot_btn,True,False,4)
         
         self.shutdown_btn = Gtk.Button()
         pix = GdkPixbuf.Pixbuf.new_from_file_at_size(os.path.join(_curr_dir,"icons","system-shutdown.svg"), int(self.BTN_ICON_SIZE/2), int(self.BTN_ICON_SIZE/2))
@@ -2564,7 +2827,7 @@ class menuWin(Gtk.Window):
         self.shutdown_btn.set_tooltip_text("Shutdown")
         self.shutdown_btn.set_relief(Gtk.ReliefStyle.NONE)
         self.shutdown_btn.connect('clicked', self.on_service_btn, "shutdown")
-        self.btn_box.pack_start(self.shutdown_btn,True,False,0)
+        self.btn_box.pack_start(self.shutdown_btn,True,False,4)
         
         # the bookmark button
         self.btn_bookmark = None
@@ -2611,43 +2874,33 @@ class menuWin(Gtk.Window):
         except:
             pass
     
-    # deactvated
-    # def on_drag_data_get(self, widget, drag_context, data, info, time):
-        # #
-        # if self.get_cat_btn_name(self._btn_toggled) == "Bookmarks":
-            # selected_path = widget.get_selected_items()[0]
-            # self._start_path = selected_path
+    def on_drag_data_get(self, widget, drag_context, data, info, time):
+        if self._btn_toggled.icat == "Bookmarks":
+            selected_path = widget.get_selected_items()[0]
+            self._start_path = selected_path
     
-    # deactivated
-    # def on_drag_data_received(self, widget, drag_context, x, y, data, info, time):
-        # _dest_path = widget.get_path_at_pos(x,y)
-        # #
-        # if _dest_path == None or self._start_path == None:
-            # return
-        # if _dest_path != self._start_path:
-            # _l = list(range(len(self.liststore)))
-            # _row1 = widget.get_item_row(self._start_path)
-            # _row2 = widget.get_item_row(_dest_path)
-            # _l.pop(_row2)
-            # if _row2 > _row1:
-                # _l.insert(_row1+1, _row2)
-            # elif _row2 < _row1:
-                # _l.insert(_row1, _row2)
-            # #
-            # self.liststore.reorder(_l)
-            # # reset
-            # self.bookmarks = []
-            # # rewrite the favorites file
-            # with open(os.path.join(main_dir, "favorites"), "w") as _f:
-                # for row in self.liststore:
-                    # _item = row[6]
-                    # _f.write(_item)
-                    # _f.write("\n")
-                    # self.bookmarks.append(_item)
-        # #
-        # self._start_path = None
-        # #
-        # return True
+    def on_drag_data_received(self, widget, drag_context, x, y, data, info, time):
+        _dest_path = widget.get_path_at_pos(x,y)
+        if _dest_path == None or self._start_path == None:
+            return
+        if _dest_path != self._start_path:
+            _l = list(range(len(self.liststore)))
+            _l.insert(_dest_path.get_indices()[0], _l.pop(self._start_path.get_indices()[0]))
+            self.liststore.reorder(_l)
+            # reset
+            self.bookmarks = []
+            # rewrite the favorites file
+            _f = open(os.path.join(_curr_dir, "favorites"), "w")
+            for row in self.liststore:
+                _item = row[4]
+                _f.write(_item)
+                _f.write("\n")
+                self.bookmarks.append(_item)
+            _f.close()
+        #
+        self._start_path = None
+        #
+        return True
     
     def on_search_return(self, widget):
         self.on_button_search(widget)
@@ -3068,12 +3321,21 @@ class clipboardWin(Gtk.Window):
         
         self.populate_clips()
         
+        donotdisturb_btn = Gtk.ToggleButton(label="Do not track")
+        donotdisturb_btn.set_active(self._parent.clip_do_not_track)
+        donotdisturb_btn.connect("clicked",self.on_donotdisturb)
+        self.main_box.pack_start(donotdisturb_btn,False,True,0)
+        
         empty_btn = Gtk.Button(label="Remove all")
         empty_btn.set_relief(Gtk.ReliefStyle.NONE)
         empty_btn.connect('clicked', self.on_empty_btn)
         self.main_box.pack_start(empty_btn,False,True,_pad)
         
         self.show_all()
+    
+    def on_donotdisturb(self, btn):
+        # btn.set_active(btn.get_active())
+        self._parent.onclip_do_not_disturb(btn.get_active())
     
     def on_empty_btn(self, btn):
         global CLIP_STORAGE
@@ -3763,6 +4025,7 @@ class DialogConfiguration(Gtk.Dialog):
             self.page1_box.attach(clip_lbl,0,5,1,1)
             clip_lbl.set_halign(1)
             clip_sw = Gtk.Switch.new()
+            clip_sw.set_halign(1)
             clip_sw.set_active(self._parent.clipboard_use)
             # clip_sw.set_halign(1)
             clip_sw.connect('notify::active', self.on_switch, "clipboard")
@@ -3772,6 +4035,7 @@ class DialogConfiguration(Gtk.Dialog):
         self.page1_box.attach(label1_lbl,0,6,1,1)
         label1_lbl.set_halign(1)
         out1_sw = Gtk.Switch.new()
+        out1_sw.set_halign(1)
         out1_sw.set_active(self._parent.label1_use)
         # out1_sw.set_halign(1)
         out1_sw.connect('notify::active', self.on_switch, "out1")
@@ -3782,6 +4046,7 @@ class DialogConfiguration(Gtk.Dialog):
         self.page1_box.attach(label2_lbl,0,7,1,1)
         label2_lbl.set_halign(1)
         out2_sw = Gtk.Switch.new()
+        out2_sw.set_halign(1)
         out2_sw.set_active(self._parent.label2_use)
         # out2_sw.set_halign(1)
         out2_sw.connect('notify::active', self.on_switch, "out2")
@@ -3800,6 +4065,7 @@ class DialogConfiguration(Gtk.Dialog):
         self.page1_box.attach(clock_lbl,0,9,1,1)
         clock_lbl.set_halign(1)
         clock_sw = Gtk.Switch.new()
+        clock_sw.set_halign(1)
         clock_sw.set_active(self._parent.clock_use)
         # clock_sw.set_halign(1)
         clock_sw.connect('notify::active', self.on_switch, "clock")
@@ -3812,6 +4078,9 @@ class DialogConfiguration(Gtk.Dialog):
         _time_format.set_active(self._parent.time_format)
         _time_format.connect('changed', self.on_time_combo)
         self.page1_box.attach_next_to(_time_format,clock_sw,1,1,1)
+        if USE_TASKBAR > 0:
+            clock_sw.set_sensitive(False)
+            _time_format.set_sensitive(False)
         # volume
         if USE_VOLUME:
             volume_lbl = Gtk.Label(label="Mixer")
@@ -4072,7 +4341,7 @@ class DialogConfiguration(Gtk.Dialog):
         _audio_lvl_spinbtn.connect('value-changed', self.on_other_spinbtn, "audio_level")
         _audio_lvl_spinbtn.set_input_purpose(Gtk.InputPurpose.DIGITS)
         
-        _lbl_use_volume = Gtk.Label(label="Use volume widget")
+        _lbl_use_volume = Gtk.Label(label="Use the volume widget")
         self.page6_box.attach(_lbl_use_volume,0,3,1,1)
         _lbl_use_volume.set_halign(1)
         use_volume_combo = Gtk.ComboBoxText.new()
@@ -4082,7 +4351,7 @@ class DialogConfiguration(Gtk.Dialog):
         use_volume_combo.connect('changed', self.on_other_combo, "volume")
         self.page6_box.attach_next_to(use_volume_combo,_lbl_use_volume,1,1,1)
         
-        _lbl_use_tray = Gtk.Label(label="Use tray widget")
+        _lbl_use_tray = Gtk.Label(label="Use the tray widget")
         self.page6_box.attach(_lbl_use_tray,0,4,1,1)
         _lbl_use_tray.set_halign(1)
         use_tray_combo = Gtk.ComboBoxText.new()
@@ -4092,8 +4361,20 @@ class DialogConfiguration(Gtk.Dialog):
         use_tray_combo.connect('changed', self.on_other_combo, "tray")
         self.page6_box.attach_next_to(use_tray_combo,_lbl_use_tray,1,1,1)
         
+        taskbar_lbl = Gtk.Label(label="Use the taskbar widget")
+        self.page6_box.attach(taskbar_lbl,0,5,1,1)
+        taskbar_lbl.set_halign(1)
+        use_taskbar_combo = Gtk.ComboBoxText.new()
+        use_taskbar_combo.append_text("no")
+        use_taskbar_combo.append_text("left")
+        use_taskbar_combo.append_text("right")
+        use_taskbar_combo.append_text("center")
+        use_taskbar_combo.set_active(USE_TASKBAR)
+        use_taskbar_combo.connect('changed', self.on_other_combo, "taskbar")
+        self.page6_box.attach_next_to(use_taskbar_combo,taskbar_lbl,1,1,1)
+        
         _lbl_double_click = Gtk.Label(label="Double click to launch apps")
-        self.page6_box.attach(_lbl_double_click,0,5,1,1)
+        self.page6_box.attach(_lbl_double_click,0,6,1,1)
         _lbl_double_click.set_halign(1)
         double_click_combo = Gtk.ComboBoxText.new()
         double_click_combo.append_text("no")
@@ -4130,6 +4411,8 @@ class DialogConfiguration(Gtk.Dialog):
             _other_settings_conf["use-tray"] = cb.get_active()
         elif _type == "click":
             _other_settings_conf["double-click"] = cb.get_active()
+        elif _type == "taskbar":
+            _other_settings_conf["use-taskbar"] = cb.get_active()
         try:
             _ff = open(_other_settings_config_file,"w")
             _data_json = _other_settings_conf
@@ -4870,6 +5153,100 @@ class audioThread(Thread):
 
 
 ######################
+
+############ taskbar
+
+# Signal hub + Wayland connection
+class taskbarContext(GObject.Object, WaylandConnection):
+    def __init__(self):
+        GObject.Object.__init__(self)
+        WaylandConnection.__init__(self, eventloop_integration=GLibIntegration())
+        # self.add_signal('periodic_update', tuple())
+        self.add_signal('wayland_sync')
+        self.manager = TaskManager(self)
+
+    def add_signal(self, signal_name, signal_args=None):
+        if signal_args is None:
+            signal_args = (GObject.TYPE_PYOBJECT,)
+        GObject.signal_new(
+            signal_name, self,
+            GObject.SignalFlags.RUN_LAST,
+            GObject.TYPE_PYOBJECT, signal_args
+        )
+
+    def on_initial_sync(self, data):
+        super().on_initial_sync(data)
+        self.seat = self.display.seat
+        self.emit('wayland_sync', self)
+
+
+# Foreign Toplevel / GObject signal emitter bridge
+class ToplevelManager(ForeignTopLevel):
+    def __init__(self, wl_connection, context):
+        super().__init__(wl_connection)
+        self.context = context
+
+    def on_toplevel_created(self, toplevel):
+        self.context.emit('toplevel_new', toplevel)
+
+    def on_toplevel_synced(self, toplevel):
+        self.context.emit('toplevel_synced', toplevel)
+
+    def on_toplevel_closed(self, toplevel):
+        self.context.emit('toplevel_closed', toplevel)
+
+# Foreign Toplevel API
+# Supports direct calls or being used as event handler for a GTK widget:
+# - manager.app_toggle(toplevel)
+# - some_button.connect('clicked', manager.app_toggle, toplevel)
+class TaskManager:
+    def __init__(self, context):
+        context.add_signal('toplevel_new')
+        context.add_signal('toplevel_synced')
+        context.add_signal('toplevel_closed')
+        context.connect('wayland_sync', self.on_wl_sync)
+        self.context = context
+        self.manager = None
+
+    def on_wl_sync(self, context, wl_connection):
+        self.manager = ToplevelManager(wl_connection, context)
+
+    def app_toggle(self, *args):
+        toplevel = args[-1]
+        if 'activated' in toplevel.states:
+            toplevel.set_minimize(True)
+        else:
+            self.app_activate(toplevel)
+
+    def app_activate(self, *args):
+        toplevel = args[-1]
+        toplevel.activate(self.context.seat)
+
+    def app_minimize(self, *args):
+        toplevel = args[-1]
+        if 'minimized' in toplevel.states:
+            return
+        toplevel.set_minimize(True)
+
+    def app_toggle_minimize(self, *args):
+        toplevel = args[-1]
+        toplevel.set_minimize('minimized' not in toplevel.states)
+
+    def app_toggle_maximize(self, *args):
+        toplevel = args[-1]
+        toplevel.set_maximize('maximized' not in toplevel.states)
+
+    def app_toggle_fullscreen(self, *args):
+        toplevel = args[-1]
+        toplevel.set_fullscreen('fullscreen' not in toplevel.states)
+
+    def app_close(self, *args):
+        toplevel = args[-1]
+        toplevel.close()
+
+####################
+
+
 win = MyWindow()
 
 if USE_TRAY:
