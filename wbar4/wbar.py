@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
-# COMMAND, maybe useless: 
+# COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar.py
 
-# V. 0.9.24
+# V. 0.9.25
 
 import os,sys,shutil,stat
 import gi
@@ -25,8 +25,6 @@ import subprocess
 import time, datetime
 import dbus
 import dbus.service as Service
-
-app = None
 
 # 0 for using internal method
 _USE_PIL = 0
@@ -80,7 +78,7 @@ if not os.path.exists(os.path.join(_curr_dir,"notes")):
 # other options
 _other_settings_conf = None
 _other_settings_config_file = os.path.join(_curr_dir,"configs","other_settings.json")
-_starting_other_settings_conf = {"pad-value":4,"audio-start-value":0,"use-volume":0,"use-tray":0,"double-click":0}
+_starting_other_settings_conf = {"pad-value":4,"audio-start-value":0,"use-volume":0,"use-tray":0,"double-click":0,"use-taskbar":0}
 if not os.path.exists(_other_settings_config_file):
     try:
         _ff = open(_other_settings_config_file,"w")
@@ -101,7 +99,14 @@ _pad = _other_settings_conf["pad-value"]
 _AUDIO_START_LEVEL = _other_settings_conf["audio-start-value"]
 USE_VOLUME = _other_settings_conf["use-volume"]
 USE_TRAY = _other_settings_conf["use-tray"]
-DOUBLE_CLICK = _other_settings_conf["double-click"]
+# DOUBLE_CLICK = _other_settings_conf["double-click"]
+USE_TASKBAR = _other_settings_conf["use-taskbar"]
+
+_context = None
+#if USE_TASKBAR:
+from wl_framework.loop_integrations import GLibIntegration
+from wl_framework.network.connection import WaylandConnection
+from wl_framework.protocols.foreign_toplevel import ForeignTopLevel
 
 if USE_VOLUME:
     import pulsectl as _pulse
@@ -557,8 +562,8 @@ class SignalObject(GObject.Object):
 # class MyWindow(Gtk.Window):
 class MyWindow(Gtk.ApplicationWindow):
     # def __init__(self):
-    def __init__(self, app):
-        super(MyWindow, self).__init__(application=app)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self._app = self.get_application()
         
         # super().__init__(title="mypanel")
@@ -671,6 +676,9 @@ class MyWindow(Gtk.ApplicationWindow):
         self.label2_use = _panel_conf["label2"]
         self.task_use = _panel_conf["tasklist"]
         self.clock_use = _panel_conf["clock"]
+        global USE_TASKBAR
+        if USE_TASKBAR:
+            self.clock_use = 2
         self.clock_use_tmp = None
         self.time_format = _panel_conf["time_format"]
         self.time_format_tmp = None
@@ -775,28 +783,24 @@ class MyWindow(Gtk.ApplicationWindow):
         
         # 0 horizontal 1 vertical - spacing
         self.main_box = Gtk.Box.new(0, 0)
-        self.main_box.set_homogeneous(True)
         _pad1 = max(self._corner_top,self._corner_bottom)
         self.main_box.set_margin_start(_pad1)
         self.main_box.set_margin_end(_pad1)
         self.set_child(self.main_box)
         
         self.left_box = Gtk.Box.new(0,0)
-        # self.main_box.pack_start(self.left_box, True, True, 0)
         self.main_box.append(self.left_box)
         self.left_box.set_halign(1)
         
         self.menubutton = Gtk.Button()
         _icon_path = os.path.join(_curr_dir,"icons","menu.svg")
         _pixbf = GdkPixbuf.Pixbuf.new_from_file_at_size(_icon_path, self.win_height,self.win_height)
-        # _img = Gtk.Image.new_from_pixbuf(_pixbf)
         _pb = Gdk.Texture.new_for_pixbuf(_pixbf)
         _img = Gtk.Image.new_from_paintable(_pb)
         # _img.set_pixel_size()
         self.menubutton.set_child(_img)
         # self.menubutton.connect('button-press-event', self.on_button1_clicked)
         self.menubutton.connect('clicked', self.on_button1_clicked)
-        # self.left_box.pack_start(self.menubutton,False,False,10)
         self.left_box.append(self.menubutton)
         # output1
         self.temp_out1 = None
@@ -809,26 +813,33 @@ class MyWindow(Gtk.ApplicationWindow):
         self.label1button.set_child(self.label1)
         self.lbl1_style_context = self.label1.get_style_context()
         self.lbl1_style_context.add_class("label1")
-        # self.left_box.pack_end(self.label1button,False,False,4)
+        self.label1.set_halign(1)
         self.left_box.append(self.label1button)
         
         self.q1 = None
         self.set_timer_label1()
         
         self.center_box = Gtk.Box.new(0,0)
-        # self.main_box.pack_start(self.center_box, True, False, 4)
         self.main_box.append(self.center_box)
-        self.center_box.set_halign(3)
+        if USE_TASKBAR == 0:
+            self.center_box.set_halign(3)
         
-        # # tasklist
-        # if self.task_use:
-            # self.on_set_tasklist(None)
+        # tasklist
+        global _context
+        if USE_TASKBAR:
+            try:
+                _context = taskbarContext()
+            except RuntimeError as e:
+                USE_TASKBAR = 0
+        if USE_TASKBAR:
+            self.context = _context
+            self.manager = self.context.manager
+            self.on_set_tasklist()
         
         self.right_box = Gtk.Box.new(0,0)
-        # self.main_box.pack_start(self.right_box, True, True, 0)
         self.main_box.append(self.right_box)
         self.right_box.set_halign(2)
-        
+        self.right_box.set_hexpand(False)
         # output2
         self.temp_out2 = None
         # self.label2button = Gtk.EventBox()
@@ -843,19 +854,13 @@ class MyWindow(Gtk.ApplicationWindow):
         # elif self.label2_use == 2 or self.label2_use == 0:
             # self.right_box.append(self.label2)
         
-        # self.otherbutton = Gtk.EventBox()
         self.otherbutton = Gtk.Button()
         _icon_path = os.path.join(_curr_dir,"icons","other_menu.svg")
         _pixbf = GdkPixbuf.Pixbuf.new_from_file_at_size(_icon_path, self.win_height,self.win_height)
-        # _img = Gtk.Image.new_from_pixbuf(_pixbf)
         _pb = Gdk.Texture.new_for_pixbuf(_pixbf)
         _img = Gtk.Image.new_from_paintable(_pb)
-        # _img.set_pixel_size(self._app_icon_size)
         self.otherbutton.set_child(_img)
-        # self.otherbutton.connect('button-press-event', self.on_other_button)
         self.otherbutton.connect('clicked', self.on_other_button)
-        # self.right_box.pack_end(self.otherbutton,False,False,10)
-        # self.right_box.append(self.otherbutton)
         
         # sticky notes list
         self.list_notes = []
@@ -885,7 +890,6 @@ class MyWindow(Gtk.ApplicationWindow):
         # tray
         if USE_TRAY:
             self.tray_box = Gtk.Box.new(0,0)
-            # self.right_box.pack_end(self.tray_box,False,False,0)
             self.right_box.append(self.tray_box)
             self._app_icon_size = self.win_height-4
             self.tray_buttons = []
@@ -894,7 +898,6 @@ class MyWindow(Gtk.ApplicationWindow):
         self.athread = None
         if USE_VOLUME:
             self.vol_box = Gtk.Box.new(0,0)
-            # self.right_box.pack_end(self.vol_box,False,False,4)
             self.right_box.append(self.vol_box)
             
             # self.volpix = Gtk.IconTheme().load_icon("gtk-delete", 24, Gtk.IconLookupFlags.FORCE_SVG)
@@ -944,8 +947,7 @@ class MyWindow(Gtk.ApplicationWindow):
             # self.volume_btn.set_events(Gdk.EventMask.BUTTON_PRESS_MASK | Gdk.EventMask.SCROLL_MASK)
             self.vol_style_context = self.volume_bar.get_style_context()
             self.vol_style_context.add_class("vollevelbar")
-            
-            # self.vol_box.pack_start(self.volume_btn,False,True,0)
+            self.volume_bar.set_tooltip_text("No devices")
             self.vol_box.append(self.volume_bar)
             
             self.vol_gesture = Gtk.GestureClick.new()
@@ -976,24 +978,11 @@ class MyWindow(Gtk.ApplicationWindow):
             
             self.athread = audioThread(_pulse,self._signal,self)
             self.athread.daemon = True
-            
-        # # tray
-        # if USE_TRAY:
-            # self.tray_box = Gtk.Box.new(0,0)
-            # # self.right_box.pack_end(self.tray_box,False,False,0)
-            # self.right_box.append(self.tray_box)
-            # self._app_icon_size = self.win_height-4
         
         # notifications
         if USE_NOTIFICATIONS:
             self.notification_box = Gtk.Box.new(0,0)
-            # self.right_box.pack_end(self.notification_box,False,False,0)
             self.right_box.append(self.notification_box)
-        
-        # # clipboard
-        # self.temp_clip = None
-        # if self.clipboard_use and USE_CLIPBOARD:
-            # self.on_set_clipboard(None)
         
         # clock
         if self.clock_use:
@@ -1013,15 +1002,7 @@ class MyWindow(Gtk.ApplicationWindow):
         self.monitor3 = gdir3.monitor_directory(Gio.FileMonitorFlags.SEND_MOVED, None)
         self.monitor3.connect("changed", self.directory_changed)
         
-        # # CLIPBOARD
-        # __clipboard = self.get_primary_clipboard()
-        # __clipboard.connect('changed', self.on_clipboard)
-        
-        # # self.show_all()
-        # self.set_visible(True)
-        
         if USE_VOLUME:
-            # self.volume_image.set_visible(False)
             self.volume_bar.set_sensitive(True)
             self._on_start_vol()
             self.athread.start()
@@ -1029,12 +1010,188 @@ class MyWindow(Gtk.ApplicationWindow):
         self.q2 = None
         self.set_timer_label2()
     
-    # def on_get_text(self, clipboard, res, data):
-        # _text = clipboard.read_text_finish(res)
     
-    # def on_clipboard(self, clipboard):
-        # _formats = clipboard.get_formats().to_string()
-        # _text = clipboard.read_text_async(None, self.on_get_text, None)
+    def on_set_tasklist(self):
+        self.box_taskbar = Gtk.Box.new(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+        self.center_box.append(self.box_taskbar)
+        #
+        self.tbox = Gtk.Box.new(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+        self.tbox.set_name("tasklist")
+        #
+        self._scroll = self._create_scroll()
+        self.box_taskbar.append(self._scroll)
+        #
+        self._viewport = Gtk.Viewport()
+        self._viewport.set_child(self.tbox)
+        self._scroll.set_child(self._viewport)
+        self._scroll.set_hexpand(True)
+        self._scroll.set_vexpand(True)
+        self._viewport.set_halign(USE_TASKBAR)
+        #
+        self.active_button = None
+        self.context.connect('toplevel_new', self.on_toplevel_new)
+        self.context.connect('toplevel_synced', self.on_toplevel_synced)
+        self.context.connect('toplevel_closed', self.on_toplevel_closed)
+        #
+        self._val = 0
+        self.scroll_controller = Gtk.EventControllerScroll.new(Gtk.EventControllerScrollFlags.VERTICAL|Gtk.EventControllerScrollFlags.KINETIC)
+        self._scroll.add_controller(self.scroll_controller)
+        self.scroll_controller.connect('scroll', self.on_scroll_gesture)
+    
+    def _create_scroll(self):
+        self.scroll = Gtk.ScrolledWindow()
+        self.scroll.set_policy(
+            Gtk.PolicyType.EXTERNAL,
+            Gtk.PolicyType.NEVER
+        )
+        return self.scroll  
+    
+    # def find_label(self,widget):
+        # #
+        # children = widget.get_children()
+        # for el in children:
+            # if isinstance(el, Gtk.Label):
+                # return el
+        # return None
+    
+    # def set_text_and_ellipsize(self, button, text):
+        # b = self.find_label(button)
+        # # In case we fail...
+        # if b is None:
+            # return
+        # # setting ellipsize
+        # b.set_ellipsize(Pango.EllipsizeMode.END)
+    
+    def on_toplevel_new(self, context, toplevel):
+        self.tbutton = Gtk.ToggleButton()
+        self.tbutton.set_name("btn-taskbar")
+        self.tbutton.connect('clicked', self.manager.app_toggle, toplevel)
+        # 
+        toplevel.button = self.tbutton
+        if not hasattr(self.tbutton, "_icon"):
+            self.tbutton._icon = None
+        self.tbutton.set_visible(False)
+        # # ellipsize the button text
+        # self.set_text_and_ellipsize(button, toplevel.title)
+        #
+        self.tbox.append(self.tbutton)
+        
+
+    def on_toplevel_synced(self, context, toplevel):
+        # # Obviously this should do a proper diff and only update if required
+        #
+        # toplevel.button.set_label(toplevel.title)
+        if toplevel.button._icon == None:
+            ICON_SIZE = self.win_height
+            ret_icon = self._on_desktop_entry(os.path.basename(toplevel.app_id))
+            _img = None
+            if ret_icon:
+                try:
+                    _pb = icon_theme.lookup_icon(ret_icon, None, ICON_SIZE, 1, Gtk.TextDirection.NONE, Gtk.IconLookupFlags.FORCE_REGULAR)
+                    _img = Gtk.Image.new_from_paintable(_pb)
+                except:
+                    pass
+                #
+                if _img:
+                    _img.set_pixel_size(self.win_height)
+                    toplevel.button.set_child(_img)
+                    toplevel.button._icon = 1
+                    _img.set_halign(3)
+                    _img.set_valign(3)
+            if not ret_icon or not _img:
+                try:
+                    pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(os.path.join(_curr_dir,"icons","unknown2.svg"), ICON_SIZE, ICON_SIZE, 1)
+                    _pb = Gdk.Texture.new_for_pixbuf(pixbuf)
+                    _img = Gtk.Image.new_from_paintable(_pb)
+                    _img.set_pixel_size(ICON_SIZE)
+                    toplevel.button.set_child(_img)
+                    toplevel.button._icon = 1
+                except Exception as E:
+                    toplevel.button.set_label(" A ")
+                    toplevel.button._icon = 1
+        #
+        toplevel.button.set_size_request(toplevel.button.get_allocated_height(),self.win_height)
+        toplevel.button.set_visible(True)
+        toplevel.button.set_tooltip_text(toplevel.title)
+        #
+        if 'activated' in toplevel.states:
+            if toplevel.button != self.active_button:
+                if isinstance(self.active_button, Gtk.ToggleButton):
+                    self.active_button.set_active(False)
+                toplevel.button.set_active(True)
+                self.active_button = toplevel.button
+        elif toplevel.button == self.active_button:
+            toplevel.button.set_active(False)
+        # 
+        self.set_default_size(-1, self.win_height)
+
+    def on_toplevel_closed(self, context, toplevel):
+        self.tbox.remove(toplevel.button)
+        # 
+        self.set_default_size(-1,self.win_height)
+    
+    def on_scroll_gesture(self, w,x,y):
+        _adj = self._scroll.get_hadjustment()
+        if y == -1.0 and self._val > 0.0:
+            self._val = round(self._val - 10/100, 1)
+            _adj.set_value(self._val*100)
+            self._scroll.set_hadjustment(_adj)
+        elif y == 1.0 and self._val < 1.0:
+            self._val = round(self._val + 10/100, 1)
+            _adj.set_value(self._val*100)
+            self._scroll.set_hadjustment(_adj)
+    
+    
+    # find the icon from the desktop file
+    def _on_desktop_entry(self, _desktop):
+        app_dirs_user = [os.path.join(os.path.expanduser("~"), ".local/share/applications")]
+        app_dirs_system = ["/usr/share/applications", "/usr/local/share/applications"]
+        _ddir = app_dirs_user+app_dirs_system
+        _icon = None
+        for dd in _ddir:
+            if os.path.exists(dd):
+                for ff in os.listdir(dd):
+                    if os.path.basename(ff) == _desktop+".desktop":
+                        try:
+                            _ap = Gio.DesktopAppInfo.new_from_filename(os.path.join(dd,ff))
+                            _icon = _ap.get_icon()
+                            if _icon:
+                                if isinstance(_icon,Gio.ThemedIcon):
+                                    _icon = _icon.to_string()
+                                elif isinstance(_icon,Gio.FileIcon):
+                                    _icon = _icon.get_file().get_path()
+                                return _icon
+                            else:
+                                return None
+                        except:
+                            return None
+        
+        return None
+
+    # # todo
+    # def handle_context_menu(self, button, event, toplevel):
+        # if event.button != Gdk.BUTTON_SECONDARY:
+            # return False
+        # for menu, func in (
+            # (self._menu_maximize, self.manager.app_toggle_maximize),
+            # (self._menu_minimize, self.manager.app_toggle_minimize),
+            # (self._menu_fullscreen, self.manager.app_toggle_fullscreen),
+            # (self._menu_close, self.manager.app_close)
+        # ):
+            # try:
+                # menu.disconnect_by_func(func)
+            # except TypeError:
+                # pass
+            # menu.connect('activate', func, toplevel)
+        # self._menu_maximize.set_label(
+            # 'UnMaximize' if 'maximized' in toplevel.states else 'Maximize')
+        # self._menu_minimize.set_label(
+            # 'UnMinimize' if 'minimized' in toplevel.states else 'Minimize')
+        # self._menu_fullscreen.set_label(
+            # 'UnFullscreen' if 'fullscreen' in toplevel.states else 'Fullscreen')
+        # self.menu.popup_at_widget(button, Gdk.Gravity.NORTH, Gdk.Gravity.SOUTH, event)
+        # return True
+        
     
     def on_label1(self, btn):
         return
@@ -1235,6 +1392,16 @@ class MyWindow(Gtk.ApplicationWindow):
         self.pulse = _pulse.Pulse()
     
     def _set_volume(self):
+        _sink = None
+        try:
+            for el in self.pulse.sink_list():
+                if el.name == self.default_sink_name:
+                    _sink = el
+                    break
+        except:
+            self._reload_pulse()
+            return
+        #
         # volume level
         _file_volume = os.path.join(_curr_dir, "volume_volume.sh")
         ret1 = None
@@ -1268,6 +1435,8 @@ class MyWindow(Gtk.ApplicationWindow):
         if 0 <= _level <= 1:
             # self.volume_bar.set_fraction(_level)
             self.volume_bar.set_value(_level)
+            if _sink:
+                self.volume_bar.set_tooltip_text("{}: {}".format(_sink.description, int(_level*100)))
         # self.volume_image.set_visible(False)
         self.volume_bar.set_sensitive(True)
         if _mute == 1:
@@ -4245,7 +4414,7 @@ class noteDialog(Gtk.Window):
         box.append(btn_box)
         
         delete_btn = Gtk.Button(label="Delete")
-        delete_btn.set_hexpand(True)
+        # delete_btn.set_hexpand(True)
         delete_btn.connect('clicked', self.on_delete)
         btn_box.append(delete_btn)
         
@@ -4538,6 +4707,9 @@ class DialogConfiguration(Gtk.Dialog):
         _time_format.set_active(self._parent.time_format)
         _time_format.connect('changed', self.on_time_combo)
         self.page1_box.attach_next_to(_time_format,clock_sw,1,1,1)
+        if USE_TASKBAR == 1:
+            clock_sw.set_sensitive(False)
+            _time_format.set_sensitive(False)
         # volume
         if USE_VOLUME:
             volume_lbl = Gtk.Label(label="Mixer")
@@ -4881,7 +5053,7 @@ class DialogConfiguration(Gtk.Dialog):
         _audio_lvl_spinbtn.connect('value-changed', self.on_other_spinbtn, "audio_level")
         _audio_lvl_spinbtn.set_numeric(True)
         
-        _lbl_use_volume = Gtk.Label(label="Use volume widget")
+        _lbl_use_volume = Gtk.Label(label="Use the volume widget")
         self.page6_box.attach(_lbl_use_volume,0,3,1,1)
         _lbl_use_volume.set_halign(1)
         use_volume_combo = Gtk.ComboBoxText.new()
@@ -4891,7 +5063,7 @@ class DialogConfiguration(Gtk.Dialog):
         use_volume_combo.connect('changed', self.on_other_combo, "volume")
         self.page6_box.attach_next_to(use_volume_combo,_lbl_use_volume,1,1,1)
         
-        _lbl_use_tray = Gtk.Label(label="Use tray widget")
+        _lbl_use_tray = Gtk.Label(label="Use the tray widget")
         self.page6_box.attach(_lbl_use_tray,0,4,1,1)
         _lbl_use_tray.set_halign(1)
         use_tray_combo = Gtk.ComboBoxText.new()
@@ -4901,8 +5073,8 @@ class DialogConfiguration(Gtk.Dialog):
         use_tray_combo.connect('changed', self.on_other_combo, "tray")
         self.page6_box.attach_next_to(use_tray_combo,_lbl_use_tray,1,1,1)
         
-        # try enable/disable
-        not_lbl_enabled = Gtk.Label(label="Use notification widget")
+        # tray enable/disable
+        not_lbl_enabled = Gtk.Label(label="Use the notification widget")
         self.page6_box.attach(not_lbl_enabled,0,5,1,1)
         not_lbl_enabled.set_halign(1)
         # not_lbl_enabled_sw = Gtk.Switch.new()
@@ -4917,6 +5089,20 @@ class DialogConfiguration(Gtk.Dialog):
         use_notif_combo.connect('changed', self.on_other_combo, "notification")
         self.page6_box.attach_next_to(use_notif_combo,not_lbl_enabled,1,1,1)
         
+        # taskbar
+        taskbar_lbl = Gtk.Label(label="Use the taskbar widget")
+        self.page6_box.attach(taskbar_lbl,0,6,1,1)
+        taskbar_lbl.set_halign(1)
+        use_taskbar_combo = Gtk.ComboBoxText.new()
+        use_taskbar_combo.append_text("no")
+        use_taskbar_combo.append_text("left")
+        use_taskbar_combo.append_text("right")
+        use_taskbar_combo.append_text("center")
+        use_taskbar_combo.set_active(USE_TASKBAR)
+        use_taskbar_combo.connect('changed', self.on_other_combo, "taskbar")
+        self.page6_box.attach_next_to(use_taskbar_combo,taskbar_lbl,1,1,1)
+        
+        # # double click
         # _lbl_double_click = Gtk.Label(label="Double click to launch apps")
         # self.page6_box.attach(_lbl_double_click,0,6,1,1)
         # _lbl_double_click.set_halign(1)
@@ -4958,8 +5144,10 @@ class DialogConfiguration(Gtk.Dialog):
             _other_settings_conf["use-tray"] = cb.get_active()
         elif _type == "notification":
             self._parent.on_switch_btn("notification", cb.get_active())
-        elif _type == "click":
-            _other_settings_conf["double-click"] = cb.get_active()
+        # elif _type == "click":
+            # _other_settings_conf["double-click"] = cb.get_active()
+        elif _type == "taskbar":
+            _other_settings_conf["use-taskbar"] = cb.get_active()
         try:
             _ff = open(_other_settings_config_file,"w")
             _data_json = _other_settings_conf
@@ -5820,29 +6008,131 @@ class audioThread(Thread):
 
 ######################
 
+############ taskbar
+
+# Signal hub + Wayland connection
+class taskbarContext(GObject.Object, WaylandConnection):
+    def __init__(self):
+        GObject.Object.__init__(self)
+        WaylandConnection.__init__(self, eventloop_integration=GLibIntegration())
+        # self.add_signal('periodic_update', tuple())
+        self.add_signal('wayland_sync')
+        self.manager = TaskManager(self)
+
+    def add_signal(self, signal_name, signal_args=None):
+        if signal_args is None:
+            signal_args = (GObject.TYPE_PYOBJECT,)
+        GObject.signal_new(
+            signal_name, self,
+            GObject.SignalFlags.RUN_LAST,
+            GObject.TYPE_PYOBJECT, signal_args
+        )
+
+    def on_initial_sync(self, data):
+        super().on_initial_sync(data)
+        self.seat = self.display.seat
+        self.emit('wayland_sync', self)
+
+
+# Foreign Toplevel / GObject signal emitter bridge
+class ToplevelManager(ForeignTopLevel):
+    def __init__(self, wl_connection, context):
+        super().__init__(wl_connection)
+        self.context = context
+
+    def on_toplevel_created(self, toplevel):
+        self.context.emit('toplevel_new', toplevel)
+
+    def on_toplevel_synced(self, toplevel):
+        self.context.emit('toplevel_synced', toplevel)
+
+    def on_toplevel_closed(self, toplevel):
+        self.context.emit('toplevel_closed', toplevel)
+
+# Foreign Toplevel API
+# Supports direct calls or being used as event handler for a GTK widget:
+# - manager.app_toggle(toplevel)
+# - some_button.connect('clicked', manager.app_toggle, toplevel)
+class TaskManager:
+    def __init__(self, context):
+        context.add_signal('toplevel_new')
+        context.add_signal('toplevel_synced')
+        context.add_signal('toplevel_closed')
+        context.connect('wayland_sync', self.on_wl_sync)
+        self.context = context
+        self.manager = None
+
+    def on_wl_sync(self, context, wl_connection):
+        self.manager = ToplevelManager(wl_connection, context)
+
+    def app_toggle(self, *args):
+        toplevel = args[-1]
+        if 'activated' in toplevel.states:
+            toplevel.set_minimize(True)
+        else:
+            self.app_activate(toplevel)
+
+    def app_activate(self, *args):
+        toplevel = args[-1]
+        toplevel.activate(self.context.seat)
+
+    def app_minimize(self, *args):
+        toplevel = args[-1]
+        if 'minimized' in toplevel.states:
+            return
+        toplevel.set_minimize(True)
+
+    def app_toggle_minimize(self, *args):
+        toplevel = args[-1]
+        toplevel.set_minimize('minimized' not in toplevel.states)
+
+    def app_toggle_maximize(self, *args):
+        toplevel = args[-1]
+        toplevel.set_maximize('maximized' not in toplevel.states)
+
+    def app_toggle_fullscreen(self, *args):
+        toplevel = args[-1]
+        toplevel.set_fullscreen('fullscreen' not in toplevel.states)
+
+    def app_close(self, *args):
+        toplevel = args[-1]
+        toplevel.close()
+
+####################
+
+
 owner_id = None
 
-def on_activate(app):
-    win = MyWindow(app)
-    
-    if USE_TRAY:
-        global owner_id
-        owner_id = Gio.bus_own_name(
-                Gio.BusType.SESSION,
-                NODE_INFO.interfaces[0].name,
-                Gio.BusNameOwnerFlags.NONE,
-                win.on_bus_acquired,
-                None,
-                win.on_name_lost,
-                )
-        
-    win.present()
+class Application(Gtk.Application):
+    """ Main Aplication class """
 
+    def __init__(self):
+        super().__init__(application_id='org.example.wbar',
+                         flags=Gio.ApplicationFlags.FLAGS_NONE)
+
+    def do_activate(self):
+        win = self.props.active_window
+        if not win:
+            win = MyWindow(application=self)
+            
+            if USE_TRAY:
+                global owner_id
+                owner_id = Gio.bus_own_name(
+                        Gio.BusType.SESSION,
+                        NODE_INFO.interfaces[0].name,
+                        Gio.BusNameOwnerFlags.NONE,
+                        win.on_bus_acquired,
+                        None,
+                        win.on_name_lost,
+                        )
+            
+        win.present()
+        
 
 def main():
-    app = Gtk.Application(application_id='com.example.wbar4')
-    app.connect('activate', on_activate)
-    app.run(None)
+    """ Run the main application"""
+    app = Application()
+    return app.run()#sys.argv)
 
 try:
     if __name__ == '__main__':
