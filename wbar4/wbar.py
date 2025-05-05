@@ -3,7 +3,7 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar.py
 
-# V. 0.9.25
+# V. 0.9.26
 
 import os,sys,shutil,stat
 import gi
@@ -559,15 +559,11 @@ class SignalObject(GObject.Object):
         self._list = [data]
 
 
-# class MyWindow(Gtk.Window):
 class MyWindow(Gtk.ApplicationWindow):
     # def __init__(self):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._app = self.get_application()
-        
-        # super().__init__(title="mypanel")
-        # super(MyWindow, self).__init__()
         
         # self.load_css('main.css')
         
@@ -823,6 +819,7 @@ class MyWindow(Gtk.ApplicationWindow):
         self.main_box.append(self.center_box)
         if USE_TASKBAR == 0:
             self.center_box.set_halign(3)
+            self.center_box.set_hexpand(True)
         
         # tasklist
         global _context
@@ -939,12 +936,9 @@ class MyWindow(Gtk.ApplicationWindow):
             self.volume_bar = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL,0.0,1.0,0.005)
             self.volume_bar.set_draw_value(False)
             self.volume_bar.set_slider_size_fixed(True)
-            # self.volume_bar.set_round_digits(2)
             self.volume_bar.connect("change-value", self.on_volume_bar)
-            # self.volume_bar.props.vexpand = True
             self.volume_bar.set_valign(3)
             self.volume_bar.set_size_request(100,-1)
-            # self.volume_btn.set_events(Gdk.EventMask.BUTTON_PRESS_MASK | Gdk.EventMask.SCROLL_MASK)
             self.vol_style_context = self.volume_bar.get_style_context()
             self.vol_style_context.add_class("vollevelbar")
             self.volume_bar.set_tooltip_text("No devices")
@@ -1239,7 +1233,7 @@ class MyWindow(Gtk.ApplicationWindow):
     def _on_start_vol(self):
         # card list
         self.card_list = self.pulse.card_list()
-        # # default sink name
+        # default sink name
         self.default_sink_name = None
         try:
             _sink_list = self.pulse.sink_list()
@@ -1318,41 +1312,6 @@ class MyWindow(Gtk.ApplicationWindow):
         except:
             pass
         
-    
-    # def on_volume_bar(self, btn, event):
-        # if event.button == 3:
-            # if self.volume_command != "":
-                # if shutil.which(self.volume_command):
-                    # try:
-                        # subprocess.Popen(self.volume_command, shell=True)
-                    # except:
-                        # pass
-        # elif event.button == 2:
-            # pass
-        # elif event.button == 1:
-            # _volume_toggle = os.path.join(_curr_dir,"volume_toggle.sh")
-            # if os.path.exists(_volume_toggle):
-                # if not os.access(_volume_toggle,os.X_OK):
-                    # os.chmod(_volume_toggle, 0o740)
-                # try:
-                    # os.system(f"{_volume_toggle} &")
-                # except:
-                    # pass
-    
-    # def on_volume_bar2(self, btn, event):
-        # if event.direction == Gdk.ScrollDirection.UP:
-            # _vol_up_file_path = os.path.join(_curr_dir, "volume_up.sh")
-            # if os.path.exists(_vol_up_file_path):
-                # if not os.access(_vol_up_file_path, os.X_OK):
-                    # os.chmod(_vol_up_file_path, 0o740)
-                # subprocess.Popen(_vol_up_file_path,shell=True)
-        # elif event.direction == Gdk.ScrollDirection.DOWN:
-            # _vol_down_file_path = os.path.join(_curr_dir, "volume_down.sh")
-            # if os.path.exists(_vol_down_file_path):
-                # if not os.access(_vol_down_file_path, os.X_OK):
-                    # os.chmod(_vol_down_file_path, 0o740)
-                # subprocess.Popen(_vol_down_file_path,shell=True)
-    
     def on_microphone_changed(self):
         return
     
@@ -2166,17 +2125,14 @@ class MyWindow(Gtk.ApplicationWindow):
         self._app.quit()
     
     def on_set_clipboard(self, _pos):
-        # self.clipbutton = Gtk.EventBox()
         self.clipbutton = Gtk.Button()
         _icon_path = os.path.join(_curr_dir,"icons","clipboard.svg")
         _pixbf = GdkPixbuf.Pixbuf.new_from_file_at_size(_icon_path, self.win_height,self.win_height)
-        # _img = Gtk.Image.new_from_pixbuf(_pixbf)
         _pb = Gdk.Texture.new_for_pixbuf(_pixbf)
         _img = Gtk.Image.new_from_paintable(_pb)
         _img.set_pixel_size(self.win_height-4)
         self.clipbutton.set_child(_img)
         self.clipbutton.connect('clicked', self.on_clipboard_button)
-        # self.right_box.pack_end(self.clipbutton,False,False,4)
         self.right_box.append(self.clipbutton)
         # # reorder
         # if _pos != None:
@@ -2828,7 +2784,6 @@ class MyWindow(Gtk.ApplicationWindow):
             
             # self.on_save_optional_widget_state()
             self.save_conf()
-        # elif response == Gtk.ResponseType.CANCEL:
         else:
             self.on_close_dialog_conf()
         dialog.destroy()
@@ -2962,16 +2917,13 @@ class commandWin(Gtk.Window):
         # button box
         self.bbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
         self.bbox.set_homogeneous(homogeneous=True)
-        # self.main_box.pack_start(self.bbox, True, False, _pad1)
         self.main_box.append(self.bbox)
         #
         _cancel_btn = Gtk.Button(label="Cancel")
-        # _cancel_btn.set_relief(Gtk.ReliefStyle.NONE)
         _cancel_btn.connect('clicked', self.on_cancel)
         self.bbox.append(_cancel_btn)
         
         c_btn = Gtk.Button.new()
-        # c_btn.set_relief(Gtk.ReliefStyle.NONE)
         self.bbox.append(c_btn)
         
         if self._command == "logout":
@@ -2987,7 +2939,6 @@ class commandWin(Gtk.Window):
             c_btn.set_label("Exit?")
             c_btn.connect('clicked',self.on_c_btn, "exit")
         
-        # self.show_all()
         self.set_visible(True)
         self._parent.set_visible(False)
         
@@ -3144,21 +3095,15 @@ class menuWin(Gtk.Window):
         # separator
         separator = Gtk.Separator()
         separator.set_orientation(Gtk.Orientation.HORIZONTAL)
-        # self.main_box.pack_start(separator, False, False, 4)
         self.main_box.append(separator)
         
         ### SEARCH BAR
         self.search_bar = Gtk.SearchBar()
         self.search_bar.set_search_mode(True)
         self.searchentry = Gtk.SearchEntry()
-        # self.searchentry.connect('icon-press', self.on_icon_press)
         self.searchentry.set_name("mysearchentry")
-        # if self._parent.menu_live_search > 2 :
-            # 'search'?
         self.searchentry.connect('search-changed', self.on_search)
-        # else:
         self.searchentry.connect('activate', self.on_search_return)
-        # self.search_bar.connect_entry(self.searchentry)
         self.searchentry.props.hexpand = True
         self.search_bar.set_child(self.searchentry)
         self.search_bar.set_show_close_button(False)
@@ -3384,30 +3329,7 @@ class menuWin(Gtk.Window):
         except Exception as E:
             self.msg_simple("Error\n"+str(E))
         self.on_focus_out(None)
-        #
-        # _l = self.iconview.get_selected_items()
-        # if _l == []:
-            # try:
-                # subprocess.Popen(f"{self.prog_modify_menu}",shell=True)
-                # # os.system("GDK_BACKEND=wayland menulibre &")
-                # # subprocess.run(f"{self.prog_modify_menu}")
-                # # GLib.spawn_command_line_async("menulibre")
-            # except:
-                # pass
-            # return
-        # # _category_selected = self.get_cat_btn_name(self._btn_toggled)
-        # _category_selected = btn.icat
-        # if _category_selected == "Bookmarks":
-            # return
-        # if _l:
-            # _path = _l[0]
-            # # icon name comment exec path appinfo
-            # _item = self.liststore[_path][4]
-            # if os.path.exists(_item):
-                # try:
-                    # subprocess.Popen(f"{self.prog_modify_menu} {_item}",shell=True)
-                # except:
-                    # pass
+    
     
     def on_service_btn(self, btn, _type):
         try:
@@ -3423,12 +3345,6 @@ class menuWin(Gtk.Window):
             self._parent.MW.close()
             self._parent.MW = None
         _f_populate_menu()
-    
-    # # clear icon pressed in the search entry
-    # def on_icon_press(self, w, p, e):
-        # if self._btn_toggled.icat == "Bookmarks":
-            # self.empty_iconview()
-            # self.populate_bookmarks()
     
     # application searching by pressing enter in the search entry
     def on_search_return(self, widget, _text=None):
@@ -3461,15 +3377,11 @@ class menuWin(Gtk.Window):
             return
         else:
             if self._btn_toggled:
-                # if USER_THEME == 0:
                 self._btn_toggled.set_active(False)
                 self._btn_toggled = None
             self.perform_searching(_text)
     
     def perform_searching(self, _text):
-        # # not used
-        # if USER_THEME == 1 and USE_LABEL_CATEGORY == 1:
-            # self.clabel.set_label("Searching...")
         _cat = ["Development", "Game", "Education", "Graphics", "Multimedia", "Network", "Office", "Utility", "Settings", "System", "Other"]
         _list = []
         # [_el_name,_el_cat,_el_exec,_el_icon,_el_comment,_el_path,_el])
@@ -3503,12 +3415,6 @@ class menuWin(Gtk.Window):
         _cat = ["Bookmarks", "Development", "Game", "Education", "Graphics", "Multimedia", "Network", "Office", "Utility", "Settings", "System", "Other"]
         _icon = ["Bookmark.svg", "Development.svg", "Game.svg", "Education.svg", "Graphics.svg", "Multimedia.svg", "Network.svg", "Office.svg", "Utility.svg", "Settings.svg", "System.svg", "Other.svg",]
         for i,el in enumerate(_cat):
-            # # not used
-            # if USER_THEME == 1:
-                # _btn = Gtk.Button()
-                # _btn.connect('clicked', self.on_toggle_toggled)
-                # _btn.connect('focus-in-event', self.on_toggle_toggled)
-            # elif USER_THEME == 0:
             _btn = Gtk.ToggleButton()
             _btn.set_can_focus(False)
             _btn.connect('clicked', self.on_toggle_toggled)
@@ -3523,14 +3429,12 @@ class menuWin(Gtk.Window):
             self.cbox.append(_btn)
             #
             if i == 0:
-                # if USER_THEME == 0:
                 _btn.set_active(True)
                 self._btn_toggled = _btn
                 self.btn_bookmark = _btn
                 self.populate_bookmarks_at_start()
                 self.populate_category(el)
-                # if USER_THEME == 1 and USE_LABEL_CATEGORY == 1:
-                    # self.clabel.set_label("Bookmarks")
+    
     
     def on_toggle_toggled(self, btn, e=None):
         self.searchentry.set_text("")
@@ -3542,19 +3446,7 @@ class menuWin(Gtk.Window):
         # emptry the iconview
         self.empty_iconview()
         
-        # self.searchentry.delete_text(0,-1)
-        # if btn.icat != "Bookmarks":
-            # self.search_bar.set_visible(False)
-        # else:
-            # self.search_bar.set_visible(True)
-        
         self.scrolledwindow.get_vadjustment().set_value(0)
-        # if USER_THEME == 1:
-            # self.populate_category(btn.icat)
-            # self._btn_toggled = btn
-            # if USE_LABEL_CATEGORY == 1:
-                # self.clabel.set_label(btn.icat)
-            # return
         if self._btn_toggled:
             if btn == self._btn_toggled:
                 if e:
@@ -3592,8 +3484,6 @@ class menuWin(Gtk.Window):
                 _f.close()
             except Exception as E:
                 self.msg_simple("Error\n"+str(E))
-        #
-        # self.populate_bookmarks()
     
     def populate_bookmarks(self):
         for eel in self.bookmarks:
@@ -3665,15 +3555,12 @@ class menuWin(Gtk.Window):
             return
         
     def populate_category(self, cat_name):
-        # self.liststore.remove_all()
-        # self.iconview.remove_all()
         self.on_populate_category_main(cat_name)
     
     def on_populate_category_main(self, cat_name):
         if cat_name == "Bookmarks":
             for _item in self.bookmarks:
                 self.f_menu_item(_item)
-                # self.iconview.unselect_all()
             return
         
         for el in the_menu:
@@ -3765,26 +3652,13 @@ class menuWin(Gtk.Window):
         if self.is_dragging:
             return
         self.iconview.unselect_all()
-        # open bookmarks next time
-        # if self._btn_toggled != self.btn_bookmark:
-            # self.btn_bookmark.set_active(True)
-            # self.on_toggle_toggled(self.btn_bookmark, None)
-        # self.set_visible(False)
-        # self.event_controller.reset()
         #
-        # if USER_THEME == 0:
         if self._btn_toggled == self.btn_bookmark:
             self.set_visible(False)
             # self.event_controller.reset()
             return
         self.btn_bookmark.set_active(True)
         self.on_toggle_toggled(self.btn_bookmark, None)
-        # elif USER_THEME == 1:
-            # self._btn_toggled = self.btn_bookmark
-            # self.btn_bookmark.clicked()
-            # self.btn_bookmark.grab_focus()
-            # if USE_LABEL_CATEGORY == 1:
-                # self.clabel.set_label("Bookmarks")
         #
         self.set_visible(False)
         # self.event_controller.reset()
@@ -3915,7 +3789,6 @@ class clipboardWin(Gtk.Window):
     def on_empty_btn(self, btn):
         global CLIP_STORAGE
         CLIP_STORAGE = {}
-        # self.list_box.remove_all()
         for el in self.list_box_items:
             self.list_box.remove(el)
         _ll= os.listdir(self._parent.clips_path)
@@ -3934,8 +3807,6 @@ class clipboardWin(Gtk.Window):
                 _tmp_box = Gtk.Box.new(0,0)
                 __row.set_child(_tmp_box)
                 _tmp_lbl = Gtk.Label(label=_ctext.decode().replace("\n"," "))
-                # _tmp_box.set_halign(0)
-                # _tmp_lbl.set_halign(1)
                 _tmp_lbl.set_xalign(0)
                 _tmp_lbl.set_hexpand(True)
                 if is_x11:
@@ -3953,23 +3824,15 @@ class clipboardWin(Gtk.Window):
                         _PREV = _ctext.decode()
                     _tmp_lbl.set_tooltip_text(_PREV)
                 _tmp_lbl.set_ellipsize(Pango.EllipsizeMode.END)
-                # _tmp_box.pack_start(_tmp_lbl,True,True,2)
                 _tmp_box.append(_tmp_lbl)
                 _tmp_btn = Gtk.Button()
-                # _tmp_btn.set_halign(2)
                 try:
-                    # pixbuf = Gtk.IconTheme().load_icon("gtk-delete", 24, Gtk.IconLookupFlags.FORCE_SVG)
-                    # # _img = Gtk.Image.new_from_pixbuf(pixbuf)
-                    # _pb = Gdk.Texture.new_for_pixbuf(pixbuf)
-                    # _img = Gtk.Image.new_from_paintable(_pb)
-                    # _tmp_btn.set_image(_img)
                     _pb = icon_theme.lookup_icon("gtk-delete", None, 24, 1, Gtk.TextDirection.NONE, Gtk.IconLookupFlags.FORCE_REGULAR)
                     _tmp_btn.set_child(Gtk.Image.new_from_paintable(_pb))
                 except:
                     _tmp_btn.set_label("X")
                 _tmp_btn.iid = _clip
                 _tmp_btn.connect('clicked', self.on_tmp_btn, __row)
-                # _tmp_box.pack_start(_tmp_btn,False,False,0)
                 _tmp_box.append(_tmp_btn)
                 self.list_box.insert(__row, 0)
                 self.list_box_items.append(__row)
@@ -4707,7 +4570,7 @@ class DialogConfiguration(Gtk.Dialog):
         _time_format.set_active(self._parent.time_format)
         _time_format.connect('changed', self.on_time_combo)
         self.page1_box.attach_next_to(_time_format,clock_sw,1,1,1)
-        if USE_TASKBAR == 1:
+        if USE_TASKBAR != 0:
             clock_sw.set_sensitive(False)
             _time_format.set_sensitive(False)
         # volume
@@ -5207,7 +5070,6 @@ class DialogConfiguration(Gtk.Dialog):
             self.entry_timer.set_state_flags(Gtk.StateFlags.NORMAL, True)
             self.entry_timer.set_text(self._parent.service_player)
         elif _active == 0:
-            # self.entry_timer.set_text("")
             self.entry_timer.set_state_flags(Gtk.StateFlags.INSENSITIVE, True)
         self._parent.set_timer_combo(cb.get_active())
     
@@ -5250,7 +5112,6 @@ class DialogConfiguration(Gtk.Dialog):
         self._parent.not_padbottom(_type, _value)
     
     def on_snd_combo(self, cb):
-        # cb.get_active_text()
         _active = cb.get_active()
         if _active == 2:
             self.entry_sound.set_state_flags(Gtk.StateFlags.NORMAL, True)
@@ -5327,7 +5188,6 @@ class notificationWin(Gtk.Window):
         self._notifier = _parent
         # self.set_transient_for(self._parent)
         # self.set_modal(True)
-        
         _x = args[0]
         _y = args[1]
         _appname = dbus_to_python(args[2])
@@ -5365,19 +5225,13 @@ class notificationWin(Gtk.Window):
         self.set_child(self.main_box)
         
         self.btn_icon_box = Gtk.Box.new(0,0)
-        # self.btn_icon_box.set_valign(3)
         self.btn_icon_box.set_vexpand(True)
-        # self.main_box.pack_start(self.btn_icon_box,True,True,0)
         self.main_box.append(self.btn_icon_box)
         
         if _pixbuf:
             _img = _pixbuf
-            # self.btn_icon_box.pack_start(_img,False,True,4)
-            # _img.set_icon_size(Gtk.IconSize.INHERIT)
             _img.set_halign(3)
             _img.set_valign(3)
-            # _img.set_vexpand(True)
-            # _img.set_hexpand(True)
             self.btn_icon_box.append(_img)
         
         self.second_box = Gtk.Box.new(1,0)
@@ -5393,11 +5247,6 @@ class notificationWin(Gtk.Window):
             _lbl_summary.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
             if self._notifier._parent.not_max_chars:
                 _lbl_summary.set_max_width_chars(self._notifier._parent.not_max_chars)
-            # _lbl_summary.set_hexpand(True)
-            # if _body:
-                # _lbl_summary.set_valign(2)
-            # else:
-                # _lbl_summary.set_valign(3)
             self.second_box.append(_lbl_summary)
         #
         if _body:
@@ -5408,28 +5257,16 @@ class notificationWin(Gtk.Window):
             _lbl_body.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
             if self._notifier._parent.not_max_chars:
                 _lbl_body.set_max_width_chars(self._notifier._parent.not_max_chars)
-            # _lbl_body.set_hexpand(True)
-            # if _summary:
-                # _lbl_body.set_valign(1)
-            # else:
-                # _lbl_body.set_valign(3)
             self.second_box.append(_lbl_body)
         
         self.close_btn = Gtk.Button.new()
         self.close_btn.set_name("closebtn")
         conf_img = Gtk.Image.new_from_icon_name("stock_close")
         self.close_btn.set_child(conf_img)
-        # self.close_btn.set_relief(Gtk.ReliefStyle.NONE)
-        # self.close_btn.set_halign(2)
         self.close_btn.set_valign(1)
-        # self.close_btn.props.hexpand = True
-        # self.conf_btn.halign = Gtk.Align.FILL
-        # self.conf_btn.valign = Gtk.Align.START
         self.close_btn.connect('clicked', self.on_close_btn)
-        # self.btn_icon_box.pack_start(self.close_btn,False,False,0)
         self.btn_icon_box.append(self.close_btn)
         self.main_box.set_margin_start(_pad)
-        # self.main_box.set_margin_end(_pad)
         
         # action buttons in main_box
         if _actions:
@@ -5439,7 +5276,6 @@ class notificationWin(Gtk.Window):
             for _ee in _actions[::2]:
                 btn_name = _actions[_actions.index(_ee)+1]
                 _btn = Gtk.Button(label=btn_name)
-                # _btn.set_relief(Gtk.ReliefStyle.NONE)
                 _btn.connect('clicked',self._on_button_callback, _replaceid, _ee)
                 _actions_box.append(_btn)
         
@@ -5448,16 +5284,17 @@ class notificationWin(Gtk.Window):
         
         # the geometry of this window
         self._value = None
-        
+        #
         self.surface_id_connect = None
         self.old_width = None
         self.old_height = None
         
         self.set_visible(True)
     
+    
     # action button pressed
     def _on_button_callback(self, _btn, _replaceid, _action):
-        # self._notifier.ActivationToken(_replaceid, _action)
+        # self._notifier.ActivationToken(_appid, _action)
         self._notifier.ActionInvoked(_replaceid, _action)
         self.close()
     
@@ -5466,6 +5303,8 @@ class notificationWin(Gtk.Window):
         for el in self._notifier.list_notifications[:]:
             if el[0] == self:
                 self._notifier.list_notifications.remove(el)
+                if len(self._notifier.list_notifications) == 0:
+                    self._notifier._y = 0
                 break
     
     def on_close_win(self,w,_replaceid):
@@ -5483,11 +5322,12 @@ class notificationWin(Gtk.Window):
         self.old_width = self.get_width()
         self.old_height = self.get_height()
         self._value = [self.old_width,self.old_height]
+        #
         _srf.disconnect(self.surface_id_connect)
         self.surface_id_connect = None
     
-    def on_get_height(self):
-        return self.get_height()
+    # def on_get_height(self):
+        # return self._value
 
 class NotSave():
     nname = None
@@ -5520,8 +5360,6 @@ class Notifier(Service.Object):
         action_1 = dbus_to_python(actions)
         
         replacesId = dbus_to_python(replacesId)
-        # if not replacesId:
-            # replacesId = 0
         
         if self._not_counter == 4000:
             self._not_counter = 1
@@ -5593,35 +5431,21 @@ class Notifier(Service.Object):
         __y = -1
         # _nw_to_close = None
         _y_error = 0
+        _found_same_id = 0
         if _replaceid != 0:
             for _el in self.list_notifications:
                 if _el[1] == _replaceid:
-                    # try:
-                        # _yy = _el[2]
-                        # _nw_height = _el[0].get_window().get_geometry().height
-                        # _y = _yy-_nw_height-2
-                        # _el[0].close()
-                        # # _nw_to_close = _el[0]
-                    # except:
-                        # _y = 0
-                        # if self.list_notifications:
-                            # _last_y = self.list_notifications[-1][2]
-                            # _y += _last_y+2
-                    #
+                    _found_same_id = 1
                     _el[0].close()
                     break
-        else:
+        # 
+        if _found_same_id == 0:
             if self.list_notifications:
-                # _last_y = self.list_notifications[-1][2]
                 _last_y = self.list_notifications[-1][0]._value[1]
-                # _y += _last_y+2
                 self._y += _last_y+2+self._parent.not_pad_pixels
             else:
-                # _y = 0
                 self._y = 0
-        
-        # if _y > self._parent.screen_height - 200:
-            # _y = 0
+        #
         if self._y > self._parent.screen_height - self._parent.not_bottom_limit:
             self._y = 0
         
@@ -5632,41 +5456,12 @@ class Notifier(Service.Object):
         _dnd_file = os.path.join(_curr_dir,"do_not_disturb_mode")
         if self.not_dnd == 0 or (self.not_dnd == 1 and _urgency == 2):
             if not os.path.exists(_dnd_file):
-                # if __y:
-                    # nw_y = __y
-                # else:
-                    # nw_y = _y
-                # NW = notificationWin(self, (0, _y, _appname, _pix, _summ, _body, _timeout, _hints, _actions, _replaceid))
-                NW = notificationWin(self, (0, self._y, _appname, _pix, _summ, _body, _timeout, _hints, _actions, _replaceid))
-                
-                # del nw_y
-                # if _nw_to_close:
-                    # _nw_to_close.close()
-                
-                # # _h = NW.on_get_height()
-
-                # # # needed to get the size of each notification window 
-                # # # all at the same position at the moment
-                # # _nw_values = NW._value
-                # # _nheight = _nw_values.height
-                # # _y += _nheight+2
-                # # if _y > self._parent.screen_height - 400:
-                    # # _y = 0
-                # else:
-                    # _y = 0
-                
-                # if __y == -1:
-                    # self.list_notifications.append([NW,_replaceid, _y])
-                # else:
-                    # __y = -1
-                
-                # self.list_notifications.append([NW,_replaceid, _y])
+                NW = notificationWin(self, (0, self._y, _appname, _pix, _summ.strip("\n"), _body.strip("\n"), _timeout, _hints, _actions, _replaceid))
                 self.list_notifications.append([NW,_replaceid, self._y])
-                
                 self._close_notification(_timeout,NW)
-        
+        #
         _is_transient = _on_hints(_hints, "transient")
-        
+        #
         # notification to be skipped
         _not_to_skip = 1
         _not_to_skip_path = os.path.join(_curr_dir,"configs","notifications_skipped")
@@ -5690,8 +5485,7 @@ class Notifier(Service.Object):
                     ff = open(os.path.join(_notification_path,"notification"), "w")
                     ff.write(_appname+"\n\n\n@\n\n\n"+_summ+"\n\n\n@\n\n\n"+_body)
                     ff.close()
-                    
-                    # _pix.savev(os.path.join(_notification_path,"image.png"),"png",None,None)
+                    #
                     _pb = _pix.get_paintable()
                     _pb.save_to_png(os.path.join(_notification_path,"image.png"))
             except:
@@ -5772,7 +5566,6 @@ class Notifier(Service.Object):
                 pass
             if pixbuf:
                 pixbuf = pixbuf.scale_simple(ICON_SIZE,ICON_SIZE,GdkPixbuf.InterpType.BILINEAR)
-                # _img = Gtk.Image.new_from_pixbuf(pixbuf)
                 _pb = Gdk.Texture.new_for_pixbuf(pixbuf)
                 _img = Gtk.Image.new_from_paintable(_pb)
                 _img.set_pixel_size(ICON_SIZE)
@@ -5790,7 +5583,6 @@ class Notifier(Service.Object):
                 except:
                     pass
                 if pixbuf:
-                    # _img = Gtk.Image.new_from_pixbuf(pixbuf)
                     _pb = Gdk.Texture.new_for_pixbuf(pixbuf)
                     _img = Gtk.Image.new_from_paintable(_pb)
                     _img.set_pixel_size(ICON_SIZE)
@@ -5814,7 +5606,6 @@ class Notifier(Service.Object):
                 except:
                     pass
             if pixbuf:
-                # _img = Gtk.Image.new_from_pixbuf(pixbuf)
                 _pb = Gdk.Texture.new_for_pixbuf(pixbuf)
                 _img = Gtk.Image.new_from_paintable(_pb)
                 _img.set_pixel_size(ICON_SIZE)
@@ -5827,7 +5618,6 @@ class Notifier(Service.Object):
             except:
                 try:
                     pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(os.path.join(_curr_dir,"icons","wicon.png"), ICON_SIZE, ICON_SIZE, 1)
-                    # _img = Gtk.Image.new_from_pixbuf(pixbuf)
                     _pb = Gdk.Texture.new_for_pixbuf(pixbuf)
                     _img = Gtk.Image.new_from_paintable(_pb)
                     _img.set_pixel_size(ICON_SIZE)
@@ -5838,7 +5628,6 @@ class Notifier(Service.Object):
         
         try:
             pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(os.path.join(_curr_dir,"icons","wicon.png"), ICON_SIZE, ICON_SIZE, 1)
-            # _img = Gtk.Image.new_from_pixbuf(pixbuf)
             _pb = Gdk.Texture.new_for_pixbuf(pixbuf)
             _img = Gtk.Image.new_from_paintable(_pb)
             _img.set_pixel_size(ICON_SIZE)
