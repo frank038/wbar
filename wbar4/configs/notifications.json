@@ -7,5 +7,6 @@
     "sound_play": 1,
     "max_chars": 50,
     "pad_pixels": 2,
-    "bottom_limit": 200
+    "bottom_limit": 200,
+    "volume_change": 0
 }
