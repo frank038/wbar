@@ -3,7 +3,7 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar.py
 
-# V. 0.9.26
+# V. 0.9.27
 
 import os,sys,shutil,stat
 import gi
@@ -223,7 +223,7 @@ _notification_config_file = os.path.join(_curr_dir,"configs", "notifications.jso
 # sound_play: 0 no sounds - 1 use gsound - 2 string: audio player
 # max_chars: the lenght of the notification window based on text - 0 to disable this option
 # pad_pixels: the pad between the notifications - bottom_limit: maximum height of all notifications
-_starting_notification_conf = {"use_this":1,"nwidth":500,"nheight":200,"icon_size":64,"dnd":0,"sound_play":1,"max_chars":0,"pad_pixels":2,"bottom_limit":200}
+_starting_notification_conf = {"use_this":1,"nwidth":500,"nheight":200,"icon_size":64,"dnd":0,"sound_play":1,"max_chars":0,"pad_pixels":2,"bottom_limit":200,"volume_change":0}
 if not os.path.exists(_notification_config_file):
     try:
         _ff = open(_notification_config_file,"w")
@@ -249,7 +249,6 @@ if _notification_conf:
 if USE_NOTIFICATIONS:
     from dbus.mainloop.glib import DBusGMainLoop
     mainloop = DBusGMainLoop(set_as_default=True)
-    STORE_NOTIFICATIONS = 1
     SOUND_PLAYER = 1
     if SOUND_PLAYER == 1:
         gi.require_version('GSound', '1.0')
@@ -756,6 +755,10 @@ class MyWindow(Gtk.ApplicationWindow):
             self.not_pad_pixels_tmp = None
             self.not_bottom_limit = self.notification_conf["bottom_limit"]
             self.not_bottom_limit_tmp = None
+            self.not_vol_change = self.notification_conf["volume_change"]
+            self.not_vol_change_tmp = None
+            self.not_skip_apps = []
+            self.not_skip_apps_tmp = None
         except:
             global USE_NOTIFICATIONS
             _error_log("Notification config file error 2.")
@@ -763,6 +766,20 @@ class MyWindow(Gtk.ApplicationWindow):
         if USE_NOTIFICATIONS:
             conn = dbus.SessionBus(mainloop = mainloop)
             Notifier(conn, "org.freedesktop.Notifications", self)
+            #
+            # notification to be skipped
+            _not_to_skip_path = os.path.join(_curr_dir,"configs","notifications_skipped")
+            _not_to_skip_ret = None
+            if os.path.exists(_not_to_skip_path):
+                try:
+                    with open(_not_to_skip_path,"r") as _f:
+                        _not_to_skip_ret = _f.read()
+                except:
+                    pass
+            if _not_to_skip_ret != None:
+                self.not_skip_apps = _not_to_skip_ret.split("\n")
+                if "" in self.not_skip_apps:
+                    self.not_skip_apps.remove("")
         
         # the menu window
         self.MW = None
@@ -2446,6 +2463,9 @@ class MyWindow(Gtk.ApplicationWindow):
     def set_not_max_chars(self, _n):
         self.not_max_chars_tmp = _n
     
+    def on_vol_change(self, _type):
+        self.not_vol_change_tmp = _type
+    
     def not_padbottom(self, _type, _value):
         if _type == "pad":
             self.not_pad_pixels_tmp = _value
@@ -2781,8 +2801,26 @@ class MyWindow(Gtk.ApplicationWindow):
                 self.not_bottom_limit = self.not_bottom_limit_tmp
                 self.notification_conf["bottom_limit"] = self.not_bottom_limit_tmp
                 self.not_bottom_limit_tmp = None
+            if self.not_vol_change_tmp != None:
+                self.not_vol_change = self.not_vol_change_tmp
+                self.notification_conf["volume_change"] = self.not_vol_change_tmp
+                self.not_vol_change_tmp = None
+            if self.not_skip_apps_tmp != None:
+                _not_to_skip_ret = None
+                try:
+                    _not_to_skip_ret = self.not_skip_apps_tmp.split(",")
+                    if "" in _not_to_skip_ret:
+                        _not_to_skip_ret.remove("")
+                    _not_to_skip_path = os.path.join(_curr_dir,"configs","notifications_skipped")
+                    ff = open(_not_to_skip_path, "w")
+                    for el in _not_to_skip_ret:
+                        ff.write(el+"\n")
+                    ff.close()
+                    self.not_skip_apps = _not_to_skip_ret
+                except:
+                    pass
+                self.not_skip_apps_tmp = None
             
-            # self.on_save_optional_widget_state()
             self.save_conf()
         else:
             self.on_close_dialog_conf()
@@ -2802,11 +2840,10 @@ class MyWindow(Gtk.ApplicationWindow):
         self.service_tray_menu_height_tmp = None
         self.note_show_at_start_tmp = None
         self.note_size_tmp = None
+        
         if self.clock_use:
             self.timer_format_tmp = None
         self.clock_use_tmp = None
-        
-        self.volume_command_tmp = None
         
         self.menu_width_tmp = 0
         self.menu_height_tmp = 0
@@ -2823,17 +2860,24 @@ class MyWindow(Gtk.ApplicationWindow):
         self.service_sound_player_tmp = None
         self.service_player_tmp = ""
         
+        self.volume_command_tmp = None
+        
         self.clip_width_tmp = 0
         self.clip_height_tmp = 0
         self.clip_max_chars_tmp = 0
         self.clip_max_clips_tmp = 0
         self.chars_preview_tmp = 0
+        
         self.not_width_tmp = 0
         self.not_height_tmp = 0
         self.not_icon_size_tmp = 0
         self.not_dnd_tmp = -1
         self.not_max_chars_tmp = None
         self.not_sounds_tmp = -1
+        self.not_pad_pixels_tmp = None
+        self.not_bottom_limit_tmp = None
+        self.not_vol_change_tmp = None
+        self.not_skip_apps_tmp = None
     
     # def on_other_button(self, btn, event):
     def on_other_button(self, btn):
@@ -4457,6 +4501,7 @@ class DialogConfiguration(Gtk.Dialog):
         ##### PANEL
         # width - pixels to substract
         width_lbl = Gtk.Label(label="Width (shrink)")
+        width_lbl.set_tooltip_text("The width panel is shrinked by the amount of pixels setted")
         self.page1_box.attach(width_lbl,0,0,1,1)
         width_lbl.set_halign(1)
         width_spinbtn = Gtk.SpinButton.new_with_range(0,1000,1)
@@ -4466,6 +4511,7 @@ class DialogConfiguration(Gtk.Dialog):
         width_spinbtn.set_numeric(True)
         # height
         size_lbl = Gtk.Label(label="Height")
+        size_lbl.set_tooltip_text("The height of the panel")
         self.page1_box.attach(size_lbl,0,1,1,1)
         size_lbl.set_halign(1)
         size_spinbtn = Gtk.SpinButton.new_with_range(10,300,1)
@@ -4493,6 +4539,7 @@ class DialogConfiguration(Gtk.Dialog):
         # corner_spinbtn2.set_numeric(True)
         # position
         pos_lbl = Gtk.Label(label="Position")
+        pos_lbl.set_tooltip_text("Position of the panel")
         self.page1_box.attach(pos_lbl,0,4,1,1)
         pos_lbl.set_halign(1)
         pos_combo = Gtk.ComboBoxText.new()
@@ -4504,6 +4551,7 @@ class DialogConfiguration(Gtk.Dialog):
         # clipboard
         if USE_CLIPBOARD:
             clip_lbl = Gtk.Label(label="Clipboard")
+            clip_lbl.set_tooltip_text("Enable/disable the clipboard applet")
             self.page1_box.attach(clip_lbl,0,5,1,1)
             clip_lbl.set_halign(1)
             clip_sw = Gtk.Switch.new()
@@ -4513,6 +4561,7 @@ class DialogConfiguration(Gtk.Dialog):
             self.page1_box.attach_next_to(clip_sw,clip_lbl,1,1,1)
         # label1
         label1_lbl = Gtk.Label(label="Output Left")
+        label1_lbl.set_tooltip_text("Enable/disable the left text output")
         self.page1_box.attach(label1_lbl,0,6,1,1)
         label1_lbl.set_halign(1)
         out1_sw = Gtk.Switch.new()
@@ -4522,6 +4571,7 @@ class DialogConfiguration(Gtk.Dialog):
         self.page1_box.attach_next_to(out1_sw,label1_lbl,1,1,1)
         # label2
         label2_lbl = Gtk.Label(label="Output Center/Right")
+        label2_lbl.set_tooltip_text("Enable/disable the center or right text output")
         self.page1_box.attach(label2_lbl,0,7,1,1)
         label2_lbl.set_halign(1)
         label2_combo = Gtk.ComboBoxText.new()
@@ -4548,6 +4598,7 @@ class DialogConfiguration(Gtk.Dialog):
         # self.page1_box.attach_next_to(task_sw,task_lbl,1,1,1)
         # clock
         clock_lbl = Gtk.Label(label="Clock")
+        clock_lbl.set_tooltip_text("Enable/disable the clock applet\nIf the taskbar is enabled, the clock is positioned at right only")
         self.page1_box.attach(clock_lbl,0,9,1,1)
         clock_lbl.set_halign(1)
         # clock_sw = Gtk.Switch.new()
@@ -4564,6 +4615,7 @@ class DialogConfiguration(Gtk.Dialog):
         self.page1_box.attach_next_to(clock_sw,clock_lbl,1,1,1)
         # 
         _time_format = Gtk.ComboBoxText.new()
+        _time_format.set_tooltip_text("Clock format")
         _time_format.append_text("24H")
         _time_format.append_text("AM/PM (12am is midnight)")
         _time_format.append_text("AM/PM (12am is noon)")
@@ -4576,6 +4628,7 @@ class DialogConfiguration(Gtk.Dialog):
         # volume
         if USE_VOLUME:
             volume_lbl = Gtk.Label(label="Mixer")
+            volume_lbl.set_tooltip_text("Launch the mixer by right mouse clicking\non the volume bar, if setted")
             self.page1_box.attach(volume_lbl,0,10,1,1)
             volume_lbl.set_halign(1)
             volume_entry = Gtk.Entry()
@@ -4585,6 +4638,7 @@ class DialogConfiguration(Gtk.Dialog):
         
         ## MENU
         menu_lbl_w = Gtk.Label(label="Width")
+        menu_lbl_w.set_tooltip_text("The width of the application menu")
         self.page2_box.attach(menu_lbl_w,0,0,1,1)
         menu_lbl_w.set_halign(1)
         menu_w_spinbtn = Gtk.SpinButton.new_with_range(0,1000,1)
@@ -4594,6 +4648,7 @@ class DialogConfiguration(Gtk.Dialog):
         menu_w_spinbtn.set_numeric(True)
         
         menu_lbl_h = Gtk.Label(label="Height")
+        menu_lbl_h.set_tooltip_text("The height of the application menu")
         self.page2_box.attach(menu_lbl_h,0,1,1,1)
         menu_lbl_h.set_halign(1)
         menu_h_spinbtn = Gtk.SpinButton.new_with_range(0,1000,1)
@@ -4603,6 +4658,7 @@ class DialogConfiguration(Gtk.Dialog):
         menu_h_spinbtn.set_numeric(True)
         
         menu_lbl_ci = Gtk.Label(label="Category icon size")
+        menu_lbl_ci.set_tooltip_text("The icon size of the categories")
         self.page2_box.attach(menu_lbl_ci,0,2,1,1)
         menu_lbl_ci.set_halign(1)
         menu_ci_spinbtn = Gtk.SpinButton.new_with_range(24,512,1)
@@ -4612,6 +4668,7 @@ class DialogConfiguration(Gtk.Dialog):
         menu_ci_spinbtn.set_numeric(True)
         
         menu_lbl_i = Gtk.Label(label="Item icon size")
+        menu_lbl_i.set_tooltip_text("The icon size of each item in the menu")
         self.page2_box.attach(menu_lbl_i,0,3,1,1)
         menu_lbl_i.set_halign(1)
         menu_i_spinbtn = Gtk.SpinButton.new_with_range(24,512,1)
@@ -4629,6 +4686,7 @@ class DialogConfiguration(Gtk.Dialog):
         # self.entry_menu_t.set_text(self._parent.menu_terminal)
         
         menu_lbl_ls = Gtk.Label(label="Live search characters (3 or more)")
+        menu_lbl_ls.set_tooltip_text("The minimum amount of characters to perform a query")
         self.page2_box.attach(menu_lbl_ls,0,5,1,1)
         menu_lbl_ls.set_halign(1)
         menu_ls_spinbtn = Gtk.SpinButton.new_with_range(0,20,1)
@@ -4638,6 +4696,7 @@ class DialogConfiguration(Gtk.Dialog):
         menu_ls_spinbtn.set_numeric(True)
         
         menu_lbl_wp = Gtk.Label(label="Position")
+        menu_lbl_wp.set_tooltip_text("Where the menu should be shown.")
         self.page2_box.attach(menu_lbl_wp,0,6,1,1)
         menu_lbl_wp.set_halign(1)
         menu_combo_p = Gtk.ComboBoxText.new()
@@ -4648,6 +4707,7 @@ class DialogConfiguration(Gtk.Dialog):
         self.page2_box.attach_next_to(menu_combo_p,menu_lbl_wp,1,1,1)
         
         menu_n_item_lbl = Gtk.Label(label="Number of columns")
+        menu_n_item_lbl.set_tooltip_text("Maximum number of items in each row of the menu")
         self.page2_box.attach(menu_n_item_lbl,0,7,1,1)
         menu_n_item_lbl.set_halign(1)
         menu_n_item_spinbtn = Gtk.SpinButton.new_with_range(0,20,1)
@@ -4657,6 +4717,7 @@ class DialogConfiguration(Gtk.Dialog):
         menu_n_item_spinbtn.set_numeric(True)
         
         menu_editor_lbl = Gtk.Label(label="Menu editor")
+        menu_editor_lbl.set_tooltip_text("Launch the menu editor if setted")
         self.page2_box.attach(menu_editor_lbl,0,8,1,1)
         menu_editor_lbl.set_halign(1)
         menu_editor_e = Gtk.Entry.new()
@@ -4667,6 +4728,7 @@ class DialogConfiguration(Gtk.Dialog):
         
         ## SERVICE MENU
         service_lbl_w = Gtk.Label(label="Width")
+        service_lbl_w.set_tooltip_text("The width of the service window")
         self.page3_box.attach(service_lbl_w,0,0,1,1)
         service_lbl_w.set_halign(1)
         service_w_spinbtn = Gtk.SpinButton.new_with_range(0,1000,1)
@@ -4676,6 +4738,7 @@ class DialogConfiguration(Gtk.Dialog):
         service_w_spinbtn.set_numeric(True)
             
         service_lbl_h = Gtk.Label(label="Height")
+        service_lbl_h.set_tooltip_text("The height of the service window")
         self.page3_box.attach(service_lbl_h,0,1,1,1)
         service_lbl_h.set_halign(1)
         service_h_spinbtn = Gtk.SpinButton.new_with_range(0,1000,1)
@@ -4686,18 +4749,22 @@ class DialogConfiguration(Gtk.Dialog):
         
         # sounds
         timer_lbl_sound = Gtk.Label(label="Play sound")
+        timer_lbl_sound.set_sensitive(False)
         self.page3_box.attach(timer_lbl_sound,0,2,1,1)
         timer_lbl_sound.set_halign(1)
         timer_combo = Gtk.ComboBoxText.new()
+        timer_combo.set_sensitive(False)
         timer_combo.append_text("Internal player")
         timer_combo.append_text("External player")
         timer_combo.connect('changed', self.on_timer_combo)
         self.page3_box.attach_next_to(timer_combo,timer_lbl_sound,1,1,1)
         
         _entry_timer_lbl = Gtk.Label(label="Player")
+        _entry_timer_lbl.set_sensitive(False)
         _entry_timer_lbl.set_halign(1)
         self.page3_box.attach(_entry_timer_lbl,0,3,1,1)
         self.entry_timer = Gtk.Entry.new()
+        self.entry_timer.set_sensitive(False)
         self.entry_timer.connect('changed', self.on_entry_timer)
         self.page3_box.attach_next_to(self.entry_timer,_entry_timer_lbl,1,1,1)
         if self._parent.service_sound_player == 0:
@@ -4708,6 +4775,7 @@ class DialogConfiguration(Gtk.Dialog):
             self.entry_timer.set_text(self._parent.service_player)
         
         lbl_note_show = Gtk.Label(label="Show all notes at start")
+        lbl_note_show.set_tooltip_text("Whether the notes should be shown at start of the panel")
         lbl_note_show.set_halign(1)
         self.page3_box.attach(lbl_note_show,0,6,1,1)
         note_sw = Gtk.Switch.new()
@@ -4717,6 +4785,7 @@ class DialogConfiguration(Gtk.Dialog):
         self.page3_box.attach_next_to(note_sw,lbl_note_show,1,1,1)
         
         lbl_note_size = Gtk.Label(label="Size of all notes")
+        lbl_note_size.set_tooltip_text("The size of the notes, width and height")
         lbl_note_size.set_halign(1)
         self.page3_box.attach(lbl_note_size,0,7,1,1)
         note_size_spinbtn = Gtk.SpinButton.new_with_range(50,1000,1)
@@ -4727,6 +4796,7 @@ class DialogConfiguration(Gtk.Dialog):
         
         # tray menu size
         _tray_menu_width = Gtk.Label(label="Tray menu width")
+        _tray_menu_width.set_tooltip_text("The width of the menu of each item in the tray")
         _tray_menu_width.set_halign(1)
         self.page3_box.attach(_tray_menu_width,0,4,1,1)
         tray_w_spinbtn = Gtk.SpinButton.new_with_range(0,1000,1)
@@ -4736,6 +4806,7 @@ class DialogConfiguration(Gtk.Dialog):
         tray_w_spinbtn.set_numeric(True)
         
         _tray_menu_height = Gtk.Label(label="Tray menu height")
+        _tray_menu_height.set_tooltip_text("The height of the menu of each item in the tray")
         _tray_menu_height.set_halign(1)
         self.page3_box.attach(_tray_menu_height,0,5,1,1)
         tray_h_spinbtn = Gtk.SpinButton.new_with_range(0,1000,1)
@@ -4747,6 +4818,7 @@ class DialogConfiguration(Gtk.Dialog):
         ## CLIPBOARD
         if USE_CLIPBOARD and self._parent.clipboard_use:
             clip_lbl_w = Gtk.Label(label="Width")
+            clip_lbl_w.set_tooltip_text("The width of the clipboard window")
             self.page4_box.attach(clip_lbl_w,0,0,1,1)
             clip_lbl_w.set_halign(1)
             clip_w_spinbtn = Gtk.SpinButton.new_with_range(0,1000,1)
@@ -4756,6 +4828,7 @@ class DialogConfiguration(Gtk.Dialog):
             clip_w_spinbtn.set_numeric(True)
             
             clip_lbl_h = Gtk.Label(label="Height")
+            clip_lbl_h.set_tooltip_text("The height of the clipboard window")
             self.page4_box.attach(clip_lbl_h,0,1,1,1)
             clip_lbl_h.set_halign(1)
             clip_h_spinbtn = Gtk.SpinButton.new_with_range(0,1000,1)
@@ -4767,7 +4840,7 @@ class DialogConfiguration(Gtk.Dialog):
             if is_x11:
                 # max chars to get clipboard to be stored
                 clip_lbl_chars = Gtk.Label(label="Characters to store (0 all)")
-                clip_lbl_chars.set_tooltip_text("If the number of characters is higher than this setting,\nthe selection will be skipped completely.")
+                clip_lbl_chars.set_tooltip_text("If the number of characters is higher than this setting,\nthe selection will be skipped completely")
                 self.page4_box.attach(clip_lbl_chars,0,2,1,1)
                 clip_lbl_chars.set_halign(1)
                 # 0 disable
@@ -4778,6 +4851,7 @@ class DialogConfiguration(Gtk.Dialog):
                 clip_chars_spinbtn.set_numeric(True)
             # max history
             clip_lbl_num = Gtk.Label(label="Max clips to store")
+            clip_lbl_num.set_tooltip_text("Maximum number of the selections to keep in the history")
             self.page4_box.attach(clip_lbl_num,0,3,1,1)
             clip_lbl_num.set_halign(1)
             clip_num_spinbtn = Gtk.SpinButton.new_with_range(1,200,1)
@@ -4808,6 +4882,7 @@ class DialogConfiguration(Gtk.Dialog):
         # self.page5_box.attach_next_to(not_lbl_enabled_sw,not_lbl_enabled,1,1,1)
         # window width
         not_lbl_w = Gtk.Label(label="Width")
+        not_lbl_w.set_tooltip_text("The width of the notification window")
         self.page5_box.attach(not_lbl_w,0,1,1,1)
         not_lbl_w.set_halign(1)
         not_w_spinbtn = Gtk.SpinButton.new_with_range(0,1000,1)
@@ -4817,6 +4892,7 @@ class DialogConfiguration(Gtk.Dialog):
         not_w_spinbtn.set_numeric(True)
         # window height
         not_lbl_h = Gtk.Label(label="Height")
+        not_lbl_h.set_tooltip_text("The height of the notification window")
         self.page5_box.attach(not_lbl_h,0,2,1,1)
         not_lbl_h.set_halign(1)
         not_h_spinbtn = Gtk.SpinButton.new_with_range(0,600,1)
@@ -4826,6 +4902,7 @@ class DialogConfiguration(Gtk.Dialog):
         not_h_spinbtn.set_numeric(True)
         # icon size
         not_lbl_i = Gtk.Label(label="Icon size")
+        not_lbl_i.set_tooltip_text("The icon size in the notification")
         self.page5_box.attach(not_lbl_i,0,3,1,1)
         not_lbl_i.set_halign(1)
         not_i_spinbtn = Gtk.SpinButton.new_with_range(0,256,1)
@@ -4847,6 +4924,7 @@ class DialogConfiguration(Gtk.Dialog):
         #
         # summary and body max chars lenght
         max_chars_lbl = Gtk.Label(label="Notification width (n chars or 0)")
+        max_chars_lbl.set_tooltip_text("Maximum amount of the characters for each line of text")
         self.page5_box.attach(max_chars_lbl,0,5,1,1)
         max_chars_lbl.set_halign(1)
         self.entry_max_chars = Gtk.Entry.new()
@@ -4856,6 +4934,7 @@ class DialogConfiguration(Gtk.Dialog):
         self.page5_box.attach_next_to(self.entry_max_chars,max_chars_lbl,1,1,1)
         # sounds
         not_lbl_sound = Gtk.Label(label="Play sound")
+        not_lbl_sound.set_tooltip_text("Whether to play any sound when the notification appears")
         self.page5_box.attach(not_lbl_sound,0,6,1,1)
         not_lbl_sound.set_halign(1)
         snd_combo = Gtk.ComboBoxText.new()
@@ -4865,6 +4944,7 @@ class DialogConfiguration(Gtk.Dialog):
         snd_combo.connect('changed', self.on_snd_combo)
         self.page5_box.attach_next_to(snd_combo,not_lbl_sound,1,1,1)
         self.entry_sound = Gtk.Entry.new()
+        self.entry_sound.set_tooltip_text("Set the audio player name if external player has been chosen")
         self.entry_sound.connect('changed', self.on_entry_sound)
         self.page5_box.attach(self.entry_sound,1,7,1,1)
         if self._parent.not_sounds in [0,1]:
@@ -4875,6 +4955,7 @@ class DialogConfiguration(Gtk.Dialog):
             self.entry_sound.set_text(self._parent.not_sounds)
         # pad
         not_lbl_pad = Gtk.Label(label="Space between notifications")
+        not_lbl_pad.set_tooltip_text("The space in pixels between the notifications")
         self.page5_box.attach(not_lbl_pad,0,8,1,1)
         not_lbl_pad.set_halign(1)
         not_pad_spinbtn = Gtk.SpinButton.new_with_range(0,100,1)
@@ -4885,6 +4966,7 @@ class DialogConfiguration(Gtk.Dialog):
         
         # bottom limit
         not_lbl_bottom = Gtk.Label(label="Height limit (pad from bottom)")
+        not_lbl_bottom.set_tooltip_text("If the height of all notifications is larger\nthan the screen size less this pad,\nthe next notifications will be shown at the top of the screen")
         self.page5_box.attach(not_lbl_bottom,0,9,1,1)
         not_lbl_bottom.set_halign(1)
         not_bottom_spinbtn = Gtk.SpinButton.new_with_range(0,500,1)
@@ -4892,6 +4974,28 @@ class DialogConfiguration(Gtk.Dialog):
         self.page5_box.attach_next_to(not_bottom_spinbtn,not_lbl_bottom,1,1,1)
         not_bottom_spinbtn.connect('value-changed', self.on_not_padbottom_spinbtn, "bottom")
         not_bottom_spinbtn.set_numeric(True)
+        
+        # volume change
+        vol_change_lbl = Gtk.Label(label="Volume change")
+        vol_change_lbl.set_tooltip_text("Whether to use the notifications to notify the volume change")
+        self.page5_box.attach(vol_change_lbl,0,10,1,1)
+        vol_change_lbl.set_halign(1)
+        vol_change_combo = Gtk.ComboBoxText.new()
+        vol_change_combo.append_text("No")
+        vol_change_combo.append_text("Yes")
+        vol_change_combo.set_active(self._parent.not_vol_change)
+        vol_change_combo.connect('changed', self.on_vol_change_combo)
+        self.page5_box.attach_next_to(vol_change_combo,vol_change_lbl,1,1,1)
+        
+        # applications to be skipped
+        not_skip_lbl = Gtk.Label(label="Applications to skip")
+        not_skip_lbl.set_halign(1)
+        not_skip_lbl.set_tooltip_text("The application listed will not show any notification:\npplication names comma separated")
+        self.page5_box.attach(not_skip_lbl,0,11,1,1)
+        not_skip_entry = Gtk.Entry.new()
+        not_skip_entry.set_text(",".join(self._parent.not_skip_apps))
+        not_skip_entry.connect('changed', self.on_entry_not_skip)
+        self.page5_box.attach_next_to(not_skip_entry,not_skip_lbl,1,1,1)
         
         ## OTHER SETTINGS
         _lbl_advice = Gtk.Label(label="(A restart is needed)")
@@ -4908,6 +5012,7 @@ class DialogConfiguration(Gtk.Dialog):
         _pad_spinbtn.set_numeric(True)
         
         _lbl_audio_start_lvl = Gtk.Label(label="Audio level at start (0 no change)")
+        _lbl_audio_start_lvl.set_tooltip_text("Whether to set the audio level at start of the panel:\ninteger from 5 to 50 (0 means no volume change)")
         self.page6_box.attach(_lbl_audio_start_lvl,0,2,1,1)
         _lbl_audio_start_lvl.set_halign(1)
         _audio_lvl_spinbtn = Gtk.SpinButton.new_with_range(0,50,1)
@@ -4954,6 +5059,7 @@ class DialogConfiguration(Gtk.Dialog):
         
         # taskbar
         taskbar_lbl = Gtk.Label(label="Use the taskbar widget")
+        taskbar_lbl.set_tooltip_text("If enabled, the clock will be positioned at right")
         self.page6_box.attach(taskbar_lbl,0,6,1,1)
         taskbar_lbl.set_halign(1)
         use_taskbar_combo = Gtk.ComboBoxText.new()
@@ -5107,6 +5213,12 @@ class DialogConfiguration(Gtk.Dialog):
     def on_entry_sound(self, _entry):
         self._parent.entry_sound_text = _entry.get_text()
     
+    def on_entry_not_skip(self, _entry):
+        self._parent.not_skip_apps_tmp =_entry.get_text()
+    
+    def on_vol_change_combo(self, cb):
+        self._parent.on_vol_change(cb.get_active())
+        
     def on_not_padbottom_spinbtn(self, btn, _type):
         _value = btn.get_value_as_int()
         self._parent.not_padbottom(_type, _value)
@@ -5353,13 +5465,20 @@ class Notifier(Service.Object):
         
     @Service.method("org.freedesktop.Notifications", in_signature="susssasa{sv}i", out_signature="u")
     def Notify(self, appName, replacesId, appIcon, summary, body, actions, hints, expireTimeout):
-        # # skip these applications
-        # if appName in SKIP_APPS:
-            # return replacesId
-        
-        action_1 = dbus_to_python(actions)
         
         replacesId = dbus_to_python(replacesId)
+        
+        # skip these applications
+        if appName in self._parent.not_skip_apps:
+            return replacesId
+        
+        # x-canonical-private-synchronous - e.g. volume
+        # replacesId = _on_hints(hints, "x-canonical-private-synchronous")
+        if "x-canonical-private-synchronous" in hints:
+            if self._parent.not_vol_change:
+                replacesId = 5000
+            else:
+                return replacesId
         
         if self._not_counter == 4000:
             self._not_counter = 1
@@ -5369,10 +5488,7 @@ class Notifier(Service.Object):
         elif replacesId == self._not_counter:
             self._not_counter += 1
         
-        # x-canonical-private-synchronous - e.g. volume
-        # replacesId = _on_hints(hints, "x-canonical-private-synchronous")
-        if "x-canonical-private-synchronous" in hints:
-            replacesId = 3000
+        action_1 = dbus_to_python(actions)
         
         if not dbus_to_python(appIcon):
             appIcon = ""
@@ -5462,23 +5578,8 @@ class Notifier(Service.Object):
         #
         _is_transient = _on_hints(_hints, "transient")
         #
-        # notification to be skipped
-        _not_to_skip = 1
-        _not_to_skip_path = os.path.join(_curr_dir,"configs","notifications_skipped")
-        _not_to_skip_ret = None
-        if os.path.exists(_not_to_skip_path):
-            try:
-                with open(_not_to_skip_path,"r") as _f:
-                    _not_to_skip_ret = _f.read()
-            except:
-                pass
-        if _not_to_skip_ret != None:
-            _not_to_skip_ret_list = _not_to_skip_ret.split("\n")
-            _not_to_skip_ret_list.remove("")
-            if _appname in _not_to_skip_ret_list:
-                _not_to_skip = 0
         # write the notification content
-        if not _is_transient and _not_to_skip and STORE_NOTIFICATIONS:
+        if not _is_transient:
             try:
                 if os.access(self._not_path,os.W_OK):
                     os.makedirs(_notification_path)
