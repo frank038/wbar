@@ -5572,7 +5572,7 @@ class Notifier(Service.Object):
         _dnd_file = os.path.join(_curr_dir,"do_not_disturb_mode")
         if self.not_dnd == 0 or (self.not_dnd == 1 and _urgency == 2):
             if not os.path.exists(_dnd_file):
-                NW = notificationWin(self, (0, self._y, _appname, _pix, _summ.strip("\n"), _body.strip("\n"), _timeout, _hints, _actions, _replaceid))
+                NW = notificationWin(self, (0, self._y, _appname, _pix, _summ, _body, _timeout, _hints, _actions, _replaceid))
                 self.list_notifications.append([NW,_replaceid, self._y])
                 self._close_notification(_timeout,NW)
         #
