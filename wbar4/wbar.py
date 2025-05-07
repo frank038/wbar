@@ -3,7 +3,7 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar.py
 
-# V. 0.9.27
+# V. 0.9.28
 
 import os,sys,shutil,stat
 import gi
@@ -2150,7 +2150,7 @@ class MyWindow(Gtk.ApplicationWindow):
         _img.set_pixel_size(self.win_height-4)
         self.clipbutton.set_child(_img)
         self.clipbutton.connect('clicked', self.on_clipboard_button)
-        self.right_box.append(self.clipbutton)
+        self.right_box.prepend(self.clipbutton)
         # # reorder
         # if _pos != None:
             # self.right_box.reorder_child(self.clipbutton, _pos)
@@ -2233,7 +2233,7 @@ class MyWindow(Gtk.ApplicationWindow):
         self._configuration = json.load(_ff)
         _ff.close()
     
-    # def on_save_optional_widget_state(self):
+    def on_save_optional_widget_state(self):
         # if self.temp_clock != None:
             # self._configuration["panel"]["clock"] = int(self.temp_clock)
             # self.clock_use = self.temp_clock
@@ -2250,20 +2250,20 @@ class MyWindow(Gtk.ApplicationWindow):
             # elif self.clock_use == 1:
                 # self.on_set_clock2(0)
         
-        # if self.temp_clip != None:
-            # self._configuration["panel"]["clipboard"] = int(self.temp_clip)
-            # self.clipboard_use = self.temp_clip
-            # self.temp_clip = None
-            # if self.clipboard_use == 0:
-                # self.right_box.remove(self.clipbutton)
-                # del self.clipbutton
-                # if is_wayland:
-                    # try:
-                        # os.system("killall wl-paste")
-                    # except:
-                        # pass
-            # elif self.clipboard_use == 1:
-                # self.on_set_clipboard(5)
+        if self.temp_clip != None:
+            self._configuration["panel"]["clipboard"] = int(self.temp_clip)
+            self.clipboard_use = self.temp_clip
+            self.temp_clip = None
+            if self.clipboard_use == 0:
+                self.right_box.remove(self.clipbutton)
+                del self.clipbutton
+                if is_wayland:
+                    try:
+                        os.system("killall wl-paste")
+                    except:
+                        pass
+            elif self.clipboard_use == 1:
+                self.on_set_clipboard(None)
         
         # if self.temp_out1 != None:
             # self._configuration["panel"]["label1"] = int(self.temp_out1)
@@ -2629,6 +2629,7 @@ class MyWindow(Gtk.ApplicationWindow):
                 if self.ClipDaemon:
                     self.ClipDaemon._stop()
                     self.ClipDaemon = None
+                    self.on_save_optional_widget_state()
                 try:
                     os.system("killall wl-paste")
                 except:
@@ -2639,6 +2640,7 @@ class MyWindow(Gtk.ApplicationWindow):
                     if _ret:
                         self.ClipDaemon = daemonClipW(self.clips_path, self)
                         self.ClipDaemon._start()
+                        self.on_save_optional_widget_state()
                     else:
                         _error_log("Something wrong with wl-paste or wclipboard.py or something else.")
             if self.temp_out1 != None and self.temp_out1 != self.label1_use:
@@ -3912,9 +3914,9 @@ class clipboardWin(Gtk.Window):
                     os.remove(_clip_file)
                 # clipboard.set_text(_text, -1)
                 #
-                subprocess.Popen("wl-copy --clear",shell=True)
-                # subprocess.Popen(f"wl-copy {_text}",shell=True)
-                subprocess.Popen("wl-copy '{}'".format(_text),shell=True)
+                # subprocess.Popen("wl-copy --clear",shell=True)
+                # # subprocess.Popen(f"wl-copy {_text}",shell=True)
+                subprocess.Popen('wl-copy "{}"'.format(_text),shell=True)
                 # subprocess.Popen("echo '{}' | wl-copy -t text".format(_text),shell=True)
             except:
                 pass
@@ -4554,24 +4556,32 @@ class DialogConfiguration(Gtk.Dialog):
             clip_lbl.set_tooltip_text("Enable/disable the clipboard applet")
             self.page1_box.attach(clip_lbl,0,5,1,1)
             clip_lbl.set_halign(1)
-            clip_sw = Gtk.Switch.new()
+            # clip_sw = Gtk.Switch.new()
+            clip_sw = Gtk.ComboBoxText.new()
+            clip_sw.append_text("No")
+            clip_sw.append_text("Yes")
             clip_sw.set_active(self._parent.clipboard_use)
-            clip_sw.set_halign(1)
-            clip_sw.connect('notify::active', self.on_switch, "clipboard")
+            # clip_sw.set_halign(1)
+            # clip_sw.connect('notify::active', self.on_switch, "clipboard")
+            clip_sw.connect('changed', self.on_switch, None, "clipboard")
             self.page1_box.attach_next_to(clip_sw,clip_lbl,1,1,1)
         # label1
         label1_lbl = Gtk.Label(label="Output Left")
-        label1_lbl.set_tooltip_text("Enable/disable the left text output")
+        label1_lbl.set_tooltip_text("Enable/disable the left text output widget")
         self.page1_box.attach(label1_lbl,0,6,1,1)
         label1_lbl.set_halign(1)
-        out1_sw = Gtk.Switch.new()
+        # out1_sw = Gtk.Switch.new()
+        out1_sw = Gtk.ComboBoxText.new()
+        out1_sw.append_text("No")
+        out1_sw.append_text("Yes")
         out1_sw.set_active(self._parent.label1_use)
-        out1_sw.set_halign(1)
-        out1_sw.connect('notify::active', self.on_switch, "out1")
+        # out1_sw.set_halign(1)
+        # out1_sw.connect('notify::active', self.on_switch, "out1")
+        out1_sw.connect('changed', self.on_switch, None, "out1")
         self.page1_box.attach_next_to(out1_sw,label1_lbl,1,1,1)
         # label2
         label2_lbl = Gtk.Label(label="Output Center/Right")
-        label2_lbl.set_tooltip_text("Enable/disable the center or right text output")
+        label2_lbl.set_tooltip_text("Enable/disable the center or right text output widget")
         self.page1_box.attach(label2_lbl,0,7,1,1)
         label2_lbl.set_halign(1)
         label2_combo = Gtk.ComboBoxText.new()
@@ -4624,7 +4634,6 @@ class DialogConfiguration(Gtk.Dialog):
         self.page1_box.attach_next_to(_time_format,clock_sw,1,1,1)
         if USE_TASKBAR != 0:
             clock_sw.set_sensitive(False)
-            _time_format.set_sensitive(False)
         # volume
         if USE_VOLUME:
             volume_lbl = Gtk.Label(label="Mixer")
@@ -4658,7 +4667,7 @@ class DialogConfiguration(Gtk.Dialog):
         menu_h_spinbtn.set_numeric(True)
         
         menu_lbl_ci = Gtk.Label(label="Category icon size")
-        menu_lbl_ci.set_tooltip_text("The icon size of the categories")
+        menu_lbl_ci.set_tooltip_text("The icon size of the main categories")
         self.page2_box.attach(menu_lbl_ci,0,2,1,1)
         menu_lbl_ci.set_halign(1)
         menu_ci_spinbtn = Gtk.SpinButton.new_with_range(24,512,1)
@@ -4696,7 +4705,7 @@ class DialogConfiguration(Gtk.Dialog):
         menu_ls_spinbtn.set_numeric(True)
         
         menu_lbl_wp = Gtk.Label(label="Position")
-        menu_lbl_wp.set_tooltip_text("Where the menu should be shown.")
+        menu_lbl_wp.set_tooltip_text("Where the menu will be shown.")
         self.page2_box.attach(menu_lbl_wp,0,6,1,1)
         menu_lbl_wp.set_halign(1)
         menu_combo_p = Gtk.ComboBoxText.new()
@@ -4747,41 +4756,45 @@ class DialogConfiguration(Gtk.Dialog):
         service_h_spinbtn.connect('value-changed', self.on_service_wh_spinbtn, "h")
         service_h_spinbtn.set_numeric(True)
         
-        # sounds
-        timer_lbl_sound = Gtk.Label(label="Play sound")
-        timer_lbl_sound.set_sensitive(False)
-        self.page3_box.attach(timer_lbl_sound,0,2,1,1)
-        timer_lbl_sound.set_halign(1)
-        timer_combo = Gtk.ComboBoxText.new()
-        timer_combo.set_sensitive(False)
-        timer_combo.append_text("Internal player")
-        timer_combo.append_text("External player")
-        timer_combo.connect('changed', self.on_timer_combo)
-        self.page3_box.attach_next_to(timer_combo,timer_lbl_sound,1,1,1)
+        # # sounds
+        # timer_lbl_sound = Gtk.Label(label="Play sound")
+        # timer_lbl_sound.set_sensitive(False)
+        # self.page3_box.attach(timer_lbl_sound,0,2,1,1)
+        # timer_lbl_sound.set_halign(1)
+        # timer_combo = Gtk.ComboBoxText.new()
+        # timer_combo.set_sensitive(False)
+        # timer_combo.append_text("Internal player")
+        # timer_combo.append_text("External player")
+        # timer_combo.connect('changed', self.on_timer_combo)
+        # self.page3_box.attach_next_to(timer_combo,timer_lbl_sound,1,1,1)
         
-        _entry_timer_lbl = Gtk.Label(label="Player")
-        _entry_timer_lbl.set_sensitive(False)
-        _entry_timer_lbl.set_halign(1)
-        self.page3_box.attach(_entry_timer_lbl,0,3,1,1)
-        self.entry_timer = Gtk.Entry.new()
-        self.entry_timer.set_sensitive(False)
-        self.entry_timer.connect('changed', self.on_entry_timer)
-        self.page3_box.attach_next_to(self.entry_timer,_entry_timer_lbl,1,1,1)
-        if self._parent.service_sound_player == 0:
-            timer_combo.set_active(0)
-            self.entry_timer.set_state_flags(Gtk.StateFlags.INSENSITIVE, True)
-        elif self._parent.service_sound_player == 1:
-            timer_combo.set_active(1)
-            self.entry_timer.set_text(self._parent.service_player)
+        # _entry_timer_lbl = Gtk.Label(label="Player")
+        # _entry_timer_lbl.set_sensitive(False)
+        # _entry_timer_lbl.set_halign(1)
+        # self.page3_box.attach(_entry_timer_lbl,0,3,1,1)
+        # self.entry_timer = Gtk.Entry.new()
+        # self.entry_timer.set_sensitive(False)
+        # self.entry_timer.connect('changed', self.on_entry_timer)
+        # self.page3_box.attach_next_to(self.entry_timer,_entry_timer_lbl,1,1,1)
+        # if self._parent.service_sound_player == 0:
+            # timer_combo.set_active(0)
+            # self.entry_timer.set_state_flags(Gtk.StateFlags.INSENSITIVE, True)
+        # elif self._parent.service_sound_player == 1:
+            # timer_combo.set_active(1)
+            # self.entry_timer.set_text(self._parent.service_player)
         
         lbl_note_show = Gtk.Label(label="Show all notes at start")
-        lbl_note_show.set_tooltip_text("Whether the notes should be shown at start of the panel")
+        lbl_note_show.set_tooltip_text("Whether the notes should be shown as the panel starts")
         lbl_note_show.set_halign(1)
         self.page3_box.attach(lbl_note_show,0,6,1,1)
-        note_sw = Gtk.Switch.new()
+        # note_sw = Gtk.Switch.new()
+        note_sw = Gtk.ComboBoxText.new()
+        note_sw.append_text("No")
+        note_sw.append_text("Yes")
         note_sw.set_active(self._parent.note_show_at_start)
-        note_sw.set_halign(1)
-        note_sw.connect('notify::active', self.on_switch, "note")
+        # note_sw.set_halign(1)
+        # note_sw.connect('notify::active', self.on_switch, "note")
+        note_sw.connect('changed', self.on_switch, None, "note")
         self.page3_box.attach_next_to(note_sw,lbl_note_show,1,1,1)
         
         lbl_note_size = Gtk.Label(label="Size of all notes")
@@ -4849,6 +4862,7 @@ class DialogConfiguration(Gtk.Dialog):
                 self.page4_box.attach_next_to(clip_chars_spinbtn,clip_lbl_chars,1,1,1)
                 clip_chars_spinbtn.connect('value-changed', self.on_clip_spinbtn, "chars")
                 clip_chars_spinbtn.set_numeric(True)
+            
             # max history
             clip_lbl_num = Gtk.Label(label="Max clips to store")
             clip_lbl_num.set_tooltip_text("Maximum number of the selections to keep in the history")
@@ -4859,9 +4873,11 @@ class DialogConfiguration(Gtk.Dialog):
             self.page4_box.attach_next_to(clip_num_spinbtn,clip_lbl_num,1,1,1)
             clip_num_spinbtn.connect('value-changed', self.on_clip_spinbtn, "clips")
             clip_num_spinbtn.set_numeric(True)
+            
             if is_x11:
                 # chars preview
                 clip_lbl_cp = Gtk.Label(label="Max chars to preview")
+                clip_lbl_cp.set_tooltip_text("Maximum amount of characters to show in the preview")
                 self.page4_box.attach(clip_lbl_cp,0,4,1,1)
                 clip_lbl_cp.set_halign(1)
                 clip_cp_spinbtn = Gtk.SpinButton.new_with_range(1,200,1)
@@ -4902,7 +4918,7 @@ class DialogConfiguration(Gtk.Dialog):
         not_h_spinbtn.set_numeric(True)
         # icon size
         not_lbl_i = Gtk.Label(label="Icon size")
-        not_lbl_i.set_tooltip_text("The icon size in the notification")
+        not_lbl_i.set_tooltip_text("The size of the icon in the notification")
         self.page5_box.attach(not_lbl_i,0,3,1,1)
         not_lbl_i.set_halign(1)
         not_i_spinbtn = Gtk.SpinButton.new_with_range(0,256,1)
@@ -4966,7 +4982,7 @@ class DialogConfiguration(Gtk.Dialog):
         
         # bottom limit
         not_lbl_bottom = Gtk.Label(label="Height limit (pad from bottom)")
-        not_lbl_bottom.set_tooltip_text("If the height of all notifications is larger\nthan the screen size less this pad,\nthe next notifications will be shown at the top of the screen")
+        not_lbl_bottom.set_tooltip_text("If the height of all notifications is larger\nthan the screen height less this pad,\nthe next notification will be shown at the top of the screen")
         self.page5_box.attach(not_lbl_bottom,0,9,1,1)
         not_lbl_bottom.set_halign(1)
         not_bottom_spinbtn = Gtk.SpinButton.new_with_range(0,500,1)
@@ -4977,7 +4993,7 @@ class DialogConfiguration(Gtk.Dialog):
         
         # volume change
         vol_change_lbl = Gtk.Label(label="Volume change")
-        vol_change_lbl.set_tooltip_text("Whether to use the notifications to notify the volume change")
+        vol_change_lbl.set_tooltip_text("Whether to use a notification to notify the volume change")
         self.page5_box.attach(vol_change_lbl,0,10,1,1)
         vol_change_lbl.set_halign(1)
         vol_change_combo = Gtk.ComboBoxText.new()
@@ -4990,7 +5006,7 @@ class DialogConfiguration(Gtk.Dialog):
         # applications to be skipped
         not_skip_lbl = Gtk.Label(label="Applications to skip")
         not_skip_lbl.set_halign(1)
-        not_skip_lbl.set_tooltip_text("The application listed will not show any notification:\npplication names comma separated")
+        not_skip_lbl.set_tooltip_text("The applications listed will not show any notification:\nApplication names comma separated")
         self.page5_box.attach(not_skip_lbl,0,11,1,1)
         not_skip_entry = Gtk.Entry.new()
         not_skip_entry.set_text(",".join(self._parent.not_skip_apps))
@@ -5012,7 +5028,7 @@ class DialogConfiguration(Gtk.Dialog):
         _pad_spinbtn.set_numeric(True)
         
         _lbl_audio_start_lvl = Gtk.Label(label="Audio level at start (0 no change)")
-        _lbl_audio_start_lvl.set_tooltip_text("Whether to set the audio level at start of the panel:\ninteger from 5 to 50 (0 means no volume change)")
+        _lbl_audio_start_lvl.set_tooltip_text("Whether to set the audio level as the panel starts:\ninteger from 5 to 50 (0 means no volume change)")
         self.page6_box.attach(_lbl_audio_start_lvl,0,2,1,1)
         _lbl_audio_start_lvl.set_halign(1)
         _audio_lvl_spinbtn = Gtk.SpinButton.new_with_range(0,50,1)
