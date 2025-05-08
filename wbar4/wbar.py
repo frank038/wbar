@@ -3,7 +3,7 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar.py
 
-# V. 0.9.28
+# V. 0.9.29
 
 import os,sys,shutil,stat
 import gi
@@ -108,8 +108,15 @@ from wl_framework.loop_integrations import GLibIntegration
 from wl_framework.network.connection import WaylandConnection
 from wl_framework.protocols.foreign_toplevel import ForeignTopLevel
 
+# 1 pulsectl - 2 pulsectl_asyncio
+_PREV_PULSE = 2
 if USE_VOLUME:
-    import pulsectl as _pulse
+    if _PREV_PULSE == 2:
+        import asyncio
+        from contextlib import suppress
+        import pulsectl_asyncio
+    elif _PREV_PULSE == 1:
+        import pulsectl as _pulse
 
 # default configuration
 _starting_conf = {"panel":{"height":30,"width":0,"corner-top":30,\
@@ -794,16 +801,25 @@ class MyWindow(Gtk.ApplicationWindow):
         GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.NONE)
         self.on_set_win_position(self.win_position)
         
-        # 0 horizontal 1 vertical - spacing
-        self.main_box = Gtk.Box.new(0, 0)
+        if USE_TASKBAR == 3:
+            self.main_box = Gtk.CenterBox.new()
+        else:
+            # 0 horizontal 1 vertical - spacing
+            self.main_box = Gtk.Box.new(0, 0)
+        
         _pad1 = max(self._corner_top,self._corner_bottom)
         self.main_box.set_margin_start(_pad1)
         self.main_box.set_margin_end(_pad1)
         self.set_child(self.main_box)
         
         self.left_box = Gtk.Box.new(0,0)
-        self.main_box.append(self.left_box)
-        self.left_box.set_halign(1)
+        if USE_TASKBAR == 3:
+            self.main_box.set_start_widget(self.left_box)
+        else:
+            self.main_box.append(self.left_box)
+        if USE_TASKBAR == 1:
+            self.left_box.set_halign(0)
+            self.left_box.set_hexpand(True)
         
         self.menubutton = Gtk.Button()
         _icon_path = os.path.join(_curr_dir,"icons","menu.svg")
@@ -833,10 +849,20 @@ class MyWindow(Gtk.ApplicationWindow):
         self.set_timer_label1()
         
         self.center_box = Gtk.Box.new(0,0)
-        self.main_box.append(self.center_box)
+        if USE_TASKBAR == 3:
+            self.main_box.set_center_widget(self.center_box)
+        else:
+            self.main_box.append(self.center_box)
         if USE_TASKBAR == 0:
             self.center_box.set_halign(3)
             self.center_box.set_hexpand(True)
+        
+        self.right_box = Gtk.Box.new(0,0)
+        if USE_TASKBAR == 3:
+            self.main_box.set_end_widget(self.right_box)
+        else:
+            self.main_box.append(self.right_box)
+            self.right_box.set_hexpand(True)
         
         # tasklist
         global _context
@@ -850,10 +876,6 @@ class MyWindow(Gtk.ApplicationWindow):
             self.manager = self.context.manager
             self.on_set_tasklist()
         
-        self.right_box = Gtk.Box.new(0,0)
-        self.main_box.append(self.right_box)
-        self.right_box.set_halign(2)
-        self.right_box.set_hexpand(False)
         # output2
         self.temp_out2 = None
         # self.label2button = Gtk.EventBox()
@@ -910,6 +932,7 @@ class MyWindow(Gtk.ApplicationWindow):
         
         # volume
         self.athread = None
+        self.athread2 = None
         if USE_VOLUME:
             self.vol_box = Gtk.Box.new(0,0)
             self.right_box.append(self.vol_box)
@@ -969,10 +992,10 @@ class MyWindow(Gtk.ApplicationWindow):
             
             #########
             
+            self.pulse = None
+            
             # the stored sink in the file
             self.start_sink_name = None
-            
-            self.pulse = _pulse.Pulse()
             
             # default sink name
             self.default_sink_name = None
@@ -986,9 +1009,15 @@ class MyWindow(Gtk.ApplicationWindow):
             ###########
             self._signal = SignalObject()
             self._signal.connect("notify::propList", self.athreadslot)
-            
-            self.athread = audioThread(_pulse,self._signal,self)
-            self.athread.daemon = True
+            self.cc_list = None
+            if _PREV_PULSE == 2:
+                _loop = asyncio.new_event_loop()
+                self.athread2 = audioThread2(_loop,self._signal,self)
+                self.athread2.daemon = True
+            elif _PREV_PULSE == 1:
+                self.pulse = _pulse.Pulse()
+                self.athread = audioThread(_pulse,self._signal,self)
+                self.athread.daemon = True
         
         # notifications
         if USE_NOTIFICATIONS:
@@ -1015,16 +1044,26 @@ class MyWindow(Gtk.ApplicationWindow):
         
         if USE_VOLUME:
             self.volume_bar.set_sensitive(True)
-            self._on_start_vol()
-            self.athread.start()
+            
+            if _PREV_PULSE == 2:
+                self._sink_list = None
+                self.athread2.start()
+            elif _PREV_PULSE == 1:
+                self.athread.start()
+                self._on_start_vol()
         
         self.q2 = None
         self.set_timer_label2()
     
-    
     def on_set_tasklist(self):
         self.box_taskbar = Gtk.Box.new(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
-        self.center_box.append(self.box_taskbar)
+        if USE_TASKBAR == 3:
+            self.center_box.append(self.box_taskbar)
+        elif USE_TASKBAR == 1:
+            self.left_box.append(self.box_taskbar)
+            # self.box_taskbar.set_hexpand(True)
+        elif USE_TASKBAR == 2:
+            self.right_box.prepend(self.box_taskbar)
         #
         self.tbox = Gtk.Box.new(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
         self.tbox.set_name("tasklist")
@@ -1246,6 +1285,200 @@ class MyWindow(Gtk.ApplicationWindow):
         
 ############### audio ################
     
+    # at start
+    async def set_pulse(self, p):
+        self.pulse = p
+        self._sink_list = await self.pulse.sink_list()
+        #
+        _server_info = await self.pulse.server_info()
+        self.default_sink_name = _server_info.default_sink_name
+        #
+        if self.AUDIO_START_LEVEL:
+            if not isinstance(self.AUDIO_START_LEVEL,int):
+                self.AUDIO_START_LEVEL = 20
+            if self.AUDIO_START_LEVEL > 100 or self.AUDIO_START_LEVEL < 0:
+                self.AUDIO_START_LEVEL = 20
+            if self.default_sink_name:
+                for ell in self._sink_list:
+                    if ell.name == self.default_sink_name:
+                        _vol = round(self.AUDIO_START_LEVEL/100, 2)
+                        try:
+                            await self.pulse.volume_set_all_chans(ell, _vol)
+                        except:
+                            pass
+                        break
+        #
+        _sink = None
+        try:
+            for el in self._sink_list:
+                if el.name == self.default_sink_name:
+                    _sink = el
+                    break
+        except:
+            return
+        # #
+        # volume level
+        _file_volume = os.path.join(_curr_dir, "volume_volume.sh")
+        ret1 = None
+        if os.path.exists(_file_volume):
+            # if not os.access(_file_volume, os.X_OK):
+                # os.chmod(_file_volume, 0o740)
+            try:
+                ret1 = subprocess.check_output(_file_volume,shell=True)
+                ret1 = ret1.decode().strip("%").strip("\n")
+            except:
+                pass
+        #
+        # mute state
+        _file_mute = os.path.join(_curr_dir, "volume_mute.sh")
+        ret2 = None
+        if os.path.exists(_file_mute):
+            # if not os.access(_file_mute, os.X_OK):
+                # os.chmod(_file_mute, 0o740)
+            try:
+                ret2 = subprocess.check_output(_file_mute,shell=True)
+            except:
+                pass
+        #
+        _level = -1
+        if ret1:
+            _level = round(int(ret1)/100,2)
+        _mute = -1
+        if ret2:
+            _mute = int(ret2.decode())
+        
+        if 0 <= _level <= 1:
+            # self.volume_bar.set_fraction(_level)
+            self.volume_bar.set_value(_level)
+            if _sink:
+                self.volume_bar.set_tooltip_text("{}: {}".format(_sink.description, int(_level*100)))
+        # self.volume_image.set_visible(False)
+        self.volume_bar.set_sensitive(True)
+        if _mute == 1:
+            self.volume_bar.set_sensitive(False)
+            # self.volume_image.set_visible(False)
+        elif _mute == 0:
+            self.volume_bar.set_sensitive(True)
+            # self.volume_image.set_visible(True)
+        #
+        return await asyncio.sleep(1)
+   
+    def _set_volume2(self):
+        _sink = None
+        try:
+            for el in self._sink_list:
+                if el.name == self.default_sink_name:
+                    _sink = el
+                    break
+        except:
+            return
+        #
+        # volume level
+        _file_volume = os.path.join(_curr_dir, "volume_volume.sh")
+        ret1 = None
+        if os.path.exists(_file_volume):
+            # if not os.access(_file_volume, os.X_OK):
+                # os.chmod(_file_volume, 0o740)
+            try:
+                ret1 = subprocess.check_output(_file_volume,shell=True)
+                ret1 = ret1.decode().strip("%").strip("\n")
+            except:
+                pass
+        
+        # mute state
+        _file_mute = os.path.join(_curr_dir, "volume_mute.sh")
+        ret2 = None
+        if os.path.exists(_file_mute):
+            # if not os.access(_file_mute, os.X_OK):
+                # os.chmod(_file_mute, 0o740)
+            try:
+                ret2 = subprocess.check_output(_file_mute,shell=True)
+            except:
+                pass
+        
+        _level = -1
+        if ret1:
+            _level = round(int(ret1)/100,2)
+        _mute = -1
+        if ret2:
+            _mute = int(ret2.decode())
+        
+        if 0 <= _level <= 1:
+            # self.volume_bar.set_fraction(_level)
+            self.volume_bar.set_value(_level)
+            if _sink:
+                self.volume_bar.set_tooltip_text("{}: {}".format(_sink.description, int(_level*100)))
+        # self.volume_image.set_visible(False)
+        self.volume_bar.set_sensitive(True)
+        if _mute == 1:
+            self.volume_bar.set_sensitive(False)
+            # self.volume_image.set_visible(False)
+        elif _mute == 0:
+            self.volume_bar.set_sensitive(True)
+            # self.volume_image.set_visible(True)
+    
+    # card changed - server
+    async def reset_pulse(self):
+        self._sink_list = await self.pulse.sink_list()
+        #
+        _server_info = await self.pulse.server_info()
+        self.default_sink_name = _server_info.default_sink_name
+        #
+        _sink = None
+        try:
+            for el in self._sink_list:
+                if el.name == self.default_sink_name:
+                    _sink = el
+                    break
+        except:
+            return
+        #
+        # volume level
+        _file_volume = os.path.join(_curr_dir, "volume_volume.sh")
+        ret1 = None
+        if os.path.exists(_file_volume):
+            # if not os.access(_file_volume, os.X_OK):
+                # os.chmod(_file_volume, 0o740)
+            try:
+                ret1 = subprocess.check_output(_file_volume,shell=True)
+                ret1 = ret1.decode().strip("%").strip("\n")
+            except:
+                pass
+        
+        # mute state
+        _file_mute = os.path.join(_curr_dir, "volume_mute.sh")
+        ret2 = None
+        if os.path.exists(_file_mute):
+            # if not os.access(_file_mute, os.X_OK):
+                # os.chmod(_file_mute, 0o740)
+            try:
+                ret2 = subprocess.check_output(_file_mute,shell=True)
+            except:
+                pass
+        
+        _level = -1
+        if ret1:
+            _level = round(int(ret1)/100,2)
+        _mute = -1
+        if ret2:
+            _mute = int(ret2.decode())
+        
+        if 0 <= _level <= 1:
+            # self.volume_bar.set_fraction(_level)
+            self.volume_bar.set_value(_level)
+            if _sink:
+                self.volume_bar.set_tooltip_text("{}: {}".format(_sink.description, int(_level*100)))
+        # self.volume_image.set_visible(False)
+        self.volume_bar.set_sensitive(True)
+        if _mute == 1:
+            self.volume_bar.set_sensitive(False)
+            # self.volume_image.set_visible(False)
+        elif _mute == 0:
+            self.volume_bar.set_sensitive(True)
+            # self.volume_image.set_visible(True)
+        #
+        return await asyncio.sleep(1)
+    
     # at this program start
     def _on_start_vol(self):
         # card list
@@ -1297,7 +1530,6 @@ class MyWindow(Gtk.ApplicationWindow):
                             self.pulse.volume_set_all_chans(ell, _vol)
                         except:
                             pass
-        
         self._set_volume()
     
     def on_vol_gesture(self, o,n,x,y):
@@ -1322,7 +1554,6 @@ class MyWindow(Gtk.ApplicationWindow):
         
         if round(obj.get_value(),2) == _value:
             return
-        
         try:
             volume_command = [os.path.join(_curr_dir,"volume_set.sh"), str(int(_value*100))]
             subprocess.Popen(volume_command, shell=False)
@@ -1347,16 +1578,30 @@ class MyWindow(Gtk.ApplicationWindow):
         elif _list[0] == "change-server":
             self.on_list_audio(_list[1], 500)
     
+    # if _PREV_PULSE == 2:
     def on_list_audio(self, _el, _t):
-        if _t == 103:
-            self._set_volume()
-        # sever
-        elif _t == 500:
-            self.on_server_changed()
+        if _PREV_PULSE == 2:
+            # sink
+            if _t == 103:
+                self._set_volume2()
+            # server
+            elif _t == 500:
+                pass
+                # self.on_server_changed2()
+        elif _PREV_PULSE == 2:
+            # sink
+            if _t == 103:
+                self._set_volume()
+            # sever
+            elif _t == 500:
+                self.on_server_changed()
         return
     
     def on_server_changed(self):
         try:
+            # card list
+            self.card_list = self.pulse.card_list()
+            # default sink
             _server_info = self.pulse.server_info()
             self.default_sink_name = _server_info.default_sink_name
             self._set_volume()
@@ -3661,6 +3906,17 @@ class menuWin(Gtk.Window):
         #
         os.chdir(_HOME)
         ret=app_to_exec.launch()
+        #
+        # _app_desktop_file = app_to_exec.get_filename()
+        # _cmd = _app_desktop_file.split("/")[-1].removesuffix(".desktop")
+        # #
+        # GLib.spawn_async([shutil.which("gtk-launch") ,_cmd])#,None,None,0,None,None,None,None,None)
+        # #
+        # flags = Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_MERGE
+        # args = [shutil.which("gtk-launch") ,_cmd]
+        # Gio.Subprocess.new(args, flags)
+        # #
+        #
         os.chdir(_curr_dir)
         if ret == False:
             _exec_name = _b._exec
@@ -3712,7 +3968,7 @@ class menuWin(Gtk.Window):
     # def on_show(self, widget):
         # pass
 
-
+        
 class ynDialog(Gtk.Dialog):
     def __init__(self, parent, _title1, _type):
         super().__init__(title=_type, transient_for=parent)
@@ -5868,7 +6124,47 @@ class daemonClip():
         return
 
 ############## audio
+
+class audioThread2(Thread):
+    
+    def __init__(self, _loop, _signal, _parent):
+        super(audioThread2, self).__init__()
+        self._loop = _loop
+        self._signal = _signal
+        self._parent = _parent
         
+    def run(self):
+        async def listen():
+            async with pulsectl_asyncio.PulseAsync('event-volume') as pulse:
+                asyncio.run_coroutine_threadsafe(self._parent.set_pulse(pulse), self._loop)
+                async for event in pulse.subscribe_events('sink', 'server'):
+                    # sink
+                    if event.facility == pulse.event_facilities[6]:
+                        # volume change
+                        if event.t == pulse.event_types[0]:
+                            self._signal.propList = ["change-sink", event.index]
+                    # server
+                    elif event.facility == pulse.event_facilities[5]:
+                        # server change
+                        if event.t == pulse.event_types[0]:
+                            self._signal.propList = ["change-server", event.index]
+                            asyncio.run_coroutine_threadsafe(self._parent.reset_pulse(), self._loop)
+
+        async def main():
+            # Run listen() coroutine in task to allow cancelling it
+            listen_task = asyncio.create_task(listen())
+            # # # register signal handlers to cancel listener when program is asked to terminate
+            # for sig in (signal_SIGTERM, signal_SIGHUP, signal_SIGINT):
+                # # loop.add_signal_handler(sig, listen_task.cancel)
+                # # RuntimeError: set_wakeup_fd only works in main thread of the main interpreter
+                # self._loop.add_signal_handler(sig, listen_task.cancel)
+            # Alternatively, the PulseAudio event subscription can be ended by breaking/returning from the `async for` loop
+            with suppress(asyncio.CancelledError):
+                await listen_task
+        #
+        self._loop.run_until_complete(main())
+
+
 class audioThread(Thread):
     
     def __init__(self, _pulse, _signal, _parent):
