@@ -3,7 +3,7 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar.py
 
-# V. 0.9.29
+# V. 0.9.30
 
 import os,sys,shutil,stat
 import gi
@@ -590,9 +590,9 @@ class MyWindow(Gtk.ApplicationWindow):
             self.clip_width = self.clipboard_conf["wwidth"]
             self.clip_height_tmp = 0
             self.clip_height = self.clipboard_conf["wheight"]
-            self.clip_max_chars = 500
+            self.clip_max_chars = self.clipboard_conf["max_chars"]
             self.clip_max_chars_tmp = 0
-            self.clip_max_clips = 100
+            self.clip_max_clips = self.clipboard_conf["max_clips"]
             self.clip_max_clips_tmp = 0
             self.chars_preview = self.clipboard_conf["chars_preview"]
             self.chars_preview_tmp = 0
@@ -1285,7 +1285,7 @@ class MyWindow(Gtk.ApplicationWindow):
         
 ############### audio ################
     
-    # at start
+    # at start - asyncio
     async def set_pulse(self, p):
         self.pulse = p
         self._sink_list = await self.pulse.sink_list()
@@ -1362,7 +1362,8 @@ class MyWindow(Gtk.ApplicationWindow):
             # self.volume_image.set_visible(True)
         #
         return await asyncio.sleep(1)
-   
+    
+    # asyncio
     def _set_volume2(self):
         _sink = None
         try:
@@ -1408,6 +1409,8 @@ class MyWindow(Gtk.ApplicationWindow):
             self.volume_bar.set_value(_level)
             if _sink:
                 self.volume_bar.set_tooltip_text("{}: {}".format(_sink.description, int(_level*100)))
+            # else:
+                # self.volume_bar.set_tooltip_text("{}: {}".format("NO Audio Devices"))
         # self.volume_image.set_visible(False)
         self.volume_bar.set_sensitive(True)
         if _mute == 1:
@@ -1417,7 +1420,7 @@ class MyWindow(Gtk.ApplicationWindow):
             self.volume_bar.set_sensitive(True)
             # self.volume_image.set_visible(True)
     
-    # card changed - server
+    # card changed - server - asyncio
     async def reset_pulse(self):
         self._sink_list = await self.pulse.sink_list()
         #
@@ -1468,6 +1471,8 @@ class MyWindow(Gtk.ApplicationWindow):
             self.volume_bar.set_value(_level)
             if _sink:
                 self.volume_bar.set_tooltip_text("{}: {}".format(_sink.description, int(_level*100)))
+            # else:
+                # self.volume_bar.set_tooltip_text("{}: {}".format("No Audio Devices"))
         # self.volume_image.set_visible(False)
         self.volume_bar.set_sensitive(True)
         if _mute == 1:
@@ -1588,7 +1593,7 @@ class MyWindow(Gtk.ApplicationWindow):
             elif _t == 500:
                 pass
                 # self.on_server_changed2()
-        elif _PREV_PULSE == 2:
+        elif _PREV_PULSE == 1:
             # sink
             if _t == 103:
                 self._set_volume()
@@ -3906,6 +3911,7 @@ class menuWin(Gtk.Window):
         #
         os.chdir(_HOME)
         ret=app_to_exec.launch()
+        os.chdir(_curr_dir)
         #
         # _app_desktop_file = app_to_exec.get_filename()
         # _cmd = _app_desktop_file.split("/")[-1].removesuffix(".desktop")
@@ -3917,11 +3923,11 @@ class menuWin(Gtk.Window):
         # Gio.Subprocess.new(args, flags)
         # #
         #
-        os.chdir(_curr_dir)
         if ret == False:
             _exec_name = _b._exec
             self.msg_simple(f"{_exec_name} not found or not setted.")
         self.on_focus_out(None)
+    
     
     def sigtype_handler(self, sig, frame):
         if sig == signal.SIGINT or sig == signal.SIGTERM:
@@ -3968,7 +3974,7 @@ class menuWin(Gtk.Window):
     # def on_show(self, widget):
         # pass
 
-        
+
 class ynDialog(Gtk.Dialog):
     def __init__(self, parent, _title1, _type):
         super().__init__(title=_type, transient_for=parent)
@@ -5737,7 +5743,6 @@ class Notifier(Service.Object):
         
     @Service.method("org.freedesktop.Notifications", in_signature="susssasa{sv}i", out_signature="u")
     def Notify(self, appName, replacesId, appIcon, summary, body, actions, hints, expireTimeout):
-        
         replacesId = dbus_to_python(replacesId)
         
         # skip these applications
