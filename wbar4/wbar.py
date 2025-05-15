@@ -3,7 +3,7 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar.py
 
-# V. 0.9.30
+# V. 0.9.31
 
 import os,sys,shutil,stat
 import gi
@@ -1159,10 +1159,13 @@ class MyWindow(Gtk.ApplicationWindow):
                 except Exception as E:
                     toplevel.button.set_label(" A ")
                     toplevel.button._icon = 1
-        #
-        toplevel.button.set_size_request(toplevel.button.get_allocated_height(),self.win_height)
-        toplevel.button.set_visible(True)
-        toplevel.button.set_tooltip_text(toplevel.title)
+            # in this case the tooltip will not change
+            toplevel.button.set_tooltip_text(toplevel.title)
+            toplevel.button.set_size_request(toplevel.button.get_allocated_height(),self.win_height)
+            toplevel.button.set_visible(True)
+        else:
+            # the tooltip will refresh
+            toplevel.button.set_tooltip_text(toplevel.title)
         #
         if 'activated' in toplevel.states:
             if toplevel.button != self.active_button:
@@ -2052,6 +2055,7 @@ class MyWindow(Gtk.ApplicationWindow):
         #
         else:
             _path = sender+path
+            # _icon = ""
             if _path in items:
                 item = items[_path]
                 #
@@ -2067,6 +2071,8 @@ class MyWindow(Gtk.ApplicationWindow):
                                         if key == 'IconName':
                                             _icon = item['IconName']
                                             self._set_icon(_icon, sender)
+                                        # elif key == 'IconPixmap':
+                                            # pass
                                         elif key == 'ToolTip':
                                             _tooltip = item['ToolTip'][2]
                                             self._set_tooltip(_tooltip, sender)
@@ -3915,6 +3921,8 @@ class menuWin(Gtk.Window):
         #
         # _app_desktop_file = app_to_exec.get_filename()
         # _cmd = _app_desktop_file.split("/")[-1].removesuffix(".desktop")
+        # print("3918", _cmd)
+        # os.system("/opt/wayland/wbar/execute.sh {} &".format(_cmd))
         # #
         # GLib.spawn_async([shutil.which("gtk-launch") ,_cmd])#,None,None,0,None,None,None,None,None)
         # #
