@@ -3,7 +3,7 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar.py
 
-# V. 0.9.31
+# V. 0.9.32
 
 import os,sys,shutil,stat
 import gi
@@ -3916,20 +3916,18 @@ class menuWin(Gtk.Window):
         app_to_exec = _b._ap
         #
         os.chdir(_HOME)
-        ret=app_to_exec.launch()
-        os.chdir(_curr_dir)
+        # ret=app_to_exec.launch()
+        # os.chdir(_curr_dir)
         #
-        # _app_desktop_file = app_to_exec.get_filename()
-        # _cmd = _app_desktop_file.split("/")[-1].removesuffix(".desktop")
-        # print("3918", _cmd)
-        # os.system("/opt/wayland/wbar/execute.sh {} &".format(_cmd))
-        # #
-        # GLib.spawn_async([shutil.which("gtk-launch") ,_cmd])#,None,None,0,None,None,None,None,None)
-        # #
-        # flags = Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_MERGE
-        # args = [shutil.which("gtk-launch") ,_cmd]
-        # Gio.Subprocess.new(args, flags)
-        # #
+        _app_desktop_file = app_to_exec.get_filename()
+        _cmd = _app_desktop_file.split("/")[-1].removesuffix(".desktop")
+        if not shutil.which("gtk-launch"):
+            self.msg_simple("gtk-launch not found.")
+            ret = True
+        else:
+            _cmd2 = "gtk-launch {}".format(_cmd)
+            ret = GLib.spawn_command_line_async(_cmd2)
+        os.chdir(_curr_dir)
         #
         if ret == False:
             _exec_name = _b._exec
