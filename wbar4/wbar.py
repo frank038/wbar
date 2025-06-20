@@ -3,7 +3,7 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar.py
 
-# V. 0.9.32
+# V. 0.9.33
 
 import os,sys,shutil,stat
 import gi
@@ -25,6 +25,9 @@ import subprocess
 import time, datetime
 import dbus
 import dbus.service as Service
+
+# enable the application server
+APP_SERVER = 1
 
 # 0 for using internal method
 _USE_PIL = 0
@@ -78,7 +81,7 @@ if not os.path.exists(os.path.join(_curr_dir,"notes")):
 # other options
 _other_settings_conf = None
 _other_settings_config_file = os.path.join(_curr_dir,"configs","other_settings.json")
-_starting_other_settings_conf = {"pad-value":4,"audio-start-value":0,"use-volume":0,"use-tray":0,"double-click":0,"use-taskbar":0}
+_starting_other_settings_conf = {"pad-value":4,"audio-start-value":0,"use-volume":0,"use-tray":0,"double-click":0,"use-taskbar":0,"launch-mode":0}
 if not os.path.exists(_other_settings_config_file):
     try:
         _ff = open(_other_settings_config_file,"w")
@@ -101,12 +104,15 @@ USE_VOLUME = _other_settings_conf["use-volume"]
 USE_TRAY = _other_settings_conf["use-tray"]
 # DOUBLE_CLICK = _other_settings_conf["double-click"]
 USE_TASKBAR = _other_settings_conf["use-taskbar"]
+# 0 internal - 1 dbus (use gtk-lauch) - 2 gtk-launch
+LAUNCH_MODE = _other_settings_conf["launch-mode"]
 
 _context = None
-#if USE_TASKBAR:
-from wl_framework.loop_integrations import GLibIntegration
-from wl_framework.network.connection import WaylandConnection
-from wl_framework.protocols.foreign_toplevel import ForeignTopLevel
+if USE_TASKBAR:
+    from taskbar_module import *
+# from wl_framework.loop_integrations import GLibIntegration
+# from wl_framework.network.connection import WaylandConnection
+# from wl_framework.protocols.foreign_toplevel import ForeignTopLevel
 
 # 1 pulsectl - 2 pulsectl_asyncio
 _PREV_PULSE = 2
@@ -225,7 +231,7 @@ Other = []
 USE_NOTIFICATIONS = 0
 _notification_conf = None
 _notification_config_file = os.path.join(_curr_dir,"configs", "notifications.json")
-# use_this: 1 yes - 0 no
+# use_this: 1 yes - 0 no - 2 external server (the notification keep storing)
 # do not disturb (dnd): 0 not active - 1 except urgent - 2 always active
 # sound_play: 0 no sounds - 1 use gsound - 2 string: audio player
 # max_chars: the lenght of the notification window based on text - 0 to disable this option
@@ -253,6 +259,7 @@ if _notification_conf:
         _error_log("Error with the notification config file: key error: use_this. Notifications disabled.")
         USE_NOTIFICATIONS = 0
 
+mainloop = None
 if USE_NOTIFICATIONS:
     from dbus.mainloop.glib import DBusGMainLoop
     mainloop = DBusGMainLoop(set_as_default=True)
@@ -260,7 +267,7 @@ if USE_NOTIFICATIONS:
     if SOUND_PLAYER == 1:
         gi.require_version('GSound', '1.0')
         from gi.repository import GSound
-    
+
 # clipboard
 USE_CLIPBOARD = 1
 CLIP_STORAGE = {}
@@ -564,12 +571,72 @@ class SignalObject(GObject.Object):
     def propList(self, data):
         self._list = [data]
 
+class SignalObject2(GObject.Object):
+    
+    def __init__(self):
+        GObject.Object.__init__(self)
+        self._name = ""
+        self.value = -99
+        self._list = []
+    
+    @GObject.Property(type=str)
+    def propName(self):
+        'Read-write integer property.'
+        return self._name
 
+    @propName.setter
+    def propName(self, name):
+        self._name = name
+    
+    @GObject.Property(type=int)
+    def propInt(self):
+        'Read-write integer property.'
+        return self.value
+
+    @propInt.setter
+    def propInt(self, value):
+        self.value = value
+    
+    @GObject.Property(type=object)
+    def propList(self):
+        'Read-write integer property.'
+        return self._list
+
+    @propList.setter
+    def propList(self, data):
+        self._list = [data]
+
+def dbus_to_python(data):
+    if isinstance(data, dbus.String):
+        data = str(data)
+    elif isinstance(data, dbus.Boolean):
+        data = bool(data)
+    elif isinstance(data, dbus.Int64):
+        data = int(data)
+    elif isinstance(data, dbus.Double):
+        data = float(data)
+    elif isinstance(data, dbus.Byte):
+        data = int(data)
+    elif isinstance(data, dbus.UInt32):
+        data = int(data)
+    elif isinstance(data, dbus.Array):
+        data = [dbus_to_python(value) for value in data]
+    elif isinstance(data, dbus.Dictionary):
+        new_data = dict()
+        for key in data.keys():
+            new_data[dbus_to_python(key)] = dbus_to_python(data[key])
+        data = new_data
+    return data
+    
+
+QUIT = 1
 class MyWindow(Gtk.ApplicationWindow):
+# class MyWindow(Gtk.Window):
+
     # def __init__(self):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._app = self.get_application()
+        # self._app = self.get_application()
         
         # self.load_css('main.css')
         
@@ -578,6 +645,10 @@ class MyWindow(Gtk.ApplicationWindow):
         
         # for menu rebuild
         self.q = queue.Queue(maxsize=1)
+        
+        # how to launch the applications from the menu
+        # 0 internal - 1 dbus - 2 gtk-launch
+        self.launch_mode = LAUNCH_MODE
         
         if USE_CLIPBOARD:
             self.clipboard_conf = _clipboard_conf
@@ -770,9 +841,13 @@ class MyWindow(Gtk.ApplicationWindow):
             global USE_NOTIFICATIONS
             _error_log("Notification config file error 2.")
             USE_NOTIFICATIONS = 0
-        if USE_NOTIFICATIONS:
+        #
+        # internal server
+        if USE_NOTIFICATIONS == 1:
+            self._signal2 = SignalObject2()
+            self._signal2.connect("notify::propList", self.nthreadslot)
             conn = dbus.SessionBus(mainloop = mainloop)
-            Notifier(conn, "org.freedesktop.Notifications", self)
+            Notifier(conn, "org.freedesktop.Notifications", self, self._signal2)
             #
             # notification to be skipped
             _not_to_skip_path = os.path.join(_curr_dir,"configs","notifications_skipped")
@@ -787,6 +862,14 @@ class MyWindow(Gtk.ApplicationWindow):
                 self.not_skip_apps = _not_to_skip_ret.split("\n")
                 if "" in self.not_skip_apps:
                     self.not_skip_apps.remove("")
+        # listen to the notification server
+        elif USE_NOTIFICATIONS == 2:
+            from dbus.mainloop.glib import DBusGMainLoop
+            mainloop2 = DBusGMainLoop(set_as_default=True)
+            bus2 = dbus.SessionBus()
+            dbus.set_default_main_loop(mainloop2)
+            bus2.add_match_string_non_blocking("eavesdrop=true, interface='org.freedesktop.Notifications', member='Notify'")
+            bus2.add_message_filter(self.from_server_notifications)
         
         # the menu window
         self.MW = None
@@ -1018,6 +1101,7 @@ class MyWindow(Gtk.ApplicationWindow):
                 self.pulse = _pulse.Pulse()
                 self.athread = audioThread(_pulse,self._signal,self)
                 self.athread.daemon = True
+            #
         
         # notifications
         if USE_NOTIFICATIONS:
@@ -1054,6 +1138,255 @@ class MyWindow(Gtk.ApplicationWindow):
         
         self.q2 = None
         self.set_timer_label2()
+        
+        #### application launcher
+        global APP_SERVER
+        if APP_SERVER:
+            try:
+                bus = dbus.SessionBus()
+                self._appExec = bus.get_object('com.appExec.Execapp', '/Application')
+            except:
+                APP_SERVER = 0
+    
+    def nthreadslot(self,_signal,_param):
+        _list = _signal.propList[0]
+        _code = _list[0]
+        if _code == "not-write":
+            _appname = _list[1]
+            _summ = _list[2]
+            _body = _list[3]
+            _urgency = _list[4]
+            _pix = _list[5]
+            try:
+                _not_name = str(int(time.time()))
+                # self._not_path = os.path.join(_curr_dir,"mynots")
+                PATH_TO_STORE = os.path.join(_curr_dir, "mynots")
+                _not_path = os.path.join(PATH_TO_STORE, _not_name)
+                os.makedirs(_not_path)
+                ff = open(os.path.join(_not_path, "notification"), "w")
+                ff.write(_appname+"\n\n\n@\n\n\n"+_summ+"\n\n\n@\n\n\n"+_body)
+                ff.close()
+                # image
+                if _pix:
+                    _pb = _pix.get_paintable()
+                    _pb.save_to_png(os.path.join(_not_path,"image.png"))
+                # sound
+                _no_sound = _list[6]
+                ####
+                # deactivated
+                # _hints = _list[6]
+                # _no_sound = _on_hints(_hints, "suppress-sound")
+                    # _soundfile = _on_hints(_hints, "sound-file")
+                    # if not _soundfile:
+                        # _soundfile = _on_hints(_hints, "sound-name")
+                    ###
+                if not _no_sound:
+                    # deactivated
+                    # if _soundfile:
+                        # self.play_sound(_soundfile)
+                    # else:
+                    if _urgency == 1 or _urgency == None:
+                        self.play_sound(os.path.join(_curr_dir, "sounds/urgency-normal.wav"))
+                    elif _urgency == 2:
+                        self.play_sound(os.path.join(_curr_dir, "sounds/urgency-critical.wav"))
+            except:
+                pass
+        elif _code == "not-sound":
+            _urgency = _list[4]
+            _no_sound = _list[6]
+            _dnd_file = os.path.join(_curr_dir,"do_not_disturb_mode")
+            try:
+                if not _no_sound and not os.path.exists(_dnd_file):
+                    # deactivated
+                    # if _soundfile:
+                        # self.play_sound(_soundfile)
+                    # else:
+                    if _urgency == 1 or _urgency == None:
+                        self.play_sound(os.path.join(_curr_dir, "sounds/urgency-normal.wav"))
+                    elif _urgency == 2:
+                        self.play_sound(os.path.join(_curr_dir, "sounds/urgency-critical.wav"))
+            except:
+                pass
+            
+    # find and return the hint
+    def _on_hints(self, _hints, _value):
+        if _value in _hints:
+            return _hints[_value]
+        return None
+    
+    def from_server_notifications(self, bus, message):
+        not_list = message.get_args_list()
+        if len(not_list) == 1:
+            return
+        _app_name = dbus_to_python(not_list[0]) or ""
+        if _app_name in self.not_skip_apps:
+            return
+        _replace_id = dbus_to_python(not_list[1])
+        _app_icon = dbus_to_python(not_list[2])
+        _summary = dbus_to_python(not_list[3]) or ""
+        _body = dbus_to_python(not_list[4]) or ""
+        _actions = dbus_to_python(not_list[5])
+        _hints = dbus_to_python(not_list[6])
+        _timeout = dbus_to_python(not_list[7])
+        _transient = self._on_hints(_hints, "transient")
+        #
+        if _transient:
+            return
+        # 
+        # _no_sound = self._on_hints(_hints, "suppress-sound")
+        # _soundfile = self._on_hints(_hints, "sound-file")
+        _urgency = self._on_hints(_hints, "urgency")
+        #
+        try:
+            _not_name = str(int(time.time()))
+            PATH_TO_STORE = os.path.join(_curr_dir, "mynots")
+            _not_path = os.path.join(PATH_TO_STORE, _not_name)
+            os.makedirs(_not_path)
+            ff = open(os.path.join(_not_path, "notification"), "w")
+            ff.write(_app_name+"\n\n\n@\n\n\n"+_summary+"\n\n\n@\n\n\n"+_body)
+            ff.close()
+            _desktop_entry = self._on_hints(_hints, "desktop-entry")
+            ret_icon = None
+            if _desktop_entry:
+                ICON_SIZE = self.not_icon_size
+                ret_icon = self._on_desktop_entry(os.path.basename(_desktop_entry))
+            _pix = self._find_icon(ret_icon, _app_icon, _hints, QSize(ICON_SIZE, ICON_SIZE))
+            if _pix:
+                _pix.save(os.path.join(_not_path, "icon"), "PNG")
+            # sounds
+            _dnd_file = os.path.join(_curr_dir,"do_not_disturb_mode")
+            if self.not_sound != 0 and not os.path.exists(_dnd_file):
+                if self.not_dnd == 0 or (self.not_dnd == 1 and _urgency == 2):
+                    _no_sound = _on_hints(_hints, "suppress-sound")
+                    _soundfile = _on_hints(_hints, "sound-file")
+                    if not _soundfile:
+                        _soundfile = _on_hints(_hints, "sound-name")
+                    #
+                    if not _no_sound:
+                        if _soundfile:
+                            self.play_sound(_soundfile)
+                        else:
+                            if _urgency == 1 or _urgency == None:
+                                self.play_sound(os.path.join(_curr_dir, "sounds/urgency-normal.wav"))
+                            elif _urgency == 2:
+                                self.play_sound(os.path.join(_curr_dir, "sounds/urgency-critical.wav"))
+        #
+        except Exception as E:
+            pass
+    
+    # desktop_icon _icon _hints user_icon_size
+    # priority: image-data image-path/application_icon
+    def _find_icon(self, ret_icon, _icon, _hints, ICON_SIZE):
+        _image_data = _on_hints(_hints, "image-data")
+        _icon_data = _on_hints(_hints, "icon_data")
+        pixbuf = None
+        _img = None
+        if _image_data or _icon_data:
+            if _image_data:
+                _image_data = _image_data
+            else:
+                _image_data = _icon_data
+            try:
+                pixbuf = GdkPixbuf.Pixbuf.new_from_bytes(
+                        width=_image_data[0],
+                        height=_image_data[1],
+                        has_alpha=_image_data[3],
+                        data=GLib.Bytes.new(_image_data[6]),
+                        colorspace=GdkPixbuf.Colorspace.RGB,
+                        rowstride=_image_data[2],
+                        bits_per_sample=_image_data[4],
+                        )
+            except:
+                pass
+            if pixbuf:
+                pixbuf = pixbuf.scale_simple(ICON_SIZE,ICON_SIZE,GdkPixbuf.InterpType.BILINEAR)
+                _pb = Gdk.Texture.new_for_pixbuf(pixbuf)
+                _img = Gtk.Image.new_from_paintable(_pb)
+                _img.set_pixel_size(ICON_SIZE)
+                return _img
+        
+        _image_path = _on_hints(_hints, "image-path")
+        if _image_path:
+            if _image_path[0:7] == "file://":
+                _image_path = _image_path[7:]
+            _base_dir = os.path.dirname(_image_path)
+            _base_name = os.path.basename(_image_path)
+            if os.path.exists(_base_dir) and os.path.exists(_image_path):
+                try:
+                    pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(_image_path, ICON_SIZE, ICON_SIZE, 1)
+                except:
+                    pass
+                if pixbuf:
+                    _pb = Gdk.Texture.new_for_pixbuf(pixbuf)
+                    _img = Gtk.Image.new_from_paintable(_pb)
+                    _img.set_pixel_size(ICON_SIZE)
+                    return _img
+            else:
+                try:
+                    _pb = icon_theme.lookup_icon(_image_path, None, ICON_SIZE, 1, Gtk.TextDirection.NONE, Gtk.IconLookupFlags.FORCE_REGULAR)
+                    _img = Gtk.Image.new_from_paintable(_pb)
+                    _img.set_pixel_size(ICON_SIZE)
+                except:
+                    pass
+                if _img:
+                    return _img
+        
+        if _icon:
+            try:
+                pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(_icon, ICON_SIZE, ICON_SIZE, 1)
+            except:
+                try:
+                    pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(os.path.join(_curr_dir,"icons","wicon.png"), ICON_SIZE, ICON_SIZE, 1)
+                except:
+                    pass
+            if pixbuf:
+                _pb = Gdk.Texture.new_for_pixbuf(pixbuf)
+                _img = Gtk.Image.new_from_paintable(_pb)
+                _img.set_pixel_size(ICON_SIZE)
+                return _img
+        
+        if ret_icon:
+            try:
+                _pb = icon_theme.lookup_icon(ret_icon, None, ICON_SIZE, 1, Gtk.TextDirection.NONE, Gtk.IconLookupFlags.FORCE_REGULAR)
+                _img = Gtk.Image.new_from_paintable(_pb)
+            except:
+                try:
+                    pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(os.path.join(_curr_dir,"icons","wicon.png"), ICON_SIZE, ICON_SIZE, 1)
+                    _pb = Gdk.Texture.new_for_pixbuf(pixbuf)
+                    _img = Gtk.Image.new_from_paintable(_pb)
+                    _img.set_pixel_size(ICON_SIZE)
+                except:
+                    pass
+            if _img:
+                return _img
+        
+        try:
+            pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(os.path.join(_curr_dir,"icons","wicon.png"), ICON_SIZE, ICON_SIZE, 1)
+            _pb = Gdk.Texture.new_for_pixbuf(pixbuf)
+            _img = Gtk.Image.new_from_paintable(_pb)
+            _img.set_pixel_size(ICON_SIZE)
+            return _img
+        except:
+            pass
+        #
+        return None
+    
+    def play_sound(self, _sound):
+        if self.not_sounds == 1 and SOUND_PLAYER == 1:
+            try:
+                ctx = GSound.Context()
+                ctx.init()
+                ret = ctx.play_full({GSound.ATTR_EVENT_ID: _sound})
+                if ret == None:
+                    ret = ctx.play_full({GSound.ATTR_MEDIA_FILENAME: _sound})
+            except:
+                pass
+        elif self.not_sounds not in [1,2] and SOUND_PLAYER == 1:
+            _player = self.no_sound
+            try:
+                os.system("{0} {1} &".format(_player, _sound))
+            except:
+                pass
     
     def on_set_tasklist(self):
         self.box_taskbar = Gtk.Box.new(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
@@ -2392,10 +2725,17 @@ class MyWindow(Gtk.ApplicationWindow):
                         self.event2.set()
     
     def _to_close(self, w=None, e=None):
+        # terminate the application server
+        if APP_SERVER:
+            ret = self._appExec.setStatus()
+        #
         self.terminate_thread(None)
         if self.ClipDaemon:
             self.ClipDaemon._stop()
-        self._app.quit()
+        # self._app.quit()
+        global QUIT
+        QUIT = 0
+        self.close()
     
     def on_set_clipboard(self, _pos):
         self.clipbutton = Gtk.Button()
@@ -2576,8 +2916,9 @@ class MyWindow(Gtk.ApplicationWindow):
         elif _type == "n_item":
             self.menu_n_items_tmp = _value
         
-    # def entry_menu(self, _type, _value):
-        # self.menu_terminal_tmp = _value
+    def entry_menu(self, _type, _value):
+        if _value == "t":
+            self.menu_terminal_tmp = _value
     
     def on_menu_editor(self, _text):
         self.menu_editor_tmp = _text
@@ -3483,7 +3824,7 @@ class menuWin(Gtk.Window):
         # populate categories
         self.bookmarks = []
         self.set_categories()
-        
+        #
         ###########
         self.connect("close-request", self.on_menu_close)
         ###########
@@ -3622,14 +3963,24 @@ class menuWin(Gtk.Window):
             # self.close()
     
     def on_modify_menu(self, btn):
-        if not shutil.which(self._parent.menu_editor):
-            self.msg_simple("Error\n"+"Menu editor not found:\n{}".format(self._parent.menu_editor))
-            self.on_focus_out(None)
-            return
-        try:
-            subprocess.Popen(self._parent.menu_editor, shell=True)
-        except Exception as E:
-            self.msg_simple("Error\n"+str(E))
+        if self._parent.menu_editor == "__internal__":
+            menu_editor = os.path.join(_curr_dir, "appmenu", "appmenu6.py")
+            try:
+                subprocess.Popen(menu_editor, shell=True)
+            except Exception as E:
+                self.msg_simple("Error\n"+str(E))
+        else:
+            if not shutil.which(self._parent.menu_editor):
+                self.msg_simple("Error\n"+"Menu editor not found:\n{}".format(self._parent.menu_editor))
+                self.on_focus_out(None)
+                return
+            try:
+                ret = self._parent._appExec.execProg2(self._parent.menu_editor)
+                if ret != "success":
+                    self.msg_simple("Error: {}".format(ret))
+                # subprocess.Popen(self._parent.menu_editor, shell=True)
+            except Exception as E:
+                self.msg_simple("Error\n"+str(E))
         self.on_focus_out(None)
     
     
@@ -3914,24 +4265,33 @@ class menuWin(Gtk.Window):
         #
         _b = widget.get_child()
         app_to_exec = _b._ap
+        # internal method
+        if self._parent.launch_mode == 0:
+            os.chdir(_HOME)
+            ret=app_to_exec.launch()
+            os.chdir(_curr_dir)
+        # dbus mode
+        elif self._parent.launch_mode == 1:
+            ret = self._parent._appExec.execProg(app_to_exec.get_filename())
+            if ret != "success":
+                self.msg_simple("Error: {}".format(ret))
+        # gtk-launch mode
+        elif self._parent.launch_mode == 2:
+            #
+            _app_desktop_file = app_to_exec.get_filename()
+            _cmd = _app_desktop_file.split("/")[-1].removesuffix(".desktop")
+            if not shutil.which("gtk-launch"):
+                self.msg_simple("gtk-launch not found.")
+                ret = True
+            else:
+                _cmd2 = "gtk-launch {}".format(_cmd)
+                ret = GLib.spawn_command_line_async(_cmd2)
+            os.chdir(_curr_dir)
+            #
+            if ret == False:
+                _exec_name = _b._exec
+                self.msg_simple(f"{_exec_name} not found or not setted.")
         #
-        os.chdir(_HOME)
-        # ret=app_to_exec.launch()
-        # os.chdir(_curr_dir)
-        #
-        _app_desktop_file = app_to_exec.get_filename()
-        _cmd = _app_desktop_file.split("/")[-1].removesuffix(".desktop")
-        if not shutil.which("gtk-launch"):
-            self.msg_simple("gtk-launch not found.")
-            ret = True
-        else:
-            _cmd2 = "gtk-launch {}".format(_cmd)
-            ret = GLib.spawn_command_line_async(_cmd2)
-        os.chdir(_curr_dir)
-        #
-        if ret == False:
-            _exec_name = _b._exec
-            self.msg_simple(f"{_exec_name} not found or not setted.")
         self.on_focus_out(None)
     
     
@@ -4955,6 +5315,7 @@ class DialogConfiguration(Gtk.Dialog):
         menu_i_spinbtn.set_numeric(True)
         
         # menu_lbl_t = Gtk.Label(label="Terminal")
+        # menu_lbl_t.set_tooltip_text("Terminal emulator to use with terminal applications")
         # self.page2_box.attach(menu_lbl_t,0,4,1,1)
         # menu_lbl_t.set_halign(1)
         # self.entry_menu_t = Gtk.Entry.new()
@@ -4994,7 +5355,7 @@ class DialogConfiguration(Gtk.Dialog):
         menu_n_item_spinbtn.set_numeric(True)
         
         menu_editor_lbl = Gtk.Label(label="Menu editor")
-        menu_editor_lbl.set_tooltip_text("Launch the menu editor if setted")
+        menu_editor_lbl.set_tooltip_text("Launch the menu editor if setted\nUse __internal__ for the internal menu editor")
         self.page2_box.attach(menu_editor_lbl,0,8,1,1)
         menu_editor_lbl.set_halign(1)
         menu_editor_e = Gtk.Entry.new()
@@ -5327,6 +5688,7 @@ class DialogConfiguration(Gtk.Dialog):
         
         # tray enable/disable
         not_lbl_enabled = Gtk.Label(label="Use the notification widget")
+        not_lbl_enabled.set_tooltip_text("Enable or disable.\nUse an external server:\nthe notifications will be stored anyway.")
         self.page6_box.attach(not_lbl_enabled,0,5,1,1)
         not_lbl_enabled.set_halign(1)
         # not_lbl_enabled_sw = Gtk.Switch.new()
@@ -5337,6 +5699,7 @@ class DialogConfiguration(Gtk.Dialog):
         use_notif_combo = Gtk.ComboBoxText.new()
         use_notif_combo.append_text("no")
         use_notif_combo.append_text("yes")
+        use_notif_combo.append_text("external server")
         use_notif_combo.set_active(self._parent.not_use)
         use_notif_combo.connect('changed', self.on_other_combo, "notification")
         self.page6_box.attach_next_to(use_notif_combo,not_lbl_enabled,1,1,1)
@@ -5354,6 +5717,19 @@ class DialogConfiguration(Gtk.Dialog):
         use_taskbar_combo.set_active(USE_TASKBAR)
         use_taskbar_combo.connect('changed', self.on_other_combo, "taskbar")
         self.page6_box.attach_next_to(use_taskbar_combo,taskbar_lbl,1,1,1)
+        
+        # launch mode
+        launch_lbl = Gtk.Label(label="Applications launch mode")
+        launch_lbl.set_tooltip_text("How to launch the applications from the menu:\n- internal uses the gtk mode\n- dbus uses a separated way (from the main program;\ngtk-launch and application_server.py are required)\n- gtk-lauch uses this external program")
+        self.page6_box.attach(launch_lbl,0,7,1,1)
+        launch_lbl.set_halign(1)
+        launch_combo = Gtk.ComboBoxText.new()
+        launch_combo.append_text("internal")
+        launch_combo.append_text("dbus")
+        launch_combo.append_text("gtk-launch")
+        launch_combo.set_active(LAUNCH_MODE)
+        launch_combo.connect('changed', self.on_other_combo, "launch")
+        self.page6_box.attach_next_to(launch_combo,launch_lbl,1,1,1)
         
         # # double click
         # _lbl_double_click = Gtk.Label(label="Double click to launch apps")
@@ -5401,6 +5777,8 @@ class DialogConfiguration(Gtk.Dialog):
             # _other_settings_conf["double-click"] = cb.get_active()
         elif _type == "taskbar":
             _other_settings_conf["use-taskbar"] = cb.get_active()
+        elif _type == "launch":
+            _other_settings_conf["launch-mode"] = cb.get_active()
         try:
             _ff = open(_other_settings_config_file,"w")
             _data_json = _other_settings_conf
@@ -5413,8 +5791,8 @@ class DialogConfiguration(Gtk.Dialog):
     def on_menu_wh_spinbtn(self, btn, _type):
         self._parent.set_menu_cp(_type, btn.get_value_as_int())
     
-    # def on_entry_menu(self, _entry, _type):
-        # self._parent.entry_menu(_type, _entry.get_text())
+    def on_entry_menu(self, _entry, _type):
+        self._parent.entry_menu(_type, _entry.get_text())
         
     def on_menu_combo(self, btn, _type):
         self._parent.on_menu_win_position(_type, btn.get_active())
@@ -5735,9 +6113,10 @@ class NotSave():
 
 class Notifier(Service.Object):
     
-    def __init__(self, conn, bus, _parent):
+    def __init__(self, conn, bus, _parent, _signal):
         Service.Object.__init__(self, object_path = "/org/freedesktop/Notifications", bus_name = Service.BusName(bus, conn))
         self._parent = _parent
+        self._signal = _signal
         self.list_notifications = []
         self._not_path = os.path.join(_curr_dir,"mynots")
         self._y = 0
@@ -5861,36 +6240,53 @@ class Notifier(Service.Object):
         #
         _is_transient = _on_hints(_hints, "transient")
         #
-        # write the notification content
+        # send signal for storing and playing sound
         if not _is_transient:
+            _no_sound = _on_hints(_hints, "suppress-sound")
             try:
-                if os.access(self._not_path,os.W_OK):
-                    os.makedirs(_notification_path)
-                    ff = open(os.path.join(_notification_path,"notification"), "w")
-                    ff.write(_appname+"\n\n\n@\n\n\n"+_summ+"\n\n\n@\n\n\n"+_body)
-                    ff.close()
-                    #
-                    _pb = _pix.get_paintable()
-                    _pb.save_to_png(os.path.join(_notification_path,"image.png"))
+                # self._signal.propList = ["not-write", _appname, _summ, _body, _urgency, _pix, _hints]
+                self._signal.propList = ["not-write", _appname, _summ, _body, _urgency, _pix, _no_sound]
             except:
                 pass
+        else:
+            _no_sound = _on_hints(_hints, "suppress-sound")
+            try:
+                # self._signal.propList = ["not-write", _appname, _summ, _body, _urgency, _pix, _hints]
+                self._signal.propList = ["not-sound", None, None, None, _urgency, None, _no_sound]
+            except:
+                pass
+        # deactivated
+        # # write the notification content
+        # if not _is_transient:
+            # try:
+                # if os.access(self._not_path,os.W_OK):
+                    # os.makedirs(_notification_path)
+                    # ff = open(os.path.join(_notification_path,"notification"), "w")
+                    # ff.write(_appname+"\n\n\n@\n\n\n"+_summ+"\n\n\n@\n\n\n"+_body)
+                    # ff.close()
+                    # #
+                    # _pb = _pix.get_paintable()
+                    # _pb.save_to_png(os.path.join(_notification_path,"image.png"))
+            # except:
+                # pass
         
-        # sounds
-        if self.no_sound != 0 and not os.path.exists(_dnd_file):
-            if self.not_dnd == 0 or (self.not_dnd == 1 and _urgency == 2):
-                _no_sound = _on_hints(_hints, "suppress-sound")
-                _soundfile = _on_hints(_hints, "sound-file")
-                if not _soundfile:
-                    _soundfile = _on_hints(_hints, "sound-name")
+        # deactivated
+        # # sounds
+        # if self.no_sound != 0 and not os.path.exists(_dnd_file):
+            # if self.not_dnd == 0 or (self.not_dnd == 1 and _urgency == 2):
+                # _no_sound = _on_hints(_hints, "suppress-sound")
+                # _soundfile = _on_hints(_hints, "sound-file")
+                # if not _soundfile:
+                    # _soundfile = _on_hints(_hints, "sound-name")
                 
-                if not _no_sound:
-                    if _soundfile:
-                        self.play_sound(_soundfile)
-                    else:
-                        if _urgency == 1 or _urgency == None:
-                            self.play_sound(os.path.join(_curr_dir, "sounds/urgency-normal.wav"))
-                        elif _urgency == 2:
-                            self.play_sound(os.path.join(_curr_dir, "sounds/urgency-critical.wav"))
+                # if not _no_sound:
+                    # if _soundfile:
+                        # self.play_sound(_soundfile)
+                    # else:
+                        # if _urgency == 1 or _urgency == None:
+                            # self.play_sound(os.path.join(_curr_dir, "sounds/urgency-normal.wav"))
+                        # elif _urgency == 2:
+                            # self.play_sound(os.path.join(_curr_dir, "sounds/urgency-critical.wav"))
         
     def on_close_notification(self, nw):
         nw.close()
@@ -6021,22 +6417,23 @@ class Notifier(Service.Object):
         
         return None
     
-    def play_sound(self, _sound):
-        if self.no_sound == 1 and SOUND_PLAYER == 1:
-            try:
-                ctx = GSound.Context()
-                ctx.init()
-                ret = ctx.play_full({GSound.ATTR_EVENT_ID: _sound})
-                if ret == None:
-                    ret = ctx.play_full({GSound.ATTR_MEDIA_FILENAME: _sound})
-            except:
-                pass
-        elif self.no_sound not in [1,2] and SOUND_PLAYER == 1:
-            _player = self.no_sound
-            try:
-                os.system("{0} {1} &".format(_player, _sound))
-            except:
-                pass
+    # deactivated
+    # def play_sound(self, _sound):
+        # if self.no_sound == 1 and SOUND_PLAYER == 1:
+            # try:
+                # ctx = GSound.Context()
+                # ctx.init()
+                # ret = ctx.play_full({GSound.ATTR_EVENT_ID: _sound})
+                # if ret == None:
+                    # ret = ctx.play_full({GSound.ATTR_MEDIA_FILENAME: _sound})
+            # except:
+                # pass
+        # elif self.no_sound not in [1,2] and SOUND_PLAYER == 1:
+            # _player = self.no_sound
+            # try:
+                # os.system("{0} {1} &".format(_player, _sound))
+            # except:
+                # pass
 
 
 ## clipboard daemon wayland
@@ -6347,9 +6744,30 @@ def main():
     app = Application()
     return app.run()#sys.argv)
 
+
+def main2():
+    win = MyWindow(application=None)
+            
+    if USE_TRAY:
+        global owner_id
+        owner_id = Gio.bus_own_name(
+                Gio.BusType.SESSION,
+                NODE_INFO.interfaces[0].name,
+                Gio.BusNameOwnerFlags.NONE,
+                win.on_bus_acquired,
+                None,
+                win.on_name_lost,
+                )
+        
+    win.present()
+    loop = GLib.MainContext().default()
+    while QUIT:
+        loop.iteration(True)
+
 try:
     if __name__ == '__main__':
-        main()
+        # main()
+        main2()
     
 finally:
     if USE_TRAY:
