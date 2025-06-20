@@ -1,8 +1,6 @@
 # wbar
 Bar for wayland
 
-Almost no more developed.
-
 free to use and modify
 
 Wbar is a panel to be used under wayland, if the display server support 
@@ -90,6 +88,7 @@ name of the applications you may want not to be stored in the history list.
 
 Known issue:
 - the gtk3 version completely freeze randomly; it is now deprecated.
+- the gtk4 version: the volume widget may freeze the application randomly (when it happens, it must be executed again)
 
 ![My image](https://github.com/frank038/wbar/blob/main/wbar_01.jpg)
 
