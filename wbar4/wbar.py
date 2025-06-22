@@ -3,7 +3,7 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar.py
 
-# V. 0.9.33
+# V. 0.9.34
 
 import os,sys,shutil,stat
 import gi
@@ -2990,6 +2990,8 @@ class MyWindow(Gtk.ApplicationWindow):
         elif _n == "notification":
             self.notification_conf["use_this"] = int(_state)
             self.not_use = int(_state)
+            global USE_NOTIFICATIONS
+            USE_NOTIFICATIONS = int(_state)
     
     def on_label2_combo(self, _state):
         self.temp_out2 = _state
@@ -5753,8 +5755,12 @@ class DialogConfiguration(Gtk.Dialog):
     def on_other_spinbtn(self, btn, _type):
         if _type == "pad":
             _other_settings_conf["pad-value"] = btn.get_value_as_int()
+            global _pad
+            _pad = btn.get_value_as_int()
         elif _type == "audio_level":
             _other_settings_conf["audio-start-value"] = btn.get_value_as_int()
+            global _AUDIO_START_LEVEL
+            _AUDIO_START_LEVEL = btn.get_value_as_int()
         try:
             _ff = open(_other_settings_config_file,"w")
             _data_json = _other_settings_conf
@@ -5769,16 +5775,24 @@ class DialogConfiguration(Gtk.Dialog):
     def on_other_combo(self, cb, _type):
         if _type == "volume":
             _other_settings_conf["use-volume"] = cb.get_active()
+            global USE_VOLUME
+            USE_VOLUME = cb.get_active()
         elif _type == "tray":
             _other_settings_conf["use-tray"] = cb.get_active()
+            global USE_TRAY
+            USE_TRAY = cb.get_active()
         elif _type == "notification":
             self._parent.on_switch_btn("notification", cb.get_active())
         # elif _type == "click":
             # _other_settings_conf["double-click"] = cb.get_active()
         elif _type == "taskbar":
             _other_settings_conf["use-taskbar"] = cb.get_active()
+            global USE_TASKBAR
+            USE_TASKBAR = cb.get_active()
         elif _type == "launch":
             _other_settings_conf["launch-mode"] = cb.get_active()
+            global LAUNCH_MODE
+            LAUNCH_MODE = cb.get_active()
         try:
             _ff = open(_other_settings_config_file,"w")
             _data_json = _other_settings_conf
