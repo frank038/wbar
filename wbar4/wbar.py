@@ -3,7 +3,7 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar.py
 
-# V. 0.9.34
+# V. 0.9.35
 
 import os,sys,shutil,stat
 import gi
@@ -108,11 +108,11 @@ USE_TASKBAR = _other_settings_conf["use-taskbar"]
 LAUNCH_MODE = _other_settings_conf["launch-mode"]
 
 _context = None
-if USE_TASKBAR:
-    from taskbar_module import *
-# from wl_framework.loop_integrations import GLibIntegration
-# from wl_framework.network.connection import WaylandConnection
-# from wl_framework.protocols.foreign_toplevel import ForeignTopLevel
+# if USE_TASKBAR:
+    # from taskbar_module import *
+from wl_framework.loop_integrations import GLibIntegration
+from wl_framework.network.connection import WaylandConnection
+from wl_framework.protocols.foreign_toplevel import ForeignTopLevel
 
 # 1 pulsectl - 2 pulsectl_asyncio
 _PREV_PULSE = 2
@@ -337,17 +337,20 @@ class Bus:
         self.path = path
 
     def call_sync(self, interface, method, params, params_type, return_type):
-        return self.conn.call_sync(
-            self.name,
-            self.path,
-            interface,
-            method,
-            GLib.Variant(params_type, params),
-            GLib.VariantType(return_type),
-            Gio.DBusCallFlags.NONE,
-            -1,
-            None,
-        )
+        try:
+            return self.conn.call_sync(
+                self.name,
+                self.path,
+                interface,
+                method,
+                GLib.Variant(params_type, params),
+                GLib.VariantType(return_type),
+                Gio.DBusCallFlags.NONE,
+                -1,
+                None,
+            )
+        except:
+            pass
 
     def get_menu_layout(self, *args):
         return self.call_sync(
@@ -2221,6 +2224,8 @@ class MyWindow(Gtk.ApplicationWindow):
         menu = self.main_box_popover
         self._stack.add_named(self.main_box_popover,"main")
         #
+        if _MENU == []:
+            return
         for _data in _MENU:
             # self.on_create_menu(menu, _data)
             self.on_create_menu(self.main_box_popover, _data)
