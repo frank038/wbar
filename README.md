@@ -33,6 +33,7 @@ Requirements:
 - PIL for the tray section (only for the gtk3 version)
 - wl-clipboard for the clipboard (wl-paste and wl-copy are needed)
 - pactl for volume applet (amixer is supported; read below for more)
+- pyqt6 for the applets
 
 The taskbar uses the framework wl_framework from Consolatis.
 
