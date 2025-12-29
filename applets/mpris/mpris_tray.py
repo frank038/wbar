@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 0.5
+# V. 0.5.1
 
 from PyQt6.QtWidgets import QSystemTrayIcon, QMenu, QLabel, QWidget, QApplication, QBoxLayout, QPushButton
 from PyQt6.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem, QSizePolicy, QAbstractItemView
@@ -31,6 +31,7 @@ menu_is_shown = 0
 class myMenu(QMenu):
     def __init__(self):
         super(myMenu, self).__init__()
+        self.setWindowTitle("qtmpris1")
         self.pixel_ratio = self.devicePixelRatio()
         layout = QBoxLayout(QBoxLayout.Direction.TopToBottom)
         layout.setContentsMargins(0,0,0,0)
