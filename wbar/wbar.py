@@ -1574,8 +1574,11 @@ class MyWindow(Gtk.Window):
                     btn = item
                     break
         if btn != None:
-            _pb = icon_theme.load_icon_for_scale(icon_name, self._app_icon_size, 1, Gtk.IconLookupFlags.FORCE_SIZE)
-            btn.set_from_pixbuf(_pb)
+            try:
+                _pb = icon_theme.load_icon_for_scale(icon_name, self._app_icon_size, 1, Gtk.IconLookupFlags.FORCE_SIZE)
+                btn.set_from_pixbuf(_pb)
+            except Exception as E:
+                print("error icon: ", str(E))
     
     def _set_tooltip(self, _tooltip, path):
         btn = None
