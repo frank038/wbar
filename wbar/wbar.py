@@ -32,10 +32,11 @@ import io
 _curr_dir = os.getcwd()
 
 def _error_log(_error):
-    _now = datetime.datetime.now().strftime("%Y-%m-%d %H:%m")
-    _ff = open(os.path.join(_curr_dir, "error.log"), "a")
-    _ff.write(_now+": "+_error+"\n\n")
-    _ff.close()
+    print(_error)
+    # _now = datetime.datetime.now().strftime("%Y-%m-%d %H:%m")
+    # _ff = open(os.path.join(_curr_dir, "error.log"), "a")
+    # _ff.write(_now+": "+_error+"\n\n")
+    # _ff.close()
 
 # ## MORE OPTIONS
 # # the pad inside the windows
