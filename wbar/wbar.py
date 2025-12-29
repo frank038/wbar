@@ -209,7 +209,7 @@ _notification_config_file = os.path.join(_curr_dir,"configs", "notifications.jso
 # use_this: 1 yes - 0 no
 # do not disturb (dnd): 0 not active - 1 except urgent - 2 always active
 # sound_play: 0 no sounds - 1 use gsound - 2 string: audio player
-_starting_notification_conf = {"use_this":1,"nwidth":500,"nheight":200,"icon_size":64,"dnd":0,"sound_play":1,"bottom_limit":200}
+_starting_notification_conf = {"use_this":1,"nwidth":500,"nheight":200,"icon_size":64,"dnd":0,"sound_play":1,"bottom_limit":200,"skip_apps":""}
 if not os.path.exists(_notification_config_file):
     try:
         _ff = open(_notification_config_file,"w")
@@ -699,6 +699,10 @@ class MyWindow(Gtk.Window):
             self.entry_sound_text = ""
             self.not_bottom_limit = self.notification_conf["bottom_limit"]
             self.not_bottom_limit_tmp = -1
+            self.skip_apps = self.notification_conf["skip_apps"]
+            self._SKIP_APPS = []
+            if self.skip_apps != "":
+                self._SKIP_APPS = self.skip_apps.split(",")
         except:
             global USE_NOTIFICATIONS
             _error_log("Notification config file error 2.")
@@ -721,19 +725,21 @@ class MyWindow(Gtk.Window):
         
         # 0 horizontal 1 vertical - spacing
         self.main_box = Gtk.Box.new(0, 0)
-        if USE_TASKBAR == 0:
+        # if USE_TASKBAR == 0:
+        if USE_TASKBAR == 0 or USE_TASKBAR == 3:
             self.main_box.set_homogeneous(True)
+        #
         _pad1 = max(self._corner_top,self._corner_bottom)
         self.main_box.set_margin_start(_pad1)
         self.main_box.set_margin_end(_pad1)
         self.add(self.main_box)
         
         self.left_box = Gtk.Box.new(0,0)
-        self.main_box.pack_start(self.left_box, True, True, 0)
+        self.main_box.pack_start(self.left_box, False, True, 0)
         self.left_box.set_halign(1)
         
         if USE_TASKBAR:
-            self.left_box.set_hexpand(False)
+            self.left_box.set_hexpand(True)
         
         self.menubutton = Gtk.EventBox()
         _icon_path = os.path.join(_curr_dir,"icons","menu.svg")
@@ -757,18 +763,22 @@ class MyWindow(Gtk.Window):
         self.set_timer_label1()
         
         self.center_box = Gtk.Box.new(0,0)
+        
+        
         if USE_TASKBAR != 3:
             self.main_box.pack_start(self.center_box, True, True, 0)
         else:
             self.main_box.pack_start(self.center_box, True, True, 0)
-            self.main_box.set_center_widget(self.center_box)
+            # self.main_box.set_center_widget(self.center_box)
         
         if USE_TASKBAR == 0:
             self.center_box.set_halign(3)
         elif USE_TASKBAR == 1:
-            self.center_box.set_halign(1)
+            # self.center_box.set_halign(1)
+            self.center_box.set_hexpand(True)
         elif USE_TASKBAR == 2:
-            self.center_box.set_halign(2)
+            # self.center_box.set_halign(2)
+            self.center_box.set_hexpand(True)
             
         # clock at center
         if self.clock_use == 1:
@@ -788,8 +798,11 @@ class MyWindow(Gtk.Window):
             self.on_set_tasklist()
         
         self.right_box = Gtk.Box.new(0,0)
-        self.main_box.pack_start(self.right_box, True, True, 0)
+        self.main_box.pack_end(self.right_box, False, True, 0)
         self.right_box.set_halign(2)
+        
+        if USE_TASKBAR:
+            self.right_box.set_hexpand(False)
         
         self.otherbutton = Gtk.EventBox()
         _icon_path = os.path.join(_curr_dir,"icons","other_menu.svg")
@@ -923,7 +936,17 @@ class MyWindow(Gtk.Window):
         # self._scroll = self._create_scroll()
         # self.box_taskbar.pack_start(self._scroll, True, True, 0)
         #
+        # #print - temporaneo
+        # _w1 = Gtk.EventBox()
+        # _w1.set_hexpand(True)
+        # self.box_taskbar.pack_start(_w1, True, True, 0)
+        
         self.box_taskbar.pack_start(self._create_scroll(), True, True, 0)
+        
+        # # print - temporaneo
+        # _w2 = Gtk.EventBox()
+        # _w2.set_hexpand(True)
+        # self.box_taskbar.pack_start(_w2, True, True, 0)
         #
         self.active_button = None
         self.context.connect('toplevel_new', self.on_toplevel_new)
@@ -2497,7 +2520,7 @@ class MyWindow(Gtk.Window):
                 self.notification_conf["icon_size"] = self.not_icon_size_tmp
                 self.not_icon_size = self.not_icon_size_tmp
                 self.not_icon_size_tmp = 0
-            if self.not_bottom_limit_tmp != 0:
+            if self.not_bottom_limit_tmp > -1:
                 self.notification_conf["bottom_limit"] = self.not_bottom_limit_tmp
                 self.not_bottom_limit = self.not_bottom_limit_tmp
                 self.not_bottom_limit_tmp = -1
@@ -2513,6 +2536,12 @@ class MyWindow(Gtk.Window):
                 self.notification_conf["sound_play"] = _type
                 self.not_sounds = _type
                 self.not_sounds_tmp = -1
+            #
+            self.notification_conf["skip_apps"] = self.skip_apps
+            if self.skip_apps != "":
+                self._SKIP_APPS = self.skip_apps.split(",")
+            else:
+                self._SKIP_APPS = []
             
             self.on_save_optional_widget_state()
             self.save_conf()
@@ -2559,6 +2588,8 @@ class MyWindow(Gtk.Window):
             self.not_bottom_limit_tmp = -1
             self.not_dnd_tmp = -1
             self.not_sounds_tmp = -1
+            #
+            self.skip_apps = self.notification_conf["skip_apps"]
     
     def on_other_button(self, btn, event):
         if self.menu_win_position in [0,1]:
@@ -2778,7 +2809,10 @@ class menuWin(Gtk.Window):
         self.iconview.set_pixbuf_column(0)
         self.iconview.set_text_column(1)
         self.iconview.set_tooltip_column(2)
+        # self.iconview.set_hexpand(True)
+        # self.iconview.set_vexpand(True)
         self.iconview.set_selection_mode(Gtk.SelectionMode.SINGLE)
+        
         if DOUBLE_CLICK == 0:
             self.iconview.set_activate_on_single_click(True)
         self.iconview.set_name("myiconview")
@@ -3071,7 +3105,6 @@ class menuWin(Gtk.Window):
         if _list:
             self.f_on_pop_iv(_list)
     
-    
     def f_on_pop_iv(self, _list):
         self.liststore.clear()
         for _item in _list:
@@ -3204,7 +3237,7 @@ class menuWin(Gtk.Window):
                 pixbuf = self._find_the_icon(el[3])
                 # icon name comment exec path appinfo
                 self.liststore.append([ pixbuf, el[0], el[4], el[2], el[5], el[6] ])
-    
+        
     def _find_the_icon(self,_item):
         pixbuf = None
         try:
@@ -4377,6 +4410,14 @@ class DialogConfiguration(Gtk.Dialog):
         self.page5_box.attach_next_to(not_l_spinbtn,not_lbl_l,1,1,1)
         not_l_spinbtn.connect('value-changed', self.on_not_wh_spinbtn, "l")
         not_l_spinbtn.set_input_purpose(Gtk.InputPurpose.DIGITS)
+        # applications to skip
+        not_lbl_no = Gtk.Label(label="Applications to skip (comma separated)")
+        self.page5_box.attach(not_lbl_no,0,8,1,1)
+        not_lbl_no.set_halign(1)
+        self.entry_not_no = Gtk.Entry.new()
+        self.entry_not_no.set_text(self._parent.skip_apps)
+        self.page5_box.attach(self.entry_not_no,1,8,1,1)
+        self.entry_not_no.connect('changed', self.on_entry_not_no)
         
         ## OTHER SETTINGS
         _lbl_advice = Gtk.Label(label="(A restart is needed)")
@@ -4550,6 +4591,9 @@ class DialogConfiguration(Gtk.Dialog):
     
     def on_entry_sound(self, _entry):
         self._parent.entry_sound_text = _entry.get_text()
+    
+    def on_entry_not_no(self, _entry):
+        self._parent.skip_apps = _entry.get_text()
     
     def on_snd_combo(self, cb):
         # cb.get_active_text()
@@ -4803,7 +4847,7 @@ class Notifier(Service.Object):
         replacesId = dbus_to_python(replacesId)
         
         # # skip these applications
-        # if appName in SKIP_APPS:
+        # if appName in self._parent._SKIP_APPS:
             # return replacesId
         
         if "x-canonical-private-synchronous" in hints:
@@ -4857,6 +4901,10 @@ class Notifier(Service.Object):
         pass
     
     def _qw(self, _appname, _summ, _body, _replaceid, _actions, _hints, _timeout, _icon):
+        # skip these applications
+        if _appname in self._parent._SKIP_APPS:
+            return
+        
         # hints: "desktop-entry" "image-path" "transient" "urgency" "value"
         #  "suppress-sound" "sound-file" "sound-name"
         _ICON_SIZE = self._parent.not_icon_size
