@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 0.5
+# V. 0.5.1
 
 from PyQt6.QtWidgets import QSystemTrayIcon, QMenu, QLabel, QWidget, QApplication, QBoxLayout, QPushButton, QSlider, QRadioButton, QCheckBox
 from PyQt6.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem, QSizePolicy, QScrollArea
@@ -22,6 +22,7 @@ _TRAY = None
 class myMenu(QMenu):
     def __init__(self):
         super(myMenu, self).__init__()
+        self.setWindowTitle("qtaudio1")
         self.pixel_ratio = self.devicePixelRatio()
         # 1
         self.scroll = QScrollArea()
