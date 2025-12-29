@@ -88,7 +88,7 @@ name of the applications you may want not to be stored in the history list.
 ------------------------------
 
 Known issue:
-- the gtk3 version completely freeze randomly; it is now deprecated.
+- the gtk3 version completely freeze randomly; it seems related to the audio internal applet: use the external applet.
 - the gtk4 version: the volume widget may freeze the application randomly (when it happens, it must be executed again)
 
 ![My image](https://github.com/frank038/wbar/blob/main/wbar_01.jpg)
