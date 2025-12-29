@@ -4,5 +4,6 @@
     "nheight": 100,
     "icon_size": 64,
     "dnd": 0,
-    "sound_play": 1
+    "sound_play": 1,
+    "bottom_limit": 200
 }
