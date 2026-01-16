@@ -7,21 +7,18 @@ Wbar is a panel to be used under wayland, if the display server support
 the layer-shell protocols. All the lroots based window managers should 
 support wbar.
 
-There is a Gtk3 and a Gtk4 version of wbar (in the past the gtk3 version freeze(d) completely for unknown reasons). The gtk3 version has less priority in developing. Requirements: gtk3-layer-shell or gtk4-layer-shell + python3 binding + other if the case (see below). Important: it seems that the lib libgtk4-layer-shell.so.1.0.4 must be preoladed before launching wbar.py (or just launch wbar.sh of the gtk4 version).
-
-The command/env "dbus-update-activation-environment --systemd WAYLAND_DISPLAY DISPLAY XAUTHORITY" may improve the use of the gtk3/4 applications.
+There is a Gtk3 and a Gtk4 version of wbar.
 
 Features:
+- graphical configurator
 - application menu
 - clock
 - clipboard (with history)
 - taskbar with scrolling support
 - tray
-- volume
+- volume (deprecated, use the external applet)
 - notifications (with history)
-- a simple timer (gtk3 version)
 - two command outputs
-- a graphical configurator
 - sticky notes
 - a timer (gtk3 version)
 
@@ -35,19 +32,20 @@ Requirements:
 - pactl for volume applet (amixer is supported; read below for more)
 - pyqt6 for the applets
 
+Important: it seems that in some cases the lib libgtk4-layer-shell.so.1.0.4 must be preoladed before launching wbar.py (or just launch wbar.sh of the gtk4 version).
+
+The command/env "dbus-update-activation-environment --systemd WAYLAND_DISPLAY DISPLAY XAUTHORITY" may improve the use of the gtk3/4 applications.
+
 The taskbar uses the framework wl_framework from Consolatis.
 
 How to use:
 - just unzip the archive and launch waybar.sh
 
-Before using wbar:
-- in the file logout.sh change the name WINDOWMANAGER with the name of the 
-window manager you are using; the commands poweroff.sh and restart.sh already 
-contain the right commands for most distros.
 
 Options and configurations
 
 Wbar has a graphical configurator for many options.
+
 
 About the file wclipboard.py: the clipboard stores the text of any length, unless an option to skip very large text clip is changed in the file: MAX_CHARS from 0 (that means all characters) to some number, e.g. 1000 if you want to skip text larger than 1000 characters; SKIP_FILES = 1 : with this option the text that seams from copy/cut operations on files/folders are skipped, unlsess it is setted to 0.
 
@@ -80,7 +78,7 @@ the scripts have to be able to output something and to control the whole process
 
 Custom styles
 
-In the foldef configs is the file panelstyle.css.
+In the foldef configs is the file panelstyle.css, that can optionally enabled in the configuration dialog. 
 
 The file notifications_skipped is a simple file in which to write the 
 name of the applications you may want not to be stored in the history list.
