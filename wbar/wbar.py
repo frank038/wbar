@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 0.9.8
+# V. 0.9.9
 
 import os,sys,shutil,stat
 import gi
@@ -107,6 +107,14 @@ USE_VOLUME = _other_settings_conf["use-volume"]
 USE_TRAY = _other_settings_conf["use-tray"]
 DOUBLE_CLICK = _other_settings_conf["double-click"]
 USE_TASKBAR = _other_settings_conf["use-taskbar"]
+USE_CSS = _other_settings_conf["use-css"]
+
+if USE_CSS:
+    screen = Gdk.Screen.get_default()
+    provider = Gtk.CssProvider()
+    provider.load_from_path(os.path.join(_curr_dir,"configs/panelstyle.css"))
+    Gtk.StyleContext.add_provider_for_screen(screen, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+
 
 _context = None
 if USE_TASKBAR:
@@ -130,17 +138,17 @@ if is_wayland:
 _panelconf = os.path.join(_curr_dir, "configs/panelconfg.json")
 
 
-screen = Gdk.Screen.get_default()
-provider = Gtk.CssProvider()
-provider.load_from_path(os.path.join(_curr_dir,"configs/panelstyle.css"))
-Gtk.StyleContext.add_provider_for_screen(screen, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+# screen = Gdk.Screen.get_default()
+# provider = Gtk.CssProvider()
+# provider.load_from_path(os.path.join(_curr_dir,"configs/panelstyle.css"))
+# Gtk.StyleContext.add_provider_for_screen(screen, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
 
 _menu_conf = None
 _menu_config_file = os.path.join(_curr_dir,"configs","menu.json")
 # live_search: num. of chars to perform a seeking; win_position: 0 left - 1 center
 _starting_menu_conf = {"wwidth":880,"wheight":600,"terminal":"xfce4-terminal",\
-"cat_icon_size":64,"item_icon_size":64,"live_search":3,"win_position":0}
+"cat_icon_size":64,"item_icon_size":64,"live_search":3,"win_position":0,"menu_editor":""}
 
 if not os.path.exists(_menu_config_file):
     try:
@@ -160,7 +168,7 @@ else:
 
 _service_conf = None
 _service_config_file = os.path.join(_curr_dir,"configs","service.json")
-_starting_service_conf = {"wwidth":800,"wheight":600,"sound-player":0,"player":""}
+_starting_service_conf = {"wwidth":800,"wheight":600,"sound-player":0,"player":"","logout":"","reboot":"","shutdown":""}
 if not os.path.exists(_service_config_file):
     try:
         _ff = open(_service_config_file,"w")
@@ -605,6 +613,8 @@ class MyWindow(Gtk.Window):
         self.menu_live_search_tmp = None
         self.menu_win_position = self.menu_conf["win_position"]
         self.menu_win_position_tmp = None
+        self.menu_editor = self.menu_conf["menu_editor"]
+        self.menu_editor_tmp = None
         
         self.service_conf = _service_conf
         self.service_width = self.service_conf["wwidth"]
@@ -617,6 +627,12 @@ class MyWindow(Gtk.Window):
         self.service_player_tmp = ""
         self._is_timer_set = 0
         self.timer_id = None
+        self._logout = self.service_conf["logout"]
+        self._logout_tmp = None
+        self._reboot = self.service_conf["reboot"]
+        self._reboot_tmp = None
+        self._shutdown = self.service_conf["shutdown"]
+        self._shutdown_tmp = None
         
         # json configuration
         self._configuration = None
@@ -726,9 +742,9 @@ class MyWindow(Gtk.Window):
         
         # 0 horizontal 1 vertical - spacing
         self.main_box = Gtk.Box.new(0, 0)
-        # if USE_TASKBAR == 0:
-        if USE_TASKBAR == 0 or USE_TASKBAR == 3:
-            self.main_box.set_homogeneous(True)
+        # # if USE_TASKBAR == 0:
+        # if USE_TASKBAR == 0 or USE_TASKBAR == 3:
+            # self.main_box.set_homogeneous(True)
         #
         _pad1 = max(self._corner_top,self._corner_bottom)
         self.main_box.set_margin_start(_pad1)
@@ -736,11 +752,11 @@ class MyWindow(Gtk.Window):
         self.add(self.main_box)
         
         self.left_box = Gtk.Box.new(0,0)
-        self.main_box.pack_start(self.left_box, False, True, 0)
+        self.main_box.pack_start(self.left_box, False, False, 0)
         self.left_box.set_halign(1)
         
-        if USE_TASKBAR:
-            self.left_box.set_hexpand(True)
+        # if USE_TASKBAR:
+            # self.left_box.set_hexpand(True)
         
         self.menubutton = Gtk.EventBox()
         _icon_path = os.path.join(_curr_dir,"icons","menu.svg")
@@ -769,17 +785,16 @@ class MyWindow(Gtk.Window):
         if USE_TASKBAR != 3:
             self.main_box.pack_start(self.center_box, True, True, 0)
         else:
-            self.main_box.pack_start(self.center_box, True, True, 0)
-            # self.main_box.set_center_widget(self.center_box)
+            self.main_box.set_center_widget(self.center_box)
         
         if USE_TASKBAR == 0:
             self.center_box.set_halign(3)
         elif USE_TASKBAR == 1:
-            # self.center_box.set_halign(1)
-            self.center_box.set_hexpand(True)
+            self.center_box.set_halign(1)
+            # self.center_box.set_hexpand(True)
         elif USE_TASKBAR == 2:
-            # self.center_box.set_halign(2)
-            self.center_box.set_hexpand(True)
+            self.center_box.set_halign(2)
+            # self.center_box.set_hexpand(True)
             
         # clock at center
         if self.clock_use == 1:
@@ -799,11 +814,11 @@ class MyWindow(Gtk.Window):
             self.on_set_tasklist()
         
         self.right_box = Gtk.Box.new(0,0)
-        self.main_box.pack_end(self.right_box, False, True, 0)
+        self.main_box.pack_end(self.right_box, False, False, 0)
         self.right_box.set_halign(2)
         
-        if USE_TASKBAR:
-            self.right_box.set_hexpand(False)
+        # if USE_TASKBAR:
+            # self.right_box.set_hexpand(False)
         
         self.otherbutton = Gtk.EventBox()
         _icon_path = os.path.join(_curr_dir,"icons","other_menu.svg")
@@ -905,7 +920,7 @@ class MyWindow(Gtk.Window):
         self.lbl2_style_context.add_class("label2")
         self.label2button.connect('button-press-event', self.on_label2)
         self.center_box.pack_start(self.label2button,False,False,4)
-                
+        
         gdir1 = Gio.File.new_for_path(os.path.join(_HOME, ".local/share/applications"))
         self.monitor1 = gdir1.monitor_directory(Gio.FileMonitorFlags.SEND_MOVED, None)
         self.monitor1.connect("changed", self.directory_changed)
@@ -930,25 +945,27 @@ class MyWindow(Gtk.Window):
     def on_set_tasklist(self):
         self.box_taskbar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
         self.center_box.add(self.box_taskbar)
+        # self.center_box.pack_start(self.box_taskbar, True, True, 0)
         # self.center_box.set_center_widget(self.box_taskbar)
         #
-        # self.tbox = Gtk.Box.new(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
-        # self.tbox.set_name("tasklist")
-        # self._scroll = self._create_scroll()
-        # self.box_taskbar.pack_start(self._scroll, True, True, 0)
+        self.center_box.set_hexpand(True)
+        self.tbox = Gtk.Box.new(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+        self.tbox.set_name("tasklist")
+        self._scroll = Gtk.ScrolledWindow()
+        self.box_taskbar.pack_start(self._scroll, True, True, 0)
+        self._scroll.connect('scroll-event', self.handle_scroll)
+        self._scroll.set_hexpand(True)
+        self._scroll.set_property("propagate-natural-width", True)
         #
-        # #print - temporaneo
-        # _w1 = Gtk.EventBox()
-        # _w1.set_hexpand(True)
-        # self.box_taskbar.pack_start(_w1, True, True, 0)
+        self._scroll.set_policy(
+            Gtk.PolicyType.EXTERNAL,
+            Gtk.PolicyType.NEVER
+        )
+        self._scroll.add(self.tbox)
+        self._scroll.show_all()
         
-        self.box_taskbar.pack_start(self._create_scroll(), True, True, 0)
+        # self.box_taskbar.pack_start(self._create_scroll(), True, True, 0)
         
-        # # print - temporaneo
-        # _w2 = Gtk.EventBox()
-        # _w2.set_hexpand(True)
-        # self.box_taskbar.pack_start(_w2, True, True, 0)
-        #
         self.active_button = None
         self.context.connect('toplevel_new', self.on_toplevel_new)
         self.context.connect('toplevel_synced', self.on_toplevel_synced)
@@ -956,7 +973,6 @@ class MyWindow(Gtk.Window):
         #
         self._create_tasklist_menu()
         #
-        # self.scroll.show_all()
         self.box_taskbar.show_all()
         
     # def find_label(self,widget):
@@ -1004,7 +1020,7 @@ class MyWindow(Gtk.Window):
         if not hasattr(self.tbutton, "_icon"):
             self.tbutton._icon = None
         self.tbox.pack_start(self.tbutton, True, True, 0)
-
+    
     def on_toplevel_synced(self, context, toplevel):
         # # Obviously this should do a proper diff and only update if required
         # toplevel.button.set_label(toplevel.title)
@@ -1084,22 +1100,24 @@ class MyWindow(Gtk.Window):
         
         return None
     
-    def _create_scroll(self):
-        self.scroll = Gtk.ScrolledWindow()
-        self.scroll.set_policy(
-            Gtk.PolicyType.EXTERNAL,
-            Gtk.PolicyType.NEVER
-        )
-        # self.scroll.set_hexpand(True)
-        # self.scroll.set_vexpand(True)
-        self.tbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
-        self.tbox.set_name('tasklist')
-        self.tbox.set_hexpand(True)
-        self.scroll.add(self.tbox)
-        self.scroll.connect('scroll-event', self.handle_scroll)
+    # def _create_scroll(self):
+        # self.scroll = Gtk.ScrolledWindow()
+        # self.scroll.set_policy(
+            # Gtk.PolicyType.EXTERNAL,
+            # Gtk.PolicyType.NEVER
+        # )
+        # # self.scroll.set_hexpand(True)
+        # # self.scroll.set_vexpand(True)
+        # self.tbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+        # self.tbox.set_name('tasklist')
+        # self.tbox.set_hexpand(True)
+        # # self.tbox.set_vexpand(True)
+        # self.scroll.add(self.tbox)
+        # self.scroll.connect('scroll-event', self.handle_scroll)
         
-        self.scroll.show_all()
-        return self.scroll
+        # self.scroll.show_all()
+        # return self.scroll
+    
     
     def handle_scroll(self, scroll, event):
         adj = scroll.get_hadjustment()
@@ -1184,12 +1202,6 @@ class MyWindow(Gtk.Window):
             _wclip_file = os.path.join(_curr_dir, "wclipboard.py")
             if not os.path.exists(_wclip_file):
                 _ret = 0
-            else:
-                try:
-                    if not os.access(_wclip_file,os.X_OK):
-                        os.chmod(_volume_toggle, 0o740)
-                except:
-                    _ret = 0
         return _ret
         
 ############### audio ################
@@ -2167,8 +2179,11 @@ class MyWindow(Gtk.Window):
             self.menu_live_search_tmp = _value
         
     def entry_menu(self, _type, _value):
-        self.menu_terminal_tmp = _value
-    
+        if _type == "t":
+            self.menu_terminal_tmp = _value
+        elif _type == "me":
+            self.menu_editor_tmp = _value
+        
     def on_menu_win_position(self, _type, _value):
         if _type == "pos":
             self.menu_win_position_tmp = _value
@@ -2253,6 +2268,14 @@ class MyWindow(Gtk.Window):
     
     def entry_timer_text(self, _text):
         self.service_player_tmp = _text
+    
+    def entry_commands(self, _text, _type):
+        if _type == "l":
+            self._logout_tmp = _text
+        elif _type == "r":
+            self._reboot_tmp = _text
+        elif _type == "s":
+            self._shutdown_tmp = _text
     
     def set_clip_window_size(self, _type, _value):
         if _type == "w":
@@ -2405,6 +2428,10 @@ class MyWindow(Gtk.Window):
                 self.menu_win_position = self.menu_win_position_tmp
                 self.menu_conf["win_position"] = self.menu_win_position
                 self.menu_win_position_tmp = None
+            if self.menu_editor_tmp != None:
+                self.menu_editor = self.menu_editor_tmp
+                self.menu_conf["menu_editor"] = self.menu_editor
+                self.menu_editor_tmp = None
             
             ## SERVICE
             if self.service_width_tmp != self.service_width:
@@ -2423,6 +2450,18 @@ class MyWindow(Gtk.Window):
                 self.service_player = self.service_player_tmp
                 self.service_conf["player"] = self.service_player
                 self.service_player_tmp = ""
+            if self._logout_tmp != None:
+                self._logout = self._logout_tmp
+                self.service_conf["logout"] = self._logout
+                self._logout_tmp = None
+            if self._reboot_tmp != None:
+                self._reboot = self._reboot_tmp
+                self.service_conf["reboot"] = self._reboot
+                self._reboot_tmp = None
+            if self._shutdown_tmp != None:
+                self._shutdown = self._shutdown_tmp
+                self.service_conf["shutdown"] = self._shutdown
+                self._shutdown_tmp = None
             
             ## PANEL
             if self.temp_clip == False:
@@ -2532,8 +2571,10 @@ class MyWindow(Gtk.Window):
             if self.not_sounds_tmp != -1:
                 if self.not_sounds_tmp in [0,1]:
                     _type = self.not_sounds_tmp
-                elif self.not_sounds_tmp == 2:
+                elif self.not_sounds_tmp == 2 and self.entry_sound_text != "":
                     _type = self.entry_sound_text
+                else:
+                     _type = 0
                 self.notification_conf["sound_play"] = _type
                 self.not_sounds = _type
                 self.not_sounds_tmp = -1
@@ -2572,11 +2613,15 @@ class MyWindow(Gtk.Window):
             self.menu_item_icon_size_tmp = 0
             self.menu_live_search_tmp = None
             self.menu_win_position_tmp = None
+            self.menu_editor_tmp = None
             
             self.service_width_tmp = 0
             self.service_height_tmp = 0
             self.service_sound_player_tmp = None
             self.service_player_tmp = ""
+            self._logout_tmp = None
+            self._reboot_tmp = None
+            self._shutdown_tmp = None
             
             self.clip_width_tmp = 0
             self.clip_height_tmp = 0
@@ -2655,14 +2700,10 @@ class commandWin(Gtk.Window):
         self.add(self.main_box)
         
         # button box
-        self.bbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+        self.bbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         self.bbox.set_homogeneous(homogeneous=True)
         self.main_box.pack_start(self.bbox, True, False, _pad1)
         #
-        _cancel_btn = Gtk.Button(label="Cancel")
-        _cancel_btn.set_relief(Gtk.ReliefStyle.NONE)
-        _cancel_btn.connect('clicked', self.on_cancel)
-        self.bbox.add(_cancel_btn)
         
         c_btn = Gtk.Button.new()
         c_btn.set_relief(Gtk.ReliefStyle.NONE)
@@ -2677,9 +2718,14 @@ class commandWin(Gtk.Window):
         elif self._command == "shutdown":
             c_btn.set_label("Shutdown?")
             c_btn.connect('clicked',self.on_c_btn, "shutdown")
-        elif self._command == "exit":
-            c_btn.set_label("Exit?")
-            c_btn.connect('clicked',self.on_c_btn, "exit")
+        # elif self._command == "exit":
+            # c_btn.set_label("Exit?")
+            # c_btn.connect('clicked',self.on_c_btn, "exit")
+        
+        _cancel_btn = Gtk.Button(label="Cancel")
+        _cancel_btn.set_relief(Gtk.ReliefStyle.NONE)
+        _cancel_btn.connect('clicked', self.on_cancel)
+        self.bbox.add(_cancel_btn)
         
         self.show_all()
         self._parent.hide()
@@ -2688,29 +2734,18 @@ class commandWin(Gtk.Window):
         try:
             _f = None
             if _type == "logout":
-                _ff = os.path.join(_curr_dir, "logout.sh")
-                if os.path.exists(_ff):
-                    if not os.access(_ff,os.X_OK):
-                        os.chmod(_ff, 0o740)
-                    _f = _ff
+                _f = self._parent._parent._logout
             elif _type == "restart":
-                _ff = os.path.join(_curr_dir, "restart.sh")
-                if os.path.exists(_ff):
-                    if not os.access(_ff,os.X_OK):
-                        os.chmod(_ff, 0o740)
-                    _f = _ff
+                _f = self._parent._parent._reboot
             elif _type == "shutdown":
-                _ff = os.path.join(_curr_dir, "poweroff.sh")
-                if os.path.exists(_ff):
-                    if not os.access(_ff,os.X_OK):
-                        os.chmod(_ff, 0o740)
-                    _f = _ff
-            elif _type == "exit":
-                
-                self._parent._parent._to_close()
+                _f = self._parent._parent._shutdown
+            # elif _type == "exit":
+                # self._parent._parent._to_close()
+            #
             
             if _f:
                 os.system(f"{_f} &")
+            
         except:
             pass
         self.close()
@@ -2873,18 +2908,19 @@ class menuWin(Gtk.Window):
         self.main_box.pack_start(self.btn_box,False,False,0)
         self.btn_box.set_halign(2)
         
-        self.prog_modify_menu = None
-        _prog_modify_menu_path = os.path.join(_curr_dir,"menu_editor")
-        if os.path.exists(_prog_modify_menu_path):
-            self.prog_modify_menu = _prog_modify_menu_path
-            self.modify_menu = Gtk.Button()
-            pix = GdkPixbuf.Pixbuf.new_from_file_at_size(os.path.join(_curr_dir,"icons","modify_menu.svg"), int(self.BTN_ICON_SIZE/2), int(self.BTN_ICON_SIZE/2))
-            _image = Gtk.Image.new_from_pixbuf(pix)
-            self.modify_menu.set_image(_image)
-            self.modify_menu.set_relief(Gtk.ReliefStyle.NONE)
-            self.modify_menu.set_tooltip_text("Modify the menu")
-            self.modify_menu.connect('clicked', self.on_modify_menu)
-            self.btn_box.pack_start(self.modify_menu,True,False,4)
+        # self.prog_modify_menu = None
+        # _prog_modify_menu_path = os.path.join(_curr_dir,"menu_editor")
+        # if os.path.exists(_prog_modify_menu_path):
+            # self.prog_modify_menu = _prog_modify_menu_path
+        # menu editor button
+        self.modify_menu = Gtk.Button()
+        pix = GdkPixbuf.Pixbuf.new_from_file_at_size(os.path.join(_curr_dir,"icons","modify_menu.svg"), int(self.BTN_ICON_SIZE/2), int(self.BTN_ICON_SIZE/2))
+        _image = Gtk.Image.new_from_pixbuf(pix)
+        self.modify_menu.set_image(_image)
+        self.modify_menu.set_relief(Gtk.ReliefStyle.NONE)
+        self.modify_menu.set_tooltip_text("Modify the menu")
+        self.modify_menu.connect('clicked', self.on_modify_menu)
+        self.btn_box.pack_start(self.modify_menu,True,False,4)
         
         self.logout_btn = Gtk.Button()
         pix = GdkPixbuf.Pixbuf.new_from_file_at_size(os.path.join(_curr_dir,"icons","system-logout.svg"), int(self.BTN_ICON_SIZE/2), int(self.BTN_ICON_SIZE/2))
@@ -2928,12 +2964,15 @@ class menuWin(Gtk.Window):
         
         self.show_all()
         
+        if self._parent.menu_editor == "" or not shutil.which(self._parent.menu_editor):
+            self.modify_menu.hide()
+        
     
     def on_modify_menu(self, btn):
         _l = self.iconview.get_selected_items()
         if _l == []:
             try:
-                subprocess.Popen(f"{self.prog_modify_menu}",shell=True)
+                subprocess.Popen(f"{self._parent.menu_editor}",shell=False)
             except:
                 pass
             return
@@ -2941,15 +2980,15 @@ class menuWin(Gtk.Window):
         _category_selected = btn.icat
         if _category_selected == "Bookmarks":
             return
-        if _l:
-            _path = _l[0]
-            # icon name comment exec path appinfo
-            _item = self.liststore[_path][4]
-            if os.path.exists(_item):
-                try:
-                    subprocess.Popen(f"{self.prog_modify_menu} {_item}",shell=True)
-                except:
-                    pass
+        # if _l:
+            # _path = _l[0]
+            # # icon name comment exec path appinfo
+            # _item = self.liststore[_path][4]
+            # if os.path.exists(_item):
+                # try:
+                    # subprocess.Popen(f"{self.prog_modify_menu} {_item}",shell=True)
+                # except:
+                    # pass
         
     
     def on_service_btn(self, btn, _type):
@@ -3300,8 +3339,8 @@ class menuWin(Gtk.Window):
         elif response_id == Gtk.ResponseType.DELETE_EVENT:
             messagedialog2.destroy()
     
-    def on_conf_btn(self, btn):
-        pass
+    # def on_conf_btn(self, btn):
+        # pass
     
     def on_focus_out(self, win, event):
         self.iconview.unselect_all()
@@ -4015,7 +4054,7 @@ class DialogConfiguration(Gtk.Dialog):
         box = self.get_content_area()
         
         self.set_modal(True)
-        self.set_transient_for(self._parent)
+        self.set_transient_for(None)
         self.set_decorated(False)
         
         self.connect('delete-event', self.delete_event)
@@ -4076,24 +4115,24 @@ class DialogConfiguration(Gtk.Dialog):
         self.page1_box.attach_next_to(size_spinbtn,size_lbl,1,2,1)
         size_spinbtn.connect('value-changed', self.on_size_spinbtn)
         size_spinbtn.set_input_purpose(Gtk.InputPurpose.DIGITS)
-        # corners top
-        corner_lbl = Gtk.Label(label="Corners: top")
-        self.page1_box.attach(corner_lbl,0,2,1,1)
-        corner_lbl.set_halign(1)
-        corner_spinbtn = Gtk.SpinButton.new_with_range(0,60,1)
-        corner_spinbtn.set_value(self._parent._corner_top)
-        self.page1_box.attach_next_to(corner_spinbtn,corner_lbl,1,2,1)
-        corner_spinbtn.connect('value-changed', self.on_corner_spinbtn)
-        corner_spinbtn.set_input_purpose(Gtk.InputPurpose.DIGITS)
-        # corners bottom
-        corner_lbl2 = Gtk.Label(label="Corners: bottom")
-        self.page1_box.attach(corner_lbl2,0,3,1,1)
-        corner_lbl2.set_halign(1)
-        corner_spinbtn2 = Gtk.SpinButton.new_with_range(0,60,1)
-        corner_spinbtn2.set_value(self._parent._corner_bottom)
-        self.page1_box.attach_next_to(corner_spinbtn2,corner_lbl2,1,2,1)
-        corner_spinbtn2.connect('value-changed', self.on_corner_spinbtn2)
-        corner_spinbtn2.set_input_purpose(Gtk.InputPurpose.DIGITS)
+        # # corners top
+        # corner_lbl = Gtk.Label(label="Corners: top")
+        # self.page1_box.attach(corner_lbl,0,2,1,1)
+        # corner_lbl.set_halign(1)
+        # corner_spinbtn = Gtk.SpinButton.new_with_range(0,60,1)
+        # corner_spinbtn.set_value(self._parent._corner_top)
+        # self.page1_box.attach_next_to(corner_spinbtn,corner_lbl,1,2,1)
+        # corner_spinbtn.connect('value-changed', self.on_corner_spinbtn)
+        # corner_spinbtn.set_input_purpose(Gtk.InputPurpose.DIGITS)
+        # # corners bottom
+        # corner_lbl2 = Gtk.Label(label="Corners: bottom")
+        # self.page1_box.attach(corner_lbl2,0,3,1,1)
+        # corner_lbl2.set_halign(1)
+        # corner_spinbtn2 = Gtk.SpinButton.new_with_range(0,60,1)
+        # corner_spinbtn2.set_value(self._parent._corner_bottom)
+        # self.page1_box.attach_next_to(corner_spinbtn2,corner_lbl2,1,2,1)
+        # corner_spinbtn2.connect('value-changed', self.on_corner_spinbtn2)
+        # corner_spinbtn2.set_input_purpose(Gtk.InputPurpose.DIGITS)
         # position
         pos_lbl = Gtk.Label(label="Position")
         self.page1_box.attach(pos_lbl,0,4,1,1)
@@ -4107,6 +4146,7 @@ class DialogConfiguration(Gtk.Dialog):
         # clipboard
         if USE_CLIPBOARD:
             clip_lbl = Gtk.Label(label="Clipboard")
+            clip_lbl.set_tooltip_text("Use the internal clipboard widget.")
             self.page1_box.attach(clip_lbl,0,5,1,1)
             clip_lbl.set_halign(1)
             clip_sw = Gtk.Switch.new()
@@ -4128,6 +4168,7 @@ class DialogConfiguration(Gtk.Dialog):
         # label2
         # label2_lbl = Gtk.Label(label="Output Right")
         label2_lbl = Gtk.Label(label="Output center")
+        label2_lbl.set_tooltip_text("The output follows the tasklist position.\nOr in the center.")
         self.page1_box.attach(label2_lbl,0,7,1,1)
         label2_lbl.set_halign(1)
         out2_sw = Gtk.Switch.new()
@@ -4147,6 +4188,7 @@ class DialogConfiguration(Gtk.Dialog):
         # self.page1_box.attach_next_to(task_sw,task_lbl,1,2,1)
         # clock
         clock_lbl = Gtk.Label(label="Clock")
+        clock_lbl.set_tooltip_text("Use the internal clock widget.")
         self.page1_box.attach(clock_lbl,0,9,1,1)
         clock_lbl.set_halign(1)
         clock_sw = Gtk.Switch.new()
@@ -4222,6 +4264,7 @@ class DialogConfiguration(Gtk.Dialog):
         # self.entry_menu_t.set_text(self._parent.menu_terminal)
         
         menu_lbl_ls = Gtk.Label(label="Live search characters")
+        menu_lbl_ls.set_tooltip_text("Minimum number of characters to perform a query.")
         self.page2_box.attach(menu_lbl_ls,0,5,1,1)
         menu_lbl_ls.set_halign(1)
         menu_ls_spinbtn = Gtk.SpinButton.new_with_range(0,20,1)
@@ -4241,8 +4284,17 @@ class DialogConfiguration(Gtk.Dialog):
         menu_combo_p.connect('changed', self.on_menu_combo, "pos")
         self.page2_box.attach_next_to(menu_combo_p,menu_lbl_wp,1,1,1)
         
+        menu_editor = Gtk.Label(label="Menu editor")
+        self.page2_box.attach(menu_editor,0,7,1,1)
+        menu_editor.set_halign(1)
+        self.entry_menu_editor = Gtk.Entry.new()
+        self.entry_menu_editor.connect('changed', self.on_entry_menu, "me")
+        self.page2_box.attach_next_to(self.entry_menu_editor,menu_editor,1,1,1)
+        self.entry_menu_editor.set_text(self._parent.menu_editor)
+        
         ## SERVICE MENU
         service_lbl_w = Gtk.Label(label="Width")
+        service_lbl_w.set_tooltip_text("Width of the calendar window.\n0 automatic.")
         self.page3_box.attach(service_lbl_w,0,0,1,1)
         service_lbl_w.set_halign(1)
         service_w_spinbtn = Gtk.SpinButton.new_with_range(0,1000,1)
@@ -4252,6 +4304,7 @@ class DialogConfiguration(Gtk.Dialog):
         service_w_spinbtn.set_input_purpose(Gtk.InputPurpose.DIGITS)
             
         service_lbl_h = Gtk.Label(label="Height")
+        service_lbl_h.set_tooltip_text("Height of the calendar window.\n0 automatic.")
         self.page3_box.attach(service_lbl_h,0,1,1,1)
         service_lbl_h.set_halign(1)
         service_h_spinbtn = Gtk.SpinButton.new_with_range(0,1000,1)
@@ -4260,32 +4313,57 @@ class DialogConfiguration(Gtk.Dialog):
         service_h_spinbtn.connect('value-changed', self.on_service_wh_spinbtn, "h")
         service_h_spinbtn.set_input_purpose(Gtk.InputPurpose.DIGITS)
         
-        # sounds
-        timer_lbl_sound = Gtk.Label(label="Play sound")
-        self.page3_box.attach(timer_lbl_sound,0,2,1,1)
-        timer_lbl_sound.set_halign(1)
-        timer_combo = Gtk.ComboBoxText.new()
-        timer_combo.append_text("Internal player")
-        timer_combo.append_text("External player")
-        timer_combo.connect('changed', self.on_timer_combo)
-        self.page3_box.attach_next_to(timer_combo,timer_lbl_sound,1,1,1)
+        # # sounds
+        # timer_lbl_sound = Gtk.Label(label="Play sound")
+        # self.page3_box.attach(timer_lbl_sound,0,2,1,1)
+        # timer_lbl_sound.set_halign(1)
+        # timer_combo = Gtk.ComboBoxText.new()
+        # timer_combo.append_text("Internal player")
+        # timer_combo.append_text("External player")
+        # timer_combo.connect('changed', self.on_timer_combo)
+        # self.page3_box.attach_next_to(timer_combo,timer_lbl_sound,1,1,1)
         
-        _entry_timer_lbl = Gtk.Label(label="Player")
-        _entry_timer_lbl.set_halign(1)
-        self.page3_box.attach(_entry_timer_lbl,0,3,1,1)
-        self.entry_timer = Gtk.Entry.new()
-        self.entry_timer.connect('changed', self.on_entry_timer)
-        self.page3_box.attach_next_to(self.entry_timer,_entry_timer_lbl,1,1,1)
-        if self._parent.service_sound_player == 0:
-            timer_combo.set_active(0)
-            self.entry_timer.set_state_flags(Gtk.StateFlags.INSENSITIVE, True)
-        elif self._parent.service_sound_player == 1:
-            timer_combo.set_active(1)
-            self.entry_timer.set_text(self._parent.service_player)
+        # _entry_timer_lbl = Gtk.Label(label="Player")
+        # _entry_timer_lbl.set_halign(1)
+        # self.page3_box.attach(_entry_timer_lbl,0,3,1,1)
+        # self.entry_timer = Gtk.Entry.new()
+        # self.entry_timer.connect('changed', self.on_entry_timer)
+        # self.page3_box.attach_next_to(self.entry_timer,_entry_timer_lbl,1,1,1)
+        # if self._parent.service_sound_player == 0:
+            # timer_combo.set_active(0)
+            # self.entry_timer.set_state_flags(Gtk.StateFlags.INSENSITIVE, True)
+        # elif self._parent.service_sound_player == 1:
+            # timer_combo.set_active(1)
+            # self.entry_timer.set_text(self._parent.service_player)
+        
+        _logout_lbl = Gtk.Label(label="Logout command")
+        _logout_lbl.set_halign(1)
+        self.page3_box.attach(_logout_lbl,0,4,1,1)
+        self.entry_logout = Gtk.Entry.new()
+        self.entry_logout.set_text(self._parent._logout)
+        self.entry_logout.connect('changed', self.on_entry_commands, "l")
+        self.page3_box.attach_next_to(self.entry_logout,_logout_lbl,1,1,1)
+        
+        _reboot_lbl = Gtk.Label(label="Reboot command")
+        _reboot_lbl.set_halign(1)
+        self.page3_box.attach(_reboot_lbl,0,5,1,1)
+        self.entry_reboot = Gtk.Entry.new()
+        self.entry_reboot.set_text(self._parent._reboot)
+        self.entry_reboot.connect('changed', self.on_entry_commands, "r")
+        self.page3_box.attach_next_to(self.entry_reboot,_reboot_lbl,1,1,1)
+        
+        _shutdown_lbl = Gtk.Label(label="Shutdown command")
+        _shutdown_lbl.set_halign(1)
+        self.page3_box.attach(_shutdown_lbl,0,6,1,1)
+        self.entry_shutdown = Gtk.Entry.new()
+        self.entry_shutdown.set_text(self._parent._shutdown)
+        self.entry_shutdown.connect('changed', self.on_entry_commands, "s")
+        self.page3_box.attach_next_to(self.entry_shutdown,_shutdown_lbl,1,1,1)
         
         ## CLIPBOARD
         if USE_CLIPBOARD and self._parent.clipboard_use:
             clip_lbl_w = Gtk.Label(label="Width")
+            clip_lbl_w.set_tooltip_text("Width of the clipboard window.")
             self.page4_box.attach(clip_lbl_w,0,0,1,1)
             clip_lbl_w.set_halign(1)
             clip_w_spinbtn = Gtk.SpinButton.new_with_range(0,1000,1)
@@ -4295,6 +4373,7 @@ class DialogConfiguration(Gtk.Dialog):
             clip_w_spinbtn.set_input_purpose(Gtk.InputPurpose.DIGITS)
             
             clip_lbl_h = Gtk.Label(label="Height")
+            clip_lbl_h.set_tooltip_text("Height of the clipboard window.")
             self.page4_box.attach(clip_lbl_h,0,1,1,1)
             clip_lbl_h.set_halign(1)
             clip_h_spinbtn = Gtk.SpinButton.new_with_range(0,1000,1)
@@ -4317,6 +4396,7 @@ class DialogConfiguration(Gtk.Dialog):
                 clip_chars_spinbtn.set_input_purpose(Gtk.InputPurpose.DIGITS)
             # max history
             clip_lbl_num = Gtk.Label(label="Max clips to store")
+            clip_lbl_num.set_tooltip_text("Maximum number of clips to keep.")
             self.page4_box.attach(clip_lbl_num,0,3,1,1)
             clip_lbl_num.set_halign(1)
             clip_num_spinbtn = Gtk.SpinButton.new_with_range(1,200,1)
@@ -4347,6 +4427,7 @@ class DialogConfiguration(Gtk.Dialog):
         self.page5_box.attach_next_to(not_lbl_enabled_sw,not_lbl_enabled,1,1,1)
         # window width
         not_lbl_w = Gtk.Label(label="Width")
+        not_lbl_w.set_tooltip_text("Width of the notification window.")
         self.page5_box.attach(not_lbl_w,0,1,1,1)
         not_lbl_w.set_halign(1)
         not_w_spinbtn = Gtk.SpinButton.new_with_range(0,1000,1)
@@ -4356,6 +4437,7 @@ class DialogConfiguration(Gtk.Dialog):
         not_w_spinbtn.set_input_purpose(Gtk.InputPurpose.DIGITS)
         # window height
         not_lbl_h = Gtk.Label(label="Height")
+        not_lbl_h.set_tooltip_text("Height of the notification window.")
         self.page5_box.attach(not_lbl_h,0,2,1,1)
         not_lbl_h.set_halign(1)
         not_h_spinbtn = Gtk.SpinButton.new_with_range(0,600,1)
@@ -4385,6 +4467,7 @@ class DialogConfiguration(Gtk.Dialog):
         # self.page5_box.attach_next_to(dnd_combo,not_lbl_dnd,1,1,1)
         # sounds
         not_lbl_sound = Gtk.Label(label="Play sound")
+        not_lbl_sound.set_tooltip_text("If external, set the player name below.")
         self.page5_box.attach(not_lbl_sound,0,5,1,1)
         not_lbl_sound.set_halign(1)
         snd_combo = Gtk.ComboBoxText.new()
@@ -4404,6 +4487,7 @@ class DialogConfiguration(Gtk.Dialog):
             self.entry_sound.set_text(self._parent.not_sounds)
         # bottom limit
         not_lbl_l = Gtk.Label(label="Bottom limit")
+        not_lbl_l.set_tooltip_text("The height of all notifications will not\nexceed the height of the screen less this number\n(in term of pixels).")
         self.page5_box.attach(not_lbl_l,0,7,1,1)
         not_lbl_l.set_halign(1)
         not_l_spinbtn = Gtk.SpinButton.new_with_range(0,5000,1)
@@ -4485,6 +4569,17 @@ class DialogConfiguration(Gtk.Dialog):
         double_click_combo.connect('changed', self.on_other_combo, "click")
         self.page6_box.attach_next_to(double_click_combo,_lbl_double_click,1,1,1)
         
+        # USE_CSS = _other_settings_conf["use-css"]
+        _lbl_use_css = Gtk.Label(label="Use the custom css for theming.")
+        self.page6_box.attach(_lbl_use_css,0,7,1,1)
+        _lbl_use_css.set_halign(1)
+        double_click_css = Gtk.ComboBoxText.new()
+        double_click_css.append_text("no")
+        double_click_css.append_text("yes")
+        double_click_css.set_active(USE_CSS)
+        double_click_css.connect('changed', self.on_other_combo, "css")
+        self.page6_box.attach_next_to(double_click_css,_lbl_use_css,1,1,1)
+        
         ###########
         self.show_all()
         self.set_keep_above(True)
@@ -4516,6 +4611,8 @@ class DialogConfiguration(Gtk.Dialog):
             _other_settings_conf["double-click"] = cb.get_active()
         elif _type == "taskbar":
             _other_settings_conf["use-taskbar"] = cb.get_active()
+        elif _type == "css":
+            _other_settings_conf["use-css"] = cb.get_active()
         try:
             _ff = open(_other_settings_config_file,"w")
             _data_json = _other_settings_conf
@@ -4575,6 +4672,9 @@ class DialogConfiguration(Gtk.Dialog):
     
     def on_entry_timer(self, _entry):
         self._parent.entry_timer_text(_entry.get_text())
+    
+    def on_entry_commands(self, _entry, _type):
+        self._parent.entry_commands(_entry.get_text(), _type)
     
     #### clipboard
     def on_clip_wh_spinbtn(self, btn, _type):
@@ -4828,7 +4928,7 @@ class Notifier(Service.Object):
         self.list_notifications = []
         self._not_path = os.path.join(_curr_dir,"mynots")
         # 0 no - 1 yes - 2 yes/with external player
-        self.no_sound = self._parent.not_sounds
+        # self.no_sound = self._parent.not_sounds
         self.not_dnd = self._parent.not_dnd
         # top margin and _pad
         self.starting_y = 0
@@ -4962,7 +5062,8 @@ class Notifier(Service.Object):
             self._close_notification(_timeout,NW)
         
         # sounds
-        if self.no_sound != 0 and not os.path.exists(_dnd_file):
+        # if self.no_sound != 0 and not os.path.exists(_dnd_file):
+        if self._parent.not_sounds != 0 and not os.path.exists(_dnd_file):
             if self.not_dnd == 0 or (self.not_dnd == 1 and _urgency == 2):
                 _no_sound = _on_hints(_hints, "suppress-sound")
                 _soundfile = _on_hints(_hints, "sound-file")
@@ -5198,7 +5299,7 @@ class Notifier(Service.Object):
         return None
     
     def play_sound(self, _sound):
-        if self.no_sound == 1 and SOUND_PLAYER == 1:
+        if self._parent.not_sounds and SOUND_PLAYER == 1:
             try:
                 ctx = GSound.Context()
                 ctx.init()
