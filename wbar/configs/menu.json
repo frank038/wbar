@@ -1,9 +1,10 @@
 {
-    "wwidth": 880,
+    "wwidth": 860,
     "wheight": 620,
-    "terminal": "sakura",
-    "cat_icon_size": 64,
+    "terminal": "xfce4-terminal",
+    "cat_icon_size": 48,
     "item_icon_size": 64,
     "live_search": 3,
-    "win_position": 0
+    "win_position": 2,
+    "menu_editor": ""
 }

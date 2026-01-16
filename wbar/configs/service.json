@@ -1,6 +1,9 @@
 {
     "wwidth": 0,
     "wheight": 0,
-    "sound-player": 0,
-    "player": ""
+    "sound-player": null,
+    "player": "",
+    "logout": "labwc -e",
+    "reboot": "/usr/bin/systemctl reboot",
+    "shutdown": "/usr/bin/systemctl poweroff"
 }
