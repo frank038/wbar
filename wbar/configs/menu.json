@@ -5,6 +5,6 @@
     "cat_icon_size": 48,
     "item_icon_size": 64,
     "live_search": 3,
-    "win_position": 2,
-    "menu_editor": ""
+    "win_position": 0,
+    "menu_editor": "_internal_"
 }

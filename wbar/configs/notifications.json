@@ -4,7 +4,7 @@
     "nheight": 100,
     "icon_size": 64,
     "dnd": 0,
-    "sound_play": 1,
+    "sound_play": 0,
     "bottom_limit": 200,
     "skip_apps": ""
 }
