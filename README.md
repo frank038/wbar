@@ -22,6 +22,7 @@ Features:
 - sticky notes
 - a timer (gtk3 version)
 - a menu editor (gtk3 version)
+- three applets: audio (can also manage cards and microphones); volume; mpris.
 
 Requirements:
 - a wayland display server with layer-shell support
