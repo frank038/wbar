@@ -1,0 +1,5 @@
+[<EnumValue event-facility=autoload>, <EnumValue event-facility=card>, <EnumValue event-facility=client>, <EnumValue event-facility=module>, <EnumValue event-facility=sample_cache>, <EnumValue event-facility=server>, <EnumValue event-facility=sink>, <EnumValue event-facility=sink_input>, <EnumValue event-facility=source>, <EnumValue event-facility=source_output>]
+
+facility=<EnumValue event-facility=client>, index=9521, t=<EnumValue event-type=remove> <EnumValue event-facility=client> 
+
+[<EnumValue event-facility=autoload>, <EnumValue event-facility=card>, <EnumValue event-facility=client>, <EnumValue event-facility=module>, <EnumValue event-facility=sample_cache>, <EnumValue event-facility=server>, <EnumValue event-facility=sink>, <EnumValue event-facility=sink_input>, <EnumValue event-facility=source>, <EnumValue event-facility=source_output>]
