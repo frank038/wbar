@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 0.9.11
+# V. 0.9.12
 
 import os,sys,shutil,stat
 import gi
@@ -749,7 +749,7 @@ class MyWindow(Gtk.Window):
         
         self.center_box = Gtk.Box.new(0,0)
         
-        if USE_TASKBAR != 3:
+        if USE_TASKBAR != 3 and USE_TASKBAR != 0:
             self.main_box.pack_start(self.center_box, True, True, 0)
         else:
             self.main_box.set_center_widget(self.center_box)
@@ -761,9 +761,13 @@ class MyWindow(Gtk.Window):
         elif USE_TASKBAR == 2:
             self.center_box.set_halign(2)
             
+        self.clock_lbl = Gtk.Label(label="")
+        self.clock_lbl_style_context = self.clock_lbl.get_style_context()
+        self.clock_lbl_style_context.add_class("clocklabel")
         # clock at center
         if self.clock_use == 1:
             self._t_id = None
+            self.center_box.pack_start(self.clock_lbl,False,False,10)
             self.on_set_clock2(self.clock_use)
         
         # tasklist
@@ -807,6 +811,7 @@ class MyWindow(Gtk.Window):
         # clock at right
         if self.clock_use == 2:
             self._t_id = None
+            self.right_box.pack_end(self.clock_lbl,False,False,10)
             self.on_set_clock2(self.clock_use)
         
         # tray
@@ -834,7 +839,7 @@ class MyWindow(Gtk.Window):
         self.lbl2_style_context = self.label2.get_style_context()
         self.lbl2_style_context.add_class("label2")
         self.label2button.connect('button-press-event', self.on_label2)
-        self.center_box.pack_start(self.label2button,False,False,4)
+        self.right_box.pack_start(self.label2button,False,False,4)
         
         gdir1 = Gio.File.new_for_path(os.path.join(_HOME, ".local/share/applications"))
         self.monitor1 = gdir1.monitor_directory(Gio.FileMonitorFlags.SEND_MOVED, None)
@@ -848,8 +853,12 @@ class MyWindow(Gtk.Window):
         
         self.show_all()
         
+        if self.clock_use == 0:
+            self.clock_lbl.hide()
+        
         self.q2 = None
         self.set_timer_label2()
+        
         
     
     def on_set_tasklist(self):
@@ -1787,19 +1796,20 @@ class MyWindow(Gtk.Window):
     def on_set_clock2(self, _pos):
         self.temp_clock = None
         self._timer = True
-        self.clock_lbl = Gtk.Label(label="")
+        # self.clock_lbl = Gtk.Label(label="")
+        self.clock_lbl.show()
         self.set_on_clock()
-        self.clock_lbl_style_context = self.clock_lbl.get_style_context()
-        self.clock_lbl_style_context.add_class("clocklabel")
-        if _pos == 1:
-            self.center_box.pack_start(self.clock_lbl,False,False,10)
-        elif _pos == 2:
-            self.right_box.pack_end(self.clock_lbl,False,False,10)
+        # self.clock_lbl_style_context = self.clock_lbl.get_style_context()
+        # self.clock_lbl_style_context.add_class("clocklabel")
+        # if _pos == 1:
+            # self.center_box.pack_start(self.clock_lbl,False,False,10)
+        # elif _pos == 2:
+            # self.right_box.pack_end(self.clock_lbl,False,False,10)
         self._t_id = GLib.timeout_add(60000, self.on_clock)
-        # reorder
-        if _pos != None:
-            self.center_box.reorder_child(self.clock_lbl, _pos)
-            self.center_box.show_all()
+        # # reorder
+        # if _pos != None:
+            # self.center_box.reorder_child(self.clock_lbl, _pos)
+            # self.center_box.show_all()
     
     def load_conf(self):
         if not os.path.exists(_panelconf):
@@ -1818,7 +1828,9 @@ class MyWindow(Gtk.Window):
             self.temp_clock = None
             if self.clock_use == 0:
                 self._timer = False
-                self.center_box.remove(self.clock_lbl)
+                # self.center_box.remove(self.clock_lbl)
+                self.clock_lbl.set_label("")
+                self.clock_lbl.hide()
                 if self._t_id:
                     GLib.source_remove(self._t_id)
                     self._t_id = None
@@ -2234,8 +2246,9 @@ class MyWindow(Gtk.Window):
                 if self._t_id:
                     GLib.source_remove(self._t_id)
                     self._t_id = None
-                self.set_on_clock()
-                self._t_id = GLib.timeout_add(60000, self.on_clock)
+                # # self._t_id is True when starts again
+                # self.set_on_clock()
+                # self._t_id = GLib.timeout_add(60000, self.on_clock)
             # volume application
             if self.volume_command_tmp != self.volume_command:
                 if self.volume_command_tmp == None:
@@ -4315,15 +4328,6 @@ class DialogConfiguration(Gtk.Dialog):
             clip_num_spinbtn.set_input_purpose(Gtk.InputPurpose.DIGITS)
         
         ## NOTIFICATIONS
-        # enable/disable
-        not_lbl_enabled = Gtk.Label(label=ENABLED1)
-        self.page5_box.attach(not_lbl_enabled,0,0,1,1)
-        not_lbl_enabled.set_halign(1)
-        not_lbl_enabled_sw = Gtk.Switch.new()
-        not_lbl_enabled_sw.set_halign(1)
-        not_lbl_enabled_sw.set_active(self._parent.not_use)
-        not_lbl_enabled_sw.connect('notify::active', self.on_switch, "notification")
-        self.page5_box.attach_next_to(not_lbl_enabled_sw,not_lbl_enabled,1,1,1)
         # window width
         not_lbl_w = Gtk.Label(label=WIDTH)
         not_lbl_w.set_tooltip_text(NOT_WIDTH_MSG1)
@@ -4416,6 +4420,16 @@ class DialogConfiguration(Gtk.Dialog):
         self.page6_box.attach_next_to(_pad_spinbtn,_lbl_pad,1,1,1)
         _pad_spinbtn.connect('value-changed', self.on_other_spinbtn, "pad")
         _pad_spinbtn.set_input_purpose(Gtk.InputPurpose.DIGITS)
+        
+        # the notification server - enable/disable
+        not_lbl_enabled = Gtk.Label(label=ENABLED1)
+        self.page6_box.attach(not_lbl_enabled,0,3,1,1)
+        not_lbl_enabled.set_halign(1)
+        not_lbl_enabled_sw = Gtk.Switch.new()
+        not_lbl_enabled_sw.set_halign(1)
+        not_lbl_enabled_sw.set_active(self._parent.not_use)
+        not_lbl_enabled_sw.connect('notify::active', self.on_switch, "notification")
+        self.page6_box.attach_next_to(not_lbl_enabled_sw,not_lbl_enabled,1,1,1)
         
         _lbl_use_tray = Gtk.Label(label=USE_TRAY2)
         self.page6_box.attach(_lbl_use_tray,0,4,1,1)
