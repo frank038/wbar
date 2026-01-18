@@ -26,7 +26,7 @@ Features:
 Requirements:
 - a wayland display server with layer-shell support
 - python3
-- gtk3/gtk4 python bindings
+- gtk3 or gtk4 python bindings
 - gtk-launch command line (gtk4 version)
 - wl-clipboard for the clipboard (wl-paste and wl-copy are needed)
 - pactl for volume applet (gtk4 version; amixer is supported; read below for more)
@@ -35,9 +35,9 @@ Requirements:
 How to use:
 - just unzip the archive and launch waybar.sh
 
-
 Options and configurations:
 - Wbar has a graphical configurator for almost all options.
+
 
 
 Important: it seems that in some cases the lib libgtk4-layer-shell.so.1.0.4 must be preoladed before launching wbar.py (or just launch wbar.sh of the gtk4 version).
@@ -49,32 +49,19 @@ The taskbar uses the framework wl_framework from Consolatis.
 
 About the file wclipboard.py: the clipboard stores the text of any length, unless an option to skip very large text clip is changed in the file: MAX_CHARS from 0 (that means all characters) to some number, e.g. 1000 if you want to skip text larger than 1000 characters; SKIP_FILES = 1 : with this option the text that seams from copy/cut operations on files/folders are skipped, unlsess it is setted to 0.
 
-The bash scripts volume_SOMENAME.sh use the command pactl for their 
-actions. amixer can also be used: switch the commands in those files.
+The bash scripts volume_SOMENAME.sh use the command pactl for their actions. amixer can also be used: switch the commands in those files.
 
-The menu updates automatically; middle mouse click on an item in any 
-category, except bookmarks, to force a menu update.
+The menu updates automatically; middle mouse click on an item in any category, except bookmarks, to force a menu update.
 
 
-The sticky notes: just open the service menu, usually at right, and choose
-the notes tab; there user can choose to add a new note or to show/hide 
-all of them. Click on Accept to store the note, click on Delete to 
-remove and delete that note. The background colour of the notes can be changed 
-in the panelstyle.css file. Initial implementation.
+The sticky notes: just open the service menu, usually at right, and choose the notes tab; there user can choose to add a new note or to show/hide all of them. Click on Accept to store the note, click on Delete to remove and delete that note. The background colour of the notes can be changed in the panelstyle.css file. Initial implementation.
 
-Wbar has two slots for the command out scripts, at left and in the center;
-the scripts are located in the scripts folder; the labels in the panel accept the left 
-mouse button action to launch a custom application: set its name in the 
-files label1.script (left label) and/or label2.script (center label).
+Wbar has two slots for the command out scripts, at left and in the center; the scripts are located in the scripts folder; the labels in the panel accept the left mouse button action to launch a custom application: set its name in the files label1.script (left label) and/or label2.script (center label).
 The scripts can be of two different types: single shot and continuous shots.
-The single shot script has to be in the form output1.#s (output2.#s) or 
-output1.#m (output2.#m). #s means the script will be executed every # seconds,
-while #m means the scripts will be executed every # minutes.
-The continuous shot scripts have to be in the form output1.sh and/or output2.sh:
-the scripts have to be able to output something and to control the whole process.
+The single shot script has to be in the form output1.#s (output2.#s) or output1.#m (output2.#m). #s means the script will be executed every # seconds, while #m means the scripts will be executed every # minutes.
+The continuous shot scripts have to be in the form output1.sh and/or output2.sh: the scripts have to be able to output something and to control the whole process.
 
-Custom styles
-
+Custom styles:
 In the folder configs is the file panelstyle.css, that can optionally enabled in the configuration dialog. 
 
 
