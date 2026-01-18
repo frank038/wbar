@@ -7,6 +7,9 @@ WIN_WIDTH = 400
 WIN_HEIGHT = 400
 DIALOGWIDTH = 300
 
+from lang import (FILE_NAME_M,NAME_M,GENERIC_NAME_M,EXECUTABLE_M,TRY_EXECUTABLE_M,PATH_M,CATEGORY_M,MIMETYPES_M,KEYWORDS_M,ICON_M,COMMENT_M,MSG1_M,RUN_IN_TERMINAL_M,NO_DISPLAY_M,HIDDEN_M,DELETE_M,ACCEPT_M,CLOSE_M,MSG2_M,DELETE2_M,MSG3_M,MSG4_M,MSG5_M,DONE2_M,MSG6_M,MSG7_M)
+
+
 freedesktop_main_categories = ["AudioVideo","Development",
                               "Education","Game","Graphics","Network",
                               "Office","Settings","System","Utility"]
@@ -26,90 +29,90 @@ class appWin(QtWidgets.QWidget):
         self.mainBox.setContentsMargins(0,0,0,0)
         self.setLayout(self.mainBox)
         #### file name
-        lbl_file_name = QtWidgets.QLabel("File name *")
+        lbl_file_name = QtWidgets.QLabel(FILE_NAME_M)
         self.mainBox.addWidget(lbl_file_name, 0, 0)
         self.le_file_name = QtWidgets.QLineEdit()
         self.mainBox.addWidget(self.le_file_name, 0, 1, 1, 5)
         #### name
-        lbl_name = QtWidgets.QLabel("Name *")
+        lbl_name = QtWidgets.QLabel(NAME_M)
         self.mainBox.addWidget(lbl_name, 1, 0)
         self.le_name = QtWidgets.QLineEdit()
         self.mainBox.addWidget(self.le_name, 1, 1, 1, 5)
         #### generic name
-        lbl_gen_name = QtWidgets.QLabel("Generic Name")
+        lbl_gen_name = QtWidgets.QLabel(GENERIC_NAME_M)
         self.mainBox.addWidget(lbl_gen_name, 2, 0)
         self.le_gen_name = QtWidgets.QLineEdit()
         self.mainBox.addWidget(self.le_gen_name, 2, 1, 1, 5)
         #### executable
-        lbl_exec = QtWidgets.QPushButton("Executable *")
+        lbl_exec = QtWidgets.QPushButton(EXECUTABLE_M)
         self.mainBox.addWidget(lbl_exec, 3, 0)
         self.le_exec = QtWidgets.QLineEdit()
         self.mainBox.addWidget(self.le_exec, 3, 1, 1, 5)
         lbl_exec.clicked.connect(lambda:self.f_choose(self.le_exec, "All Files (*.*)"))
         #### try executable
-        lbl_exec_try = QtWidgets.QPushButton("Try Executable *")
+        lbl_exec_try = QtWidgets.QPushButton(TRY_EXECUTABLE_M)
         self.mainBox.addWidget(lbl_exec_try, 4, 0)
         self.le_exec_try = QtWidgets.QLineEdit()
         self.mainBox.addWidget(self.le_exec_try, 4, 1, 1, 5)
         lbl_exec_try.clicked.connect(lambda:self.f_choose(self.le_exec_try, "All Files (*.*)"))
         #### path
-        lbl_path = QtWidgets.QPushButton("Path")
+        lbl_path = QtWidgets.QPushButton(PATH_M)
         self.mainBox.addWidget(lbl_path, 5, 0)
         self.le_path = QtWidgets.QLineEdit()
         self.mainBox.addWidget(self.le_path, 5, 1, 1, 5)
         lbl_path.clicked.connect(lambda:self.f_choose(self.le_path, "All Files (*.*)"))
         #### categories
-        lbl_categ = QtWidgets.QLabel("Category *")
+        lbl_categ = QtWidgets.QLabel(CATEGORY_M)
         self.mainBox.addWidget(lbl_categ, 6, 0)
         self.combo_categ = QtWidgets.QComboBox()
         self.mainBox.addWidget(self.combo_categ, 6, 1, 1, 5)
         self.combo_categ.addItems(freedesktop_main_categories)
         #### mimetypes
-        lbl_mime = QtWidgets.QLabel("Mimetypes **")
+        lbl_mime = QtWidgets.QLabel(MIMETYPES_M)
         self.mainBox.addWidget(lbl_mime, 7, 0)
         self.le_mime = QtWidgets.QLineEdit()
         self.mainBox.addWidget(self.le_mime, 7, 1, 1, 5)
         #### keywords
-        lbl_keys = QtWidgets.QLabel("Keywords **")
+        lbl_keys = QtWidgets.QLabel(KEYWORDS_M)
         self.mainBox.addWidget(lbl_keys, 8, 0)
         self.le_keys = QtWidgets.QLineEdit()
         self.mainBox.addWidget(self.le_keys, 8, 1, 1, 5)
         #### icon
-        lbl_icon = QtWidgets.QPushButton("Icon")
+        lbl_icon = QtWidgets.QPushButton(ICON_M)
         self.mainBox.addWidget(lbl_icon, 9, 0)
         self.le_icon = QtWidgets.QLineEdit()
         self.mainBox.addWidget(self.le_icon, 9, 1, 1, 5)
         lbl_icon.clicked.connect(lambda:self.f_choose(self.le_icon, "Icons (*.png *.svg *.xpm)"))
         #### comment
-        lbl_comment = QtWidgets.QLabel("Comment")
+        lbl_comment = QtWidgets.QLabel(COMMENT_M)
         self.mainBox.addWidget(lbl_comment, 10, 0)
         self.le_comment = QtWidgets.QLineEdit()
         self.mainBox.addWidget(self.le_comment, 10, 1, 1, 5)
         ####
-        lbl_optional = QtWidgets.QLabel("(* mandatory - ** optional and separate with a semicolon)")
+        lbl_optional = QtWidgets.QLabel(MSG1_M)
         self.mainBox.addWidget(lbl_optional, 11, 0, 1, 6)
         #### check buttons
         hbox_chk_btn = QtWidgets.QHBoxLayout()
         self.mainBox.addLayout(hbox_chk_btn, 12, 0, 1, 6)
-        self.chk_term = QtWidgets.QCheckBox("Run in Terminal")
+        self.chk_term = QtWidgets.QCheckBox(RUN_IN_TERMINAL_M)
         hbox_chk_btn.addWidget(self.chk_term)
-        self.chk_disp = QtWidgets.QCheckBox("No Display")
+        self.chk_disp = QtWidgets.QCheckBox(NO_DISPLAY_M)
         hbox_chk_btn.addWidget(self.chk_disp)
-        self.chk_hidd = QtWidgets.QCheckBox("Hidden")
+        self.chk_hidd = QtWidgets.QCheckBox(HIDDEN_M)
         hbox_chk_btn.addWidget(self.chk_hidd)
         #### buttons
         self.hbox_btn = QtWidgets.QHBoxLayout()
         self.mainBox.addLayout(self.hbox_btn, 13, 0, 1, 6)
         ## delete button
-        self.del_btn = QtWidgets.QPushButton("Delete")
+        self.del_btn = QtWidgets.QPushButton(DELETE_M)
         self.del_btn.clicked.connect(self.f_delete)
         self.hbox_btn.addWidget(self.del_btn)
         ## accept button
-        self.acpt_btn = QtWidgets.QPushButton("Accept")
+        self.acpt_btn = QtWidgets.QPushButton(ACCEPT_M)
         self.acpt_btn.clicked.connect(self.f_accept)
         self.hbox_btn.addWidget(self.acpt_btn)
         ## close button
-        self.quit_btn = QtWidgets.QPushButton("Close")
+        self.quit_btn = QtWidgets.QPushButton(CLOSE_M)
         self.quit_btn.clicked.connect(self.f_close)
         self.hbox_btn.addWidget(self.quit_btn)
         #
@@ -123,12 +126,12 @@ class appWin(QtWidgets.QWidget):
     
     def f_delete(self):
         if not self.le_file_name.text() or not self.le_name.text() or not self.le_exec.text():
-            MyDialog("Info", "Nothing to do.", self)
+            MyDialog("Info", MSG2_M, self)
             return
         #
         if os.path.dirname(self.file_name) == app_dir_user:
             #
-            ret = MyDialog("Question", "Delete?", self)
+            ret = MyDialog("Question", DELETE2_M, self)
             if ret.getValue() == 1:
                 try:
                     os.remove(self.file_name)
@@ -137,12 +140,12 @@ class appWin(QtWidgets.QWidget):
                     MyDialog("Error", str(E), self)
                     return
         else:
-            MyDialog("Info", "Cannot remove a system file.", self)
+            MyDialog("Info", MSG3_M, self)
             return
     
     def f_accept(self):
         if not self.le_file_name.text() or not self.le_name.text() or not self.le_exec.text():
-            MyDialog("Info", "Mandatory field(s) empty.", self)
+            MyDialog("Info", MSG4_M, self)
             return
         #
         file_name = self.le_file_name.text()
@@ -150,7 +153,7 @@ class appWin(QtWidgets.QWidget):
             file_name += ".desktop"
         file_name_path = os.path.join(app_dir_user, file_name)
         if os.path.exists(file_name_path):
-            ret = MyDialog("Question", "The desktop file already exists.\nDo you want to overwrite it?", self)
+            ret = MyDialog("Question", MSG5_M, self)
             if ret.getValue() == 0:
                 return
         #
@@ -188,7 +191,7 @@ Hidden={}
             ffile = open(file_name_path, "w")
             ffile.write(f_content)
             ffile.close()
-            MyDialog("Info", "Done.", self)
+            MyDialog("Info", DONE2_M, self)
         except Exception as E:
             MyDialog("Error", str(E), self)
         #
@@ -242,7 +245,7 @@ Hidden={}
                 self.chk_hidd.setChecked(False if hidd_chk=="false" else True)
     
     def f_close(self):
-        ret = MyDialog("Question", "Close this program?", self)
+        ret = MyDialog("Question", MSG6_M, self)
         if ret.getValue() == 1:
             self.close()
     
@@ -301,7 +304,7 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         if sys.argv[1]:
             if not os.path.exists(sys.argv[1]):
-                MyDialog("Error", "The desktop file doesn't exist.", None)
+                MyDialog("Error", MSG7_M, None)
                 sys.exit()
             else:
                 window = appWin(sys.argv[1])

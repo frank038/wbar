@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 0.9.12
+# V. 0.9.13
 
 import os,sys,shutil,stat
 import gi
@@ -173,7 +173,7 @@ if not os.path.exists(_menu_favorites):
     _f.close()
 
 # the language files
-_lang_list = os.listdir(os.path.join(_curr_dir,"langs"))
+_lang_list = sorted(os.listdir(os.path.join(_curr_dir,"langs")))
 
 qq = queue.Queue(maxsize=1)
 USER_THEME=0
@@ -1324,7 +1324,8 @@ class MyWindow(Gtk.Window):
                     item1.destroy()
                     break 
     
-    def _set_icon(self, icon_name, path):
+    # def _set_icon(self, icon_name, path):
+    def _set_icon(self, _pb, path):
         btn = None
         #
         for item1 in self.tray_box.get_children():
@@ -1335,10 +1336,36 @@ class MyWindow(Gtk.Window):
                     break
         if btn != None:
             try:
-                _pb = icon_theme.load_icon_for_scale(icon_name, self._app_icon_size, 1, Gtk.IconLookupFlags.FORCE_SIZE)
+                # _pb = icon_theme.load_icon_for_scale(icon_name, self._app_icon_size, 1, Gtk.IconLookupFlags.FORCE_SIZE)
                 btn.set_from_pixbuf(_pb)
             except Exception as E:
                 print("error icon: ", str(E))
+    
+    def _set_icon_pix(self, _icon_pix, path, _icon_w,_icon_h):
+        btn = None
+        #
+        for item1 in self.tray_box.get_children():
+            if isinstance(item1, Gtk.EventBox):
+                item = item1.get_children()[0]
+                if item.get_property('property_one') == path:
+                    btn = item
+                    break
+        if btn != None:
+            try:
+                b = []
+                a = _icon_pix
+                l = len(a)
+                for i in range(0,l-1,4):
+                    b.append(a[i+1])
+                    b.append(a[i+2])
+                    b.append(a[i+3])
+                    b.append(a[i])
+
+                _pb = GdkPixbuf.Pixbuf.new_from_data(b, GdkPixbuf.Colorspace.RGB, True, 8, _icon_w,_icon_h,_icon_w*4)
+                
+                btn.set_from_pixbuf(_pb)
+            except Exception as E:
+                print("Error icon: ", str(E))
     
     def _set_tooltip(self, _tooltip, path):
         btn = None
@@ -1369,7 +1396,23 @@ class MyWindow(Gtk.Window):
                     if _status == 'Passive':
                         return
                 #
-                _icon = _found[1]['IconName']
+                _icon = None
+                _pb = None
+                _icon_pix = None
+                #
+                if 'IconName' in _found[1]:
+                    _icon = _found[1]['IconName']
+                    try:
+                        _pb = icon_theme.load_icon_for_scale(_icon, self._app_icon_size, 1, Gtk.IconLookupFlags.FORCE_SIZE)
+                    except:
+                        _pb = None
+                #
+                if _icon == None or _icon == "" or _pb == None:
+                    if 'IconPixmap' in _found[1]:
+                        if _found[1]['IconPixmap'] != '' or _found[1]['IconPixmap'] != []:
+                            _icon_pix = _found[1]['IconPixmap'][0][2]
+                            _icon_w = _found[1]['IconPixmap'][0][0]
+                            _icon_h = _found[1]['IconPixmap'][0][1]
                 #
                 if 'ToolTip' in _found[1]:
                     _label = _found[1]['ToolTip'][2]
@@ -1387,7 +1430,11 @@ class MyWindow(Gtk.Window):
                 #
                 self.add_btn(_label, _name, _path, _menu)
                 # 
-                self._set_icon(_icon, _name)
+                if _icon_pix == None:
+                    # self._set_icon(_icon, _name)
+                    self._set_icon(_pb, _name)
+                else:
+                    self._set_icon_pix(_icon_pix, _name, _icon_w,_icon_h)
             #
             return
         # 
@@ -1425,8 +1472,29 @@ class MyWindow(Gtk.Window):
                                 if key == kk:
                                     if v != vv:
                                         if key == 'IconName':
-                                            _icon = item['IconName']
-                                            self._set_icon(_icon, sender)
+                                            _icon = None
+                                            _pb = None
+                                            _icon_pix = None
+                                            if 'IconName' in item:
+                                                _icon = item['IconName']
+                                                try:
+                                                    _pb = icon_theme.load_icon_for_scale(_icon, self._app_icon_size, 1, Gtk.IconLookupFlags.FORCE_SIZE)
+                                                except:
+                                                    _pb = None
+                                            #
+                                            if _icon == None or _icon == "" or _pb == None:
+                                                if 'IconPixmap' in _item:
+                                                    if _item['IconPixmap'] != '' or _item['IconPixmap'] != []:
+                                                        _icon_pix = _item['IconPixmap'][0][2]
+                                                        _icon_w = _item['IconPixmap'][0][0]
+                                                        _icon_h = _item['IconPixmap'][0][1]
+                                                        self._set_icon_pix(_icon_pix, sender, _icon_w,_icon_h)
+                                            else:
+                                                self._set_icon(_pb, sender)
+                                            #
+                                            # self._set_icon(_icon, sender)
+
+                                        #
                                         elif key == 'ToolTip':
                                             _tooltip = item['ToolTip'][2]
                                             self._set_tooltip(_tooltip, sender)
@@ -1448,8 +1516,30 @@ class MyWindow(Gtk.Window):
                                                     _menu = None
                                                 #
                                                 self.add_btn(_label, sender, path, _menu)
-                                                # set the icon and tooltip
-                                                self._set_icon(_icon, sender)
+                                                # # set the icon and tooltip
+                                                # self._set_icon(_icon, sender)
+                                                
+                                                ################
+                                                _icon = None
+                                                _pb = None
+                                                _icon_pix = None
+                                                if 'IconName' in item:
+                                                    _icon = item['IconName']
+                                                    try:
+                                                        _pb = icon_theme.load_icon_for_scale(_icon, self._app_icon_size, 1, Gtk.IconLookupFlags.FORCE_SIZE)
+                                                    except:
+                                                        _pb = None
+                                                #
+                                                if _icon == None or _icon == " "or _pb == None:
+                                                    if 'IconPixmap' in _item:
+                                                        if _item['IconPixmap'] != '' or _item['IconPixmap'] != []:
+                                                            _icon_pix = _item['IconPixmap'][0][2]
+                                                            _icon_w = _item['IconPixmap'][0][0]
+                                                            _icon_h = _item['IconPixmap'][0][1]
+                                                            self._set_icon_pix(_icon_pix, sender, _icon_w,_icon_h)
+                                                else:
+                                                    self._set_icon(_pb, sender)
+                                                ##############
                                             #
                                             else:
                                                 self.remove_btn(sender)
@@ -3527,6 +3617,7 @@ class otherWin(Gtk.Window):
         self.body_lbl.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
         _scrolledwin.set_size_request(-1,max(int(self._parent.service_height/2),150))
         _scrolledwin.add(self.body_lbl)
+        self.body_lbl.connect('activate-link', self.on_lbl_body_clicked)
         
         _clip_dir = os.path.join(_curr_dir,"mynots")
         _not_list = sorted(os.listdir(_clip_dir), reverse=True)
@@ -3684,11 +3775,18 @@ class otherWin(Gtk.Window):
     
     def on_row_activated(self, box, row):
         try:
+            _time_tmp = int(row.iid)
+            _time = datetime.datetime.fromtimestamp(_time_tmp).strftime('%Y-%b-%d %H:%M:%S')
             _body = self._my_nots[row.iid].decode()
             self.body_lbl.set_markup(" ")
-            self.body_lbl.set_markup(_body)
+            self.body_lbl.set_markup(_time+"\n\n"+_body)
         except:
             pass
+    
+    def on_lbl_body_clicked(self, lbl, _url):
+        if _url:
+            Gtk.show_uri_on_window(None, _url, Gdk.CURRENT_TIME)
+        return True
     
     def on_timer_btn(self, btn):
         if self._parent._is_timer_set == 1:
