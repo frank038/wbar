@@ -4,6 +4,7 @@
     "terminal": "xfce4-terminal",
     "cat_icon_size": 48,
     "item_icon_size": 64,
+    "item_width": 0,
     "live_search": 3,
     "win_position": 0,
     "menu_editor": "_internal_"

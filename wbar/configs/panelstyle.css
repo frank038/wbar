@@ -23,11 +23,12 @@
 }*/
 
 /* the panel */
+/*
 .mywindow {
   border-bottom-width: 2px;
   border-color: @border_color;
   border-style: solid;
-}
+}*/
 
 
 /* taskbar buttons - type togglebutton */ 
@@ -56,6 +57,7 @@
 }
 
 /* the menu window */
+/*
 .menuwin { 
   border-radius: 10px 10px 10px 10px;
   border-width: 2px;
@@ -70,8 +72,10 @@
   border-color: #7F7F7F;
   margin: 2px;
 }
+*/
 
 /* the shutdown/reboot/logout dialog */
+/*
 .commandwin { 
   border-radius: 10px 10px 10px 10px;
   border-width: 2px;
@@ -86,8 +90,10 @@
   border-color: #7F7F7F;
   margin: 2px;
 }
+*/
 
 /* the clipboard window */
+/*
 .clipboardwin { 
   border-radius: 10px 10px 10px 10px;
   border-width: 2px;
@@ -110,8 +116,10 @@
   border-color: #7F7F7F;
   margin: 2px;
 }
+*/
 
 /* the service window */
+/*
 .servicewin { 
   border-radius: 10px 10px 10px 10px;
   border-width: 2px;
@@ -133,8 +141,10 @@
   border-color: #7F7F7F;
   margin: 2px;
 }
+*/
 
 /* the notification window */
+/*
 .notificationwin { 
   border-radius: 10px 10px 10px 10px;
   border-width: 2px;
@@ -149,8 +159,9 @@
   border-color: #7F7F7F;
   margin: 2px;
 }
+*/
 
-/* the volume meter */
+/* the volume meter - unused */
 /*
 .vollevelbar trough, progress {
   background-color: white;
@@ -167,13 +178,16 @@
 }*/
 
 /* the clock label */
+/*
 .clocklabel {
   font-family: DIGITALDREAMFAT;
   font-size: 21px;
   color: black;
 }
+*/
 
 /* the timer win */
+/*
 .timerwin button {
   border-radius: 6px;
   border: solid;
@@ -181,12 +195,14 @@
   border-color: #7F7F7F;
   margin: 2px;
 }
+*/
 
 /* the note window */
 .notewin * {
   background-color: @stickynote_color;
 }
 
+/*
 .notewin button {
   border-radius: 6px;
   border: solid;
@@ -194,7 +210,7 @@
   border-color: #7F7F7F;
   margin: 2px;
 }
-
+*/
 /*
 .notewin textview text {
   color: black;
