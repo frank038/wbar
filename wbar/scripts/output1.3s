@@ -1,5 +1,0 @@
-#!/bin/bash
-# output1.3s means the file output1.3s will be executed every 3 seconds
-# output1.3m means the file output1.3m will be executed every 3 minutes
-
-echo " Hi 1 "
