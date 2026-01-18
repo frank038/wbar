@@ -3,6 +3,8 @@ Panel/Bar for wayland
 
 free to use and modify
 
+Download the latest package from the release section.
+
 Wbar is a panel to be used under wayland, if the display server support the layer-shell protocols. All the wlroots based window managers should support wbar.
 
 There is a Gtk3 and a Gtk4 version of wbar.
