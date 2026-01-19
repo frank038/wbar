@@ -9,5 +9,3 @@ MPRIS_IMAGE_SIZE=64
 USE_MPRIS = 2
 # play/pause/stop button size
 button_size = 64
-# increase if the window opens again after it has been closed
-reset_timer = 150
