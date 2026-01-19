@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 0.9.13
+# V. 0.9.14
 
 import os,sys,shutil,stat
 import gi
@@ -630,9 +630,11 @@ class MyWindow(Gtk.Window):
         self.label2_use = _panel_conf["label2"]
         self.task_use = _panel_conf["tasklist"]
         self.clock_use = _panel_conf["clock"]
+        self.temp_clock = None
+        self.temp_clock_format = None
         global USE_TASKBAR
-        if USE_TASKBAR:
-            self.clock_use = 2
+        # if USE_TASKBAR and self.clock_use != 0:
+            # self.clock_use = 2
         self.time_format = _panel_conf["time_format"]
         self.volume_command = _panel_conf["volume_command"]
         self.volume_command_tmp = None
@@ -761,13 +763,15 @@ class MyWindow(Gtk.Window):
         elif USE_TASKBAR == 2:
             self.center_box.set_halign(2)
             
+        self._t_id = None
         self.clock_lbl = Gtk.Label(label="")
         self.clock_lbl_style_context = self.clock_lbl.get_style_context()
         self.clock_lbl_style_context.add_class("clocklabel")
+        
         # clock at center
-        if self.clock_use == 1:
-            self._t_id = None
+        if USE_TASKBAR == 0:
             self.center_box.pack_start(self.clock_lbl,False,False,10)
+        if self.clock_use == 1:
             self.on_set_clock2(self.clock_use)
         
         # tasklist
@@ -782,6 +786,7 @@ class MyWindow(Gtk.Window):
             self.manager = self.context.manager
             self.on_set_tasklist()
         
+        # adds in reverse order
         self.right_box = Gtk.Box.new(0,0)
         self.main_box.pack_end(self.right_box, False, False, 0)
         self.right_box.set_halign(2)
@@ -793,6 +798,10 @@ class MyWindow(Gtk.Window):
         self.otherbutton.add(_img)
         self.otherbutton.connect('button-press-event', self.on_other_button)
         self.right_box.pack_end(self.otherbutton,False,False,10)
+        
+        # clock
+        if USE_TASKBAR != 0:
+            self.right_box.pack_end(self.clock_lbl,False,False,10)
         
         # sticky notes list
         self.list_notes = []
@@ -808,22 +817,11 @@ class MyWindow(Gtk.Window):
         except:
             pass
         
-        # clock at right
-        if self.clock_use == 2:
-            self._t_id = None
-            self.right_box.pack_end(self.clock_lbl,False,False,10)
-            self.on_set_clock2(self.clock_use)
-        
         # tray
         if USE_TRAY:
             self.tray_box = Gtk.Box.new(0,0)
             self.right_box.pack_end(self.tray_box,False,False,0)
             self._app_icon_size = self.win_height-2
-        
-        # notifications
-        if USE_NOTIFICATIONS:
-            self.notification_box = Gtk.Box.new(0,0)
-            self.right_box.pack_end(self.notification_box,False,False,0)
         
         # clipboard
         self.temp_clip = None
@@ -1869,6 +1867,16 @@ class MyWindow(Gtk.Window):
                 _am_pm = ""
             self.clock_lbl.set_label(time.strftime('%I:%M')+_am_pm)
     
+    def on_set_clock2(self, _pos):
+        self._timer = True
+        self.clock_lbl.show()
+        self.set_on_clock()
+        self._t_id = GLib.timeout_add(60000, self.on_clock)
+        # # reorder
+        # if _pos != None:
+            # self.center_box.reorder_child(self.clock_lbl, _pos)
+            # self.center_box.show_all()
+    
     def on_set_clipboard(self, _pos):
         self.clipbutton = Gtk.EventBox()
         _icon_path = os.path.join(_curr_dir,"icons","clipboard.svg")
@@ -1877,29 +1885,10 @@ class MyWindow(Gtk.Window):
         self.clipbutton.add(_img)
         self.clipbutton.connect('button-press-event', self.on_clipboard_button)
         self.right_box.pack_end(self.clipbutton,False,False,4)
-        # reorder
-        if _pos != None:
-            self.right_box.reorder_child(self.clipbutton, _pos)
-            self.right_box.show_all()
-        
-    
-    def on_set_clock2(self, _pos):
-        self.temp_clock = None
-        self._timer = True
-        # self.clock_lbl = Gtk.Label(label="")
-        self.clock_lbl.show()
-        self.set_on_clock()
-        # self.clock_lbl_style_context = self.clock_lbl.get_style_context()
-        # self.clock_lbl_style_context.add_class("clocklabel")
-        # if _pos == 1:
-            # self.center_box.pack_start(self.clock_lbl,False,False,10)
-        # elif _pos == 2:
-            # self.right_box.pack_end(self.clock_lbl,False,False,10)
-        self._t_id = GLib.timeout_add(60000, self.on_clock)
         # # reorder
         # if _pos != None:
-            # self.center_box.reorder_child(self.clock_lbl, _pos)
-            # self.center_box.show_all()
+            # self.right_box.reorder_child(self.clipbutton, _pos)
+            # self.right_box.show_all()
     
     def load_conf(self):
         if not os.path.exists(_panelconf):
@@ -1912,11 +1901,9 @@ class MyWindow(Gtk.Window):
         _ff.close()
     
     def on_save_optional_widget_state(self):
-        if self.temp_clock != None:
-            self._configuration["panel"]["clock"] = int(self.temp_clock)
-            self.clock_use = self.temp_clock
-            self.temp_clock = None
-            if self.clock_use == 0:
+        if self.temp_clock != None or self.temp_clock_format != None:
+            #
+            if self.temp_clock == 0 and self.temp_clock_format == None:
                 self._timer = False
                 # self.center_box.remove(self.clock_lbl)
                 self.clock_lbl.set_label("")
@@ -1924,8 +1911,31 @@ class MyWindow(Gtk.Window):
                 if self._t_id:
                     GLib.source_remove(self._t_id)
                     self._t_id = None
-            elif self.clock_use == 1:
+                #
+                self._configuration["panel"]["clock"] = int(self.temp_clock)
+                self.clock_use = self.temp_clock
+            elif self.temp_clock == 1 and self.temp_clock_format == None:
+                self._configuration["panel"]["clock"] = int(self.temp_clock)
+                self.clock_use = self.temp_clock
                 self.on_set_clock2(0)
+            elif self.temp_clock_format != None:
+                self._timer = False
+                # self.center_box.remove(self.clock_lbl)
+                self.clock_lbl.set_label("")
+                self.clock_lbl.hide()
+                if self._t_id:
+                    GLib.source_remove(self._t_id)
+                    self._t_id = None
+                if self.temp_clock_format != None:
+                    self._configuration["panel"]["time_format"] = int(self.temp_clock_format)
+                    self.time_format = self.temp_clock_format
+                if self.temp_clock != None:
+                    self._configuration["panel"]["clock"] = int(self.temp_clock)
+                    self.clock_use = self.temp_clock
+                self.on_set_clock2(0)
+            #
+            self.temp_clock = None
+            self.temp_clock_format = None
         
         if self.temp_clip != None:
             self._configuration["panel"]["clipboard"] = int(self.temp_clip)
@@ -2045,8 +2055,7 @@ class MyWindow(Gtk.Window):
             self.on_set_win_position(self.win_position)
     
     def on_time_combo(self, _type):
-        if self.clock_use:
-            self.time_format = _type
+        self.temp_clock_format = _type
     
     def set_volume_entry(self, _text):
         self.volume_command_tmp = _text
@@ -2329,16 +2338,6 @@ class MyWindow(Gtk.Window):
                 self._configuration["panel"]["label2"] = self.label2_use
                 self.terminate_thread(2)
                 self.set_timer_label2()
-            # time format
-            if self.clock_use:
-                self._configuration["panel"]["time_format"] = self.time_format
-                self._timer = False
-                if self._t_id:
-                    GLib.source_remove(self._t_id)
-                    self._t_id = None
-                # # self._t_id is True when starts again
-                # self.set_on_clock()
-                # self._t_id = GLib.timeout_add(60000, self.on_clock)
             # volume application
             if self.volume_command_tmp != self.volume_command:
                 if self.volume_command_tmp == None:
@@ -2429,6 +2428,7 @@ class MyWindow(Gtk.Window):
             self.on_close_dialog_conf()
         dialog.destroy()
     
+    # no changes at all
     def on_close_dialog_conf(self):
         old_pos = self._configuration["panel"]["position"]
         if old_pos != self.win_position:
@@ -2436,6 +2436,7 @@ class MyWindow(Gtk.Window):
             self.on_set_win_position(self.win_position)
             self.temp_clip = None
             self.temp_clock = None
+            self.temp_clock_format = None
             self.temp_out1 = None
             self.temp_out2 = None
             self.temp_task = None
@@ -3568,7 +3569,7 @@ class otherWin(Gtk.Window):
         self._stack.add_titled(_stack_vbox1,"Calendar",CALENDAR)
         
         _stack_vbox2 = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=0)
-        # _stack_vbox2.set_homogeneous(True)
+        _stack_vbox2.set_homogeneous(homogeneous=True)
         self._stack.add_titled(_stack_vbox2,"Notifications",NOTIFICATIONS)
         
         _stack_vbox3 = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=0)
