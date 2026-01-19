@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 0.5.1
+# V. 0.6
 
 from PyQt6.QtWidgets import QSystemTrayIcon, QMenu, QLabel, QWidget, QApplication, QBoxLayout, QPushButton, QSlider, QRadioButton, QCheckBox
 from PyQt6.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem, QSizePolicy, QScrollArea
@@ -65,17 +65,10 @@ class myMenu(QMenu):
     
     def sizeHint(self):
         return QSize(int(WIN_WIDTH/self.pixel_ratio),int(WIN_HEIGHT/self.pixel_ratio))
-    
-    def on_timer(self):
-        global menu_is_shown
-        if menu_is_shown == 1 and self.isHidden():
-            menu_is_shown = 0
 
     def hideEvent(self, event):
-        self._timer = QTimer(self)
-        self._timer.setSingleShot(True)
-        self._timer.timeout.connect(self.on_timer)
-        self._timer.start(int(reset_timer))
+        global menu_is_shown
+        menu_is_shown = 0
         super(myMenu, self).hideEvent(event)
 
 
@@ -110,13 +103,16 @@ class SystemTrayIcon(QSystemTrayIcon):
     
     def _activateMenu(self, reason):
         global menu_is_shown
+        # QSystemTrayIcon::MiddleClick
         if reason == QSystemTrayIcon.ActivationReason.Trigger:
             if menu_is_shown == 0:
-                self._myMenu.exec(QCursor.pos())
+                # self._myMenu.exec(QCursor.pos())
+                self._myMenu.show()
                 menu_is_shown = 1
             else:
                 menu_is_shown = 0
-        
+                self._myMenu.hide()
+
        
 # audio
 class winAudio(QWidget):
