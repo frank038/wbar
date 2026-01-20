@@ -18,6 +18,7 @@ Features:
 - taskbar with scrolling support
 - tray
 - notifications (with history)
+- calendar appointments
 - two command outputs
 - sticky notes
 - a timer (gtk3 version)
@@ -41,8 +42,15 @@ Options and configurations:
 - Wbar has a graphical configurator for almost all options.
 
 
+Custom styles:
+In the folder configs is the file panelstyle.css, that can optionally enabled in the configuration dialog. 
 
-Important: it seems that in some cases the lib libgtk4-layer-shell.so.1.0.4 must be preoladed before launching wbar.py (or just launch wbar.sh of the gtk4 version).
+
+The languages files:
+just copy and translate in your language the content of the file EN.py, and rename the new file in LANGUAGE_CODE.py; then choose the LANGUAGE_CODE in the configurator.
+
+The calendar appointments:
+just double click a day to launch a dialog; the new events will be markded in the calendar and list in the appointment section.
 
 The command/env "dbus-update-activation-environment --systemd WAYLAND_DISPLAY DISPLAY XAUTHORITY" may improve the use of the gtk3/4 applications.
 
@@ -63,16 +71,14 @@ The scripts can be of two different types: single shot and continuous shots.
 The single shot script has to be in the form output1.#s (output2.#s) or output1.#m (output2.#m). #s means the script will be executed every # seconds, while #m means the scripts will be executed every # minutes.
 The continuous shot scripts have to be in the form output1.sh and/or output2.sh: the scripts have to be able to output something and to control the whole process.
 
-Custom styles:
-In the folder configs is the file panelstyle.css, that can optionally enabled in the configuration dialog. 
 
-
-The languages files:
-just copy and translate in your language the content of the file EN.py, and rename the new file in LANGUAGE_CODE.py; then choose the LANGUAGE_CODE in the configurator.
 
 ------------------------------
 
 Known issue:
+
+- the gtk4 version: it seems that in some cases the lib libgtk4-layer-shell.so.1.0.4 must be preoladed before launching wbar.py (or just launch wbar.sh of the gtk4 version)
+
 - the gtk4 version: the volume widget may freeze the application randomly (when it happens, it must be executed again; maybe disabling the internal widget and using the external applet may solde the issue).
 
 ![My image](https://github.com/frank038/wbar/blob/main/wbar_01.jpg)
