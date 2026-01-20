@@ -5,5 +5,7 @@
     "reboot": "/usr/bin/systemctl reboot",
     "shutdown": "/usr/bin/systemctl poweroff",
     "note-width": 300,
-    "note-height": 300
+    "note-height": 300,
+    "cal-width": 800,
+    "cal-height": 340
 }
