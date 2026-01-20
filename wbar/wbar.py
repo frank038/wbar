@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 0.9.14
+# V. 0.9.15
 
 import os,sys,shutil,stat
 import gi
@@ -149,7 +149,7 @@ else:
 
 _service_conf = None
 _service_config_file = os.path.join(_curr_dir,"configs","service.json")
-_starting_service_conf = {"wwidth":800,"wheight":600,"logout":"","reboot":"","shutdown":"","note-width":300,"note-height":300}
+_starting_service_conf = {"wwidth":800,"wheight":600,"logout":"","reboot":"","shutdown":"","note-width":300,"note-height":300,"cal-width":300,"cal-height":300}
 if not os.path.exists(_service_config_file):
     try:
         _ff = open(_service_config_file,"w")
@@ -174,6 +174,80 @@ if not os.path.exists(_menu_favorites):
 
 # the language files
 _lang_list = sorted(os.listdir(os.path.join(_curr_dir,"langs")))
+
+
+################ CALENDAR SECTION
+# the database file
+fopen = os.path.join(_curr_dir, "configs/eventdb.ics")
+
+calendar_command = "_internal_"
+# create a calendar file if it doesnt exist
+if calendar_command == "_internal_":
+    if not os.path.exists(fopen):
+        try:
+            f = open(fopen, "w")
+            f.write("""BEGIN:VCALENDAR
+VERSION:2.0
+CALSCALE:GREGORIAN
+END:VCALENDAR""")
+            f.close()
+        except Exception as E:
+            _error_log(str(E))
+            # dialog = DialogBox(None, str(E))
+            # dialog.run()
+            # dialog.destroy()
+            fopen = ""
+
+class calEvent:
+    SUMMARY=None
+    DESCRIPTION=None
+    LOCATION = None
+    DTSTART=None
+    DTEND = None
+
+list_events_all = []
+#
+def get_events():
+    _events = None
+    if os.path.exists(fopen):
+        try:
+            with open(fopen, "r") as f:
+                _events = f.readlines()
+        except:
+            pass
+    else:
+        return
+    #
+    if _events is None:
+        return
+    if _events == []:
+        return
+    #
+    s_event = None
+    for el in _events:
+        if el.strip("\n") == "BEGIN:VEVENT":
+            s_event = calEvent()
+        elif el.strip("\n")[0:8] == "SUMMARY:":
+            s_event.SUMMARY = el.strip("\n")[8:]
+        elif el.strip("\n")[0:12] == "DESCRIPTION:":
+            s_event.DESCRIPTION = el.strip("\n")[12:]
+        elif el.strip("\n")[0:8] == "DTSTART:":
+            s_event.DTSTART = el.strip("\n")[8:]
+        elif el.strip("\n")[0:6] == "DTEND:":
+            s_event.DTEND = el.strip("\n")[6:]
+        elif el.strip("\n")[0:9] == "LOCATION:":
+            s_event.LOCATION = el.strip("\n")[9:]
+        elif el.strip("\n") == "END:VEVENT":
+            list_events_all.append(s_event)
+            s_event = None
+        elif el.strip("\n") == "END:VCALENDAR":
+            s_event = None
+            break
+    
+get_events()
+
+#################
+
 
 qq = queue.Queue(maxsize=1)
 USER_THEME=0
@@ -609,6 +683,11 @@ class MyWindow(Gtk.Window):
         self.note_width_tmp = None
         self.note_height = self.service_conf["note-height"]
         self.note_height_tmp = None
+        # "cal-width":300,"cal-height":300
+        self.cal_width = self.service_conf["cal-width"]
+        self.cal_width_tmp = None
+        self.cal_height = self.service_conf["cal-height"]
+        self.cal_height_tmp = None
         
         # json configuration
         self._configuration = None
@@ -848,6 +927,12 @@ class MyWindow(Gtk.Window):
         gdir3 = Gio.File.new_for_path("/usr/local/share/applications")
         self.monitor3 = gdir3.monitor_directory(Gio.FileMonitorFlags.SEND_MOVED, None)
         self.monitor3.connect("changed", self.directory_changed)
+        # # consecutive change limits
+        # self.monitor1.set_rate_limit(1000)
+        # self.monitor2.set_rate_limit(1000)
+        # self.monitor3.set_rate_limit(1000)
+        
+        # self.menu_update_count = 0
         
         self.show_all()
         
@@ -941,21 +1026,32 @@ class MyWindow(Gtk.Window):
         # toplevel.button.set_label(toplevel.title)
         if toplevel.button._icon == None:
             ICON_SIZE = self.win_height-4
+            # ( toplevel.app_id, toplevel.parent, toplevel.title, toplevel.states)
             ret_icon = self._on_desktop_entry(os.path.basename(toplevel.app_id))
             _img = None
             if ret_icon:
                 try:
-                    _img = Gtk.Image.new_from_icon_name(ret_icon, ICON_SIZE)
+                    if os.path.exists(ret_icon):
+                        pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(ret_icon, ICON_SIZE, ICON_SIZE, 1)
+                        _img = Gtk.Image.new_from_pixbuf(pixbuf)
+                        toplevel.button.set_image(_img)
+                        toplevel.button._icon = 1
                 except:
-                    pass
+                    _img = None
                 #
-                if _img:
-                    # _img.set_pixel_size(self.win_height)
-                    _img.set_pixel_size(ICON_SIZE)
-                    toplevel.button.set_image(_img)
-                    toplevel.button._icon = 1
-                    # _img.set_halign(3)
-                    # _img.set_valign(3)
+                if _img == None:
+                    try:
+                        _img = Gtk.Image.new_from_icon_name(ret_icon, -1)#ICON_SIZE)
+                    except:
+                        _img = None
+                    #
+                    if _img:
+                        # # _img.set_pixel_size(self.win_height)
+                        _img.set_pixel_size(ICON_SIZE)
+                        toplevel.button.set_image(_img)
+                        toplevel.button._icon = 1
+                        # _img.set_halign(3)
+                        # _img.set_valign(3)
             if not ret_icon or not _img:
                 try:
                     pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(os.path.join(_curr_dir,"icons","unknown2.svg"), ICON_SIZE, ICON_SIZE, 1)
@@ -1012,7 +1108,7 @@ class MyWindow(Gtk.Window):
                                 return None
                         except:
                             return None
-        
+        #
         return None
     
     def handle_scroll(self, scroll, event):
@@ -1104,22 +1200,34 @@ class MyWindow(Gtk.Window):
         if self.MW:
             self.MW.close()
             self.MW = None
-        _f_populate_menu()
-    
+        if self.q.empty():
+            _f_populate_menu()
+            self.q.queue.clear()
+        # else:
+            # self.menu_update_count += 1
+        
     def directory_changed(self, monitor, file1, file2, event):
         if (event == Gio.FileMonitorEvent.CREATED):
             self.on_directory_changed(file1.get_path(), "created")
         elif (event == Gio.FileMonitorEvent.DELETED):
             self.on_directory_changed(file1.get_path(), "deleted")
+        # elif (event == Gio.FileMonitorEvent.CHANGED):
+            # self.on_directory_changed(file1.get_path(), "changed")
+        # elif (event == Gio.FileMonitorEvent.RENAMED):
+            # self.on_directory_changed(file1.get_path(), "renamed")
+        elif (event == Gio.FileMonitorEvent.CHANGES_DONE_HINT):
+            self.on_directory_changed(file1.get_path(), "changes_done")
+        # elif (event == Gio.FileMonitorEvent.ATTRIBUTE_CHANGED):
+            # self.on_directory_changed(file1.get_path(), "attributes")
 
     def on_directory_changed(self, _path, _type):
-        try:
-            if self.q.empty():
-                self.q.put("new", timeout=0.001)
-        except:
-            pass
-        
-        if not self.q.empty():
+        # try:
+            # if self.q.empty():
+                # self.q.put("new", timeout=0.001)
+        # except:
+            # pass
+        # if not self.q.empty():
+        if self.q.empty():
             if self.MW:
                 self.MW.close()
                 self.MW = None
@@ -1132,11 +1240,12 @@ class MyWindow(Gtk.Window):
                 for el in _bookmarks[:]:
                     if el.strip("\n") == _path:
                         _bookmarks.remove(el)
+                        #
+                        with open(os.path.join(_curr_dir, "favorites"), "w") as _f:
+                            for el in _bookmarks:
+                                _f.write(el)
+                        #
                         break
-            
-            with open(os.path.join(_curr_dir, "favorites"), "w") as _f:
-                for el in _bookmarks:
-                    _f.write(el)
             
             self.rebuild_menu()
     
@@ -2111,6 +2220,12 @@ class MyWindow(Gtk.Window):
         elif _type == "h":
             self.note_height_tmp = int(_value)
     
+    def set_cal_window_size(self, _type, _value):
+        if _type == "w":
+            self.cal_width_tmp = int(_value)
+        elif _type == "h":
+            self.cal_height_tmp = int(_value)
+    
     def set_clip_window_size(self, _type, _value):
         if _type == "w":
             self.clip_width_tmp = int(_value)
@@ -2308,6 +2423,14 @@ class MyWindow(Gtk.Window):
                 self.note_height = self.note_height_tmp
                 self.service_conf["note-height"] = self.note_height
                 self.note_height_tmp = None
+            if self.cal_width_tmp != None:
+                self.cal_width = self.cal_width_tmp
+                self.service_conf["cal-width"] = self.cal_width
+                self.cal_width_tmp = None
+            if self.cal_height_tmp != None:
+                self.cal_height = self.cal_height_tmp
+                self.service_conf["cal-height"] = self.cal_height
+                self.cal_height_tmp = None
             
             ## PANEL
             if self.temp_clip == False:
@@ -2464,6 +2587,8 @@ class MyWindow(Gtk.Window):
             self._shutdown_tmp = None
             self.note_width_tmp = None
             self.note_height_tmp = None
+            self.cal_width_tmp = None
+            self.cal_height_tmp = None
             
             self.clip_width_tmp = 0
             self.clip_height_tmp = 0
@@ -2801,8 +2926,8 @@ class menuWin(Gtk.Window):
         self.btn_bookmark = None
         # the last category button pressed
         self._btn_toggled = None
-        # populate the menu
-        self.q.put_nowait("new")
+        # # populate the menu
+        # self.q.put_nowait("new")
         # self.on_populate_menu()
         # populate categories
         self.bookmarks = []
@@ -2886,7 +3011,12 @@ class menuWin(Gtk.Window):
         if self._parent.MW:
             self._parent.MW.close()
             self._parent.MW = None
-        _f_populate_menu()
+        if self.q.empty():
+            self.q.put_nowait("new")
+            _f_populate_menu()
+            self.q.queue.clear()
+        # else:
+            # self._parent.menu_update_count += 1
         
     # on iconview
     def mouse_event(self, iv, event):
@@ -2937,15 +3067,18 @@ class menuWin(Gtk.Window):
                     # dialog.destroy()
                     # self._parent.MW = None
                     # self.close()
-        # central mouse button
-        elif event.button == 2:
-            dialog = ynDialog(self, "Rebuild the menu?", "Question")
-            response = dialog.run()
-            if response == Gtk.ResponseType.OK:
-                self.rebuild_menu()
-            dialog.destroy()
-            self._parent.MW = None
-            self.close()
+            return True
+        # # may crash the entire application - disabled
+        # # central mouse button
+        # elif event.button == 2:
+            # dialog = ynDialog(self, "Rebuild the menu?", "Question")
+            # response = dialog.run()
+            # if response == Gtk.ResponseType.OK:
+                # self.rebuild_menu()
+            # dialog.destroy()
+            # self._parent.MW = None
+            # self.close()
+            # return True
     
     # clear icon pressed in the search entry
     def on_icon_press(self, w, p, e):
@@ -3513,6 +3646,199 @@ class menuModify(Gtk.Window):
         self._parent.MM = None
         self.close()
 
+# rebuild the calendar file
+def _rebuild_cal_file():
+    _f = open(fopen, "w")
+    _f.write("BEGIN:VCALENDAR\nVERSION:2.0\nCALSCALE:GREGORIAN\n")
+    for ev in list_events_all:
+        _f.write("BEGIN:VEVENT\nSUMMARY:{}\nLOCATION:{}\nDESCRIPTION:{}\nDTSTART:{}\nDTEND:{}\nEND:VEVENT\n".format(ev.SUMMARY,ev.LOCATION,ev.DESCRIPTION,ev.DTSTART,ev.DTEND))
+    _f.write("END:VCALENDAR")
+    _f.close()
+    
+
+class cal_event(Gtk.Window):
+    def __init__(self, parent, _date, _w = None):
+        super().__init__()
+        
+        self._parent = parent
+        # [year, month, day] - month from 1
+        self._date = _date
+        if self._date == []:
+            _new_date = self._parent._calendar.get_date()
+            self._date = [_new_date.year,int(_new_date.month)+1,_new_date.day]
+        
+        self._list_box = _w
+        
+        self.self_style_context = self.get_style_context()
+        self.self_style_context.add_class("caleventwin")
+        
+        self.set_size_request(self._parent._parent.cal_width, self._parent._parent.cal_height)
+        self.set_title(CALENDAR_ADD)
+        
+        self.connect('delete-event', self.delete_event)
+        self.connect('destroy-event', self.delete_event)
+        
+        self.main_box = Gtk.Box.new(orientation=Gtk.Orientation.VERTICAL,spacing=0)
+        self.main_box.set_margin_start(_pad)
+        self.main_box.set_margin_end(_pad)
+        self.add(self.main_box)
+        
+        self._box = Gtk.Grid.new()
+        self.main_box.pack_start(self._box, True, True, 0)
+        
+        lbl1 = Gtk.Label(label=CAL_SUMMARY)
+        lbl1.set_halign(1)
+        self._box.attach(lbl1,0,0,1,1)
+        self.entry1 = Gtk.Entry.new()
+        self.entry1.set_hexpand(True)
+        self.entry1.set_vexpand(False)
+        self._box.attach_next_to(self.entry1,lbl1,1,2,1)
+        
+        lbl2 = Gtk.Label(label=CAL_LOCATION)
+        lbl2.set_halign(1)
+        self._box.attach(lbl2,0,1,1,1)
+        self.entry2 = Gtk.Entry.new()
+        self.entry2.set_vexpand(False)
+        self._box.attach_next_to(self.entry2,lbl2,1,2,1)
+        
+        lbl3 = Gtk.Label(label=CAL_DATE)
+        lbl3.set_halign(1)
+        self._box.attach(lbl3,0,2,1,1)
+        self.entry3 = Gtk.Entry.new()
+        self.entry3.set_vexpand(False)
+        self.entry3.set_state_flags(Gtk.StateFlags.INSENSITIVE, True)
+        self.entry3.set_text("{}/{}/{}".format(self._date[0],self._date[1]+1,self._date[2]))
+        self._box.attach_next_to(self.entry3,lbl3,1,2,1)
+        
+        lbl4 = Gtk.Label(label=CAL_TIME)
+        lbl4.set_halign(1)
+        self._box.attach(lbl4,0,3,1,1)
+        self.entry4 = Gtk.ComboBoxText.new()
+        for ii in range(0,24,1):
+            self.entry4.append_text("{:02d}".format(ii))
+        self.entry4.set_active(0)
+        self._box.attach_next_to(self.entry4,lbl4,1,1,1)
+        #
+        self.entry42 = Gtk.ComboBoxText.new()
+        for iii in range(0,60,5):
+            self.entry42.append_text("{:02d}".format(iii))
+        self.entry42.set_active(0)
+        self._box.attach_next_to(self.entry42,self.entry4,1,1,1)
+        
+        separator = Gtk.Separator()
+        separator.set_orientation(orientation=Gtk.Orientation.HORIZONTAL)
+        self.main_box.pack_start(separator, True, True, 0)
+        
+        lbl5 = Gtk.Label(label=CAL_DESCRIPTION)
+        lbl5.set_halign(1)
+        self._box.attach(lbl5,0,5,1,1)
+        self.entry5 = Gtk.TextView.new()
+        self.entry5.set_wrap_mode(Gtk.WrapMode.WORD_CHAR)
+        self.entry5.set_vexpand(True)
+        #
+        _scrolledwin5 = Gtk.ScrolledWindow()
+        _scrolledwin5.set_overlay_scrolling(True)
+        _scrolledwin5.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        _scrolledwin5.set_vexpand(True)
+        self._box.attach_next_to(_scrolledwin5,lbl5,1,2,100)
+        _scrolledwin5.add(self.entry5)
+        
+        self.btn_box = Gtk.Box.new(orientation=Gtk.Orientation.HORIZONTAL,spacing=0)
+        self.main_box.pack_start(self.btn_box, False, False, 0)
+        
+        btn_close = Gtk.Button(label=CAL_CLOSE)
+        btn_close.connect('clicked', self.delete_event)
+        self.btn_box.pack_start(btn_close, True, True, 0)
+        
+        btn_accept = Gtk.Button(label=CAL_ACCEPT)
+        btn_accept.connect('clicked', self.on_accept)
+        self.btn_box.pack_start(btn_accept, True, True, 0)
+        
+        self.show_all()
+        
+    def on_accept(self, btn):
+        global list_events_all
+        _t1 = self.entry1.get_text() # summary
+        _t2 = self.entry2.get_text() # location
+        _b = self.entry5.get_buffer() # description
+        _i1 = _b.get_start_iter()
+        _i2 = _b.get_end_iter()
+        _t5 = _b.get_text(_i1,_i2,False).replace("\n","\\n")
+        # 20260120T201000
+        _t3 = "{}{:02d}{:02d}T{:02d}{:02d}00".format(self._date[0],self._date[1],self._date[2],int(self.entry4.get_active_text()),int(self.entry42.get_active_text()))
+        _t4 = _t3 # date end
+        #
+        _ev = calEvent()
+        _ev.SUMMARY = _t1
+        _ev.DESCRIPTION = _t5
+        _ev.LOCATION = _t2
+        _ev.DTSTART = _t3
+        _ev.DTEND = _t3
+        #
+        # list_events_all.append(_ev)
+        #
+        if list_events_all == []:
+            list_events_all.append(_ev)
+        else:
+            try:
+                is_inserted = 0
+                _l = len(list_events_all)
+                for i,e in enumerate(list_events_all[::-1]):
+                    if str(_ev.DTSTART) >= str(e.DTSTART):
+                        list_events_all.insert(_l-i, _ev)
+                        is_inserted = 1
+                        break
+                if is_inserted == 0:
+                    list_events_all.insert(0,_ev)
+            except Exception as E:
+                pass
+        #
+        # rebuild the file file 
+        _rebuild_cal_file()
+        # update the event list
+        try:
+            # empty the list
+            _rrow = self._list_box.get_row_at_index(0)
+            while _rrow != None:
+                self._list_box.remove(_rrow)
+                _rrow = self._list_box.get_row_at_index(0)
+            # populate the list
+            for _ev in list_events_all:
+                row = Gtk.ListBoxRow()
+                hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=2)
+                row.add(hbox)
+                
+                _lbl_ev = Gtk.Label()
+                _lbl_ev.set_single_line_mode(False)
+                _lbl_ev.set_line_wrap(True)
+                _lbl_ev.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
+                _lbl_ev.set_use_markup(True)
+                _lbl_ev.set_markup("<b>{}</b>\n{}".format(_ev.SUMMARY,_ev.DTSTART))
+                _lbl_ev.set_tooltip_text("{}\n{}".format(_ev.LOCATION,_ev.DESCRIPTION))
+                _lbl_ev.set_xalign(0)
+                hbox.pack_start(_lbl_ev,True,True,4)
+                
+                _remove_btn = Gtk.Button()
+                try:
+                    pixbuf = Gtk.IconTheme().load_icon("gtk-delete", 24, Gtk.IconLookupFlags.FORCE_SVG)
+                    _img = Gtk.Image.new_from_pixbuf(pixbuf)
+                    _remove_btn.set_image(_img)
+                except:
+                    _remove_btn.set_label("X")
+                
+                _remove_btn.connect('clicked', self._parent.on_remove_btn, _ev, row)
+                hbox.pack_start(_remove_btn,False,False,0)
+                
+                self._list_box.add(row)
+        except Exception as E:
+            pass
+        #
+        self.close()
+        
+    def delete_event(self, btn, event=None):
+        self.close()
+        return False
+
 
 
 class otherWin(Gtk.Window):
@@ -3568,6 +3894,9 @@ class otherWin(Gtk.Window):
         _stack_vbox1 = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=0)
         self._stack.add_titled(_stack_vbox1,"Calendar",CALENDAR)
         
+        _stack_vbox4 = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=0)
+        self._stack.add_titled(_stack_vbox4,"Appointments",CAL_EVENTS)
+        
         _stack_vbox2 = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=0)
         _stack_vbox2.set_homogeneous(homogeneous=True)
         self._stack.add_titled(_stack_vbox2,"Notifications",NOTIFICATIONS)
@@ -3581,14 +3910,77 @@ class otherWin(Gtk.Window):
         self.main_box.pack_start(self._stacksw, False, True, _pad)
         self.main_box.pack_start(self._stack, True, True, 0)
         
-        # Calendar
+        ## CALENDAR
         self._calendar = Gtk.Calendar()
         # self._calendar.connect('day-selected',self.on_selected_day)
-        # self._calendar.connect('day-selected-double-click',self.on_activated_day)
+        self._calendar.connect('day-selected-double-click',self.on_activated_day)
+        self._calendar.connect('month-changed', self.on_month_changed)
         # self._calendar.mark_day(30)
         # self._calendar.props.show_details = True
         # self._calendar.set_detail_func(self.on_cal_events, None)
         _stack_vbox1.pack_start(self._calendar, True, True, 0)
+        
+        ## CALENDAR APPOINTMENTS
+        self.list_box_c = Gtk.ListBox()
+        self.list_box_c.set_selection_mode(Gtk.SelectionMode.SINGLE)
+        self.list_box_c.set_hexpand(True)
+        #self.list_box_c.connect('row-activated', self.on_row_activated_c)
+        _scrolledwin_c = Gtk.ScrolledWindow()
+        _scrolledwin_c.set_property("propagate-natural-width", True)
+        _scrolledwin_c.set_overlay_scrolling(True)
+        _scrolledwin_c.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        _stack_vbox4.pack_start(_scrolledwin_c, True, True, 6)
+        _scrolledwin_c.add(self.list_box_c)
+        # # separator
+        # separator_c = Gtk.Separator()
+        # separator_c.set_orientation(Gtk.Orientation.HORIZONTAL)
+        # _stack_vbox4.pack_start(separator_c, False, False, 0)
+        # #
+        # _btn_c = Gtk.Button(label="Aggiungi un evento")
+        # _btn_c.connect('clicked', self.on_btn_c)
+        # _stack_vbox4.pack_start(_btn_c, False, False, 6)
+        
+        # update the event list
+        try:
+            _rrow = self.list_box_c.get_row_at_index(0)
+            while _rrow != None:
+                self.list_box_c.remove(_rrow)
+                _rrow = self.list_box_c.get_row_at_index(0)
+                
+            for _ev in list_events_all:
+                # self._list_box
+                row = Gtk.ListBoxRow()
+                row.ev = _ev
+                hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=2)
+                row.add(hbox)
+                
+                _lbl_ev = Gtk.Label()
+                _lbl_ev.set_single_line_mode(False)
+                _lbl_ev.set_line_wrap(True)
+                _lbl_ev.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
+                _lbl_ev.set_use_markup(True)
+                _ev_date_tmp,_ev_time_tmp = _ev.DTSTART.split("T")
+                _ev_date = datetime.datetime.strptime(str(_ev_date_tmp), '%Y%m%d').strftime('%Y-%b-%d')
+                _ev_time = "{}:{}".format(_ev_time_tmp[0:2],_ev_time_tmp[2:4])
+                _lbl_ev.set_markup("<b>{}</b>\n{} {}".format(_ev.SUMMARY,_ev_date, _ev_time))
+                _lbl_ev.set_tooltip_text("{}: {}\n{}: {}".format(CAL_LOCATION2,_ev.LOCATION,CAL_DESCRIPTION2,_ev.DESCRIPTION.replace("\\n","\n")))
+                _lbl_ev.set_xalign(0)
+                hbox.pack_start(_lbl_ev,True,True,4)
+                
+                _remove_btn = Gtk.Button()
+                try:
+                    pixbuf = Gtk.IconTheme().load_icon("gtk-delete", 24, Gtk.IconLookupFlags.FORCE_SVG)
+                    _img = Gtk.Image.new_from_pixbuf(pixbuf)
+                    _remove_btn.set_image(_img)
+                except:
+                    _remove_btn.set_label("X")
+                
+                _remove_btn.connect('clicked', self.on_remove_btn_c, _ev, row)
+                hbox.pack_start(_remove_btn,False,False,0)
+                
+                self.list_box_c.add(row)
+        except Exception as E:
+            pass
         
         ## NOTIFICATIONS
         self.list_box = Gtk.ListBox()
@@ -3688,8 +4080,10 @@ class otherWin(Gtk.Window):
         self.show_hide_notes.connect('clicked', self.on_show_hide_notes)
         _stack_vbox3.add(self.show_hide_notes)
         
-        ##############
-        
+        separator = Gtk.Separator()
+        separator.set_orientation(Gtk.Orientation.HORIZONTAL)
+        _stack_vbox3.pack_start(separator, True, True, 0)
+        # timer
         self.timer_btn = Gtk.Button.new()
         if self._parent._is_timer_set == 0:
             self.timer_btn.set_label(SET_TIMER)
@@ -3697,11 +4091,13 @@ class otherWin(Gtk.Window):
             self.timer_btn.set_label(TIMER_SETTED)
         self.timer_btn.set_relief(Gtk.ReliefStyle.NONE)
         self.timer_btn.connect('clicked', self.on_timer_btn)
-        self.main_box.pack_start(self.timer_btn,False,True,4)
+        _stack_vbox3.pack_start(self.timer_btn,False,True,4)
+        
+        ##############
         
         separator = Gtk.Separator()
         separator.set_orientation(Gtk.Orientation.HORIZONTAL)
-        self.main_box.pack_start(separator, False, False, 0)
+        self.main_box.pack_start(separator, True, True, 0)
         
         self.btn_box = Gtk.Box.new(0,0)
         self.btn_box.set_margin_bottom(_pad)
@@ -3725,7 +4121,20 @@ class otherWin(Gtk.Window):
         exit_btn.connect('clicked', self.on_exit_btn)
         self.btn_box.pack_start(exit_btn,False,False,0)
         
+        self.on_mark_calendar(self._calendar)
+        
         self.show_all()
+        
+    # def on_btn_c(self, btn):
+        # cal_event(self, [])
+        
+    def on_remove_btn_c(self, btn, _ev, row):
+        global list_events_all
+        self.list_box_c.remove(row)
+        if _ev in list_events_all:
+            list_events_all.remove(_ev)
+        # rebuil the calendar file
+        _rebuild_cal_file()
         
     def on_add_note(self, btn):
         if self._parent.OW:
@@ -3836,11 +4245,26 @@ class otherWin(Gtk.Window):
         pass
     
     def on_activated_day(self, _calendar):
-        pass
+        _date = _calendar.get_date()
+        cal_event(self, [_date.year, int(_date.month)+1, _date.day], self.list_box_c)
     
-    def on_cal_events(self, _cal, _y,_m,_d, data):
-        if _y == 2024 and _m == 10 and _d == 29:
-            return "10.15"
+    def on_month_changed(self, _calendar):
+        _calendar.clear_marks()
+        self.on_mark_calendar(_calendar)
+        
+    def on_mark_calendar(self, _calendar):
+        _year = int(_calendar.get_date().year)
+        _month = int("{:02d}".format(int(_calendar.get_date().month)+1))
+        for _ev in list_events_all:
+            _y = int(_ev.DTSTART.split("T")[0][0:4])
+            _m = int(_ev.DTSTART.split("T")[0][4:6])
+            _d = int(_ev.DTSTART.split("T")[0][6:8])
+            if _year == _y and _month == _m:
+                _calendar.mark_day(_d)
+    
+    # def on_cal_events(self, _cal, _y,_m,_d, data):
+        # if _y == 2024 and _m == 10 and _d == 29:
+            # return "10.15"
     
     def on_focus_out(self, win, event):
         # self.close()
@@ -4392,6 +4816,25 @@ class DialogConfiguration(Gtk.Dialog):
         note_h_spinbtn.connect('value-changed', self.on_note_wh_spinbtn, "h")
         note_h_spinbtn.set_input_purpose(Gtk.InputPurpose.DIGITS)
         
+        # calendar appointment window
+        _cal_w_lbl = Gtk.Label(label=CAL_WINDOW_WIDTH)
+        _cal_w_lbl.set_halign(1)
+        self.page3_box.attach(_cal_w_lbl,0,9,1,1)
+        cal_w_spinbtn = Gtk.SpinButton.new_with_range(0,4000,1)
+        cal_w_spinbtn.set_value(self._parent.cal_width)
+        self.page3_box.attach_next_to(cal_w_spinbtn,_cal_w_lbl,1,1,1)
+        cal_w_spinbtn.connect('value-changed', self.on_cal_wh_spinbtn, "w")
+        cal_w_spinbtn.set_input_purpose(Gtk.InputPurpose.DIGITS)
+        
+        _cal_h_lbl = Gtk.Label(label=CAL_WINDOW_HEIGHT)
+        _cal_h_lbl.set_halign(1)
+        self.page3_box.attach(_cal_h_lbl,0,10,1,1)
+        cal_h_spinbtn = Gtk.SpinButton.new_with_range(0,4000,1)
+        cal_h_spinbtn.set_value(self._parent.cal_height)
+        self.page3_box.attach_next_to(cal_h_spinbtn,_cal_h_lbl,1,1,1)
+        cal_h_spinbtn.connect('value-changed', self.on_cal_wh_spinbtn, "h")
+        cal_h_spinbtn.set_input_purpose(Gtk.InputPurpose.DIGITS)
+        
         
         ## CLIPBOARD
         if USE_CLIPBOARD and self._parent.clipboard_use:
@@ -4692,6 +5135,9 @@ class DialogConfiguration(Gtk.Dialog):
     
     def on_note_wh_spinbtn(self, btn, _type):
         self._parent.set_note_window_size(_type, btn.get_value_as_int())
+        
+    def on_cal_wh_spinbtn(self, btn, _type):
+        self._parent.set_cal_window_size(_type, btn.get_value_as_int())
         
     #### clipboard
     def on_clip_wh_spinbtn(self, btn, _type):
