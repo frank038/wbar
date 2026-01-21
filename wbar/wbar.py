@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 0.9.15
+# V. 0.9.16
 
 import os,sys,shutil,stat
 import gi
@@ -116,7 +116,7 @@ if USE_TASKBAR:
 _starting_conf = {"panel":{"height":30,"width":0,"corner-top":30,\
     "corner-bottom":0,"position":1,"clipboard":1,\
     "label1":0,"label2":0,"tasklist":1,"clock":1,"time_format":0,\
-    "volume_command":""} }
+    "show_notes":0,"volume_command":""} }
 
 if is_wayland:
     if not shutil.which("wl-paste"):
@@ -715,6 +715,8 @@ class MyWindow(Gtk.Window):
         # if USE_TASKBAR and self.clock_use != 0:
             # self.clock_use = 2
         self.time_format = _panel_conf["time_format"]
+        self.show_notes = _panel_conf["show_notes"]
+        self.show_notes_tmp = None
         self.volume_command = _panel_conf["volume_command"]
         self.volume_command_tmp = None
         
@@ -807,11 +809,20 @@ class MyWindow(Gtk.Window):
         self.main_box.pack_start(self.left_box, False, False, 0)
         self.left_box.set_halign(1)
         
+        # menu icons
+        _icon_path_menu = os.path.join(_curr_dir,"icons","menu.svg")
+        _pixbf_menu = GdkPixbuf.Pixbuf.new_from_file_at_size(_icon_path_menu, self.win_height,self.win_height)
+        self._img_menu = Gtk.Image.new_from_pixbuf(_pixbf_menu)
+        #
+        _icon_path_other_menu = os.path.join(_curr_dir,"icons","other_menu.svg")
+        _pixbf_other_menu = GdkPixbuf.Pixbuf.new_from_file_at_size(_icon_path_other_menu, self.win_height,self.win_height)
+        self._img_other_menu = Gtk.Image.new_from_pixbuf(_pixbf_other_menu)
+        
         self.menubutton = Gtk.EventBox()
-        _icon_path = os.path.join(_curr_dir,"icons","menu.svg")
-        _pixbf = GdkPixbuf.Pixbuf.new_from_file_at_size(_icon_path, self.win_height,self.win_height)
-        _img = Gtk.Image.new_from_pixbuf(_pixbf)
-        self.menubutton.add(_img)
+        if self.menu_win_position in [0,1]:
+            self.menubutton.add(self._img_menu)
+        else:
+            self.menubutton.add(self._img_other_menu)
         self.menubutton.connect('button-press-event', self.on_button1_clicked)
         self.left_box.pack_start(self.menubutton,False,False,10)
         # output1
@@ -871,10 +882,10 @@ class MyWindow(Gtk.Window):
         self.right_box.set_halign(2)
         
         self.otherbutton = Gtk.EventBox()
-        _icon_path = os.path.join(_curr_dir,"icons","other_menu.svg")
-        _pixbf = GdkPixbuf.Pixbuf.new_from_file_at_size(_icon_path, self.win_height,self.win_height)
-        _img = Gtk.Image.new_from_pixbuf(_pixbf)
-        self.otherbutton.add(_img)
+        if self.menu_win_position in [0,1]:
+            self.otherbutton.add(self._img_other_menu)
+        else:
+            self.otherbutton.add(self._img_menu)
         self.otherbutton.connect('button-press-event', self.on_other_button)
         self.right_box.pack_end(self.otherbutton,False,False,10)
         
@@ -889,10 +900,13 @@ class MyWindow(Gtk.Window):
             _list_notes = os.listdir(os.path.join(_curr_dir,"notes"))
             if _list_notes:
                 for el in _list_notes:
-                    with open(os.path.join(_curr_dir,"notes",el)) as ffile:
-                        _note = ffile.read()
-                        _notedialog = noteDialog(self, _note, el)
-                        self.list_notes.append(_notedialog)
+                    ffile =  open(os.path.join(_curr_dir,"notes",el))
+                    _note = ffile.read()
+                    ffile.close()
+                    _notedialog = noteDialog(self, _note, el)
+                    self.list_notes.append(_notedialog)
+                    if self.show_notes == 1:
+                        _notedialog.show_all()
         except:
             pass
         
@@ -2183,6 +2197,8 @@ class MyWindow(Gtk.Window):
         elif _n == "notification":
             self.notification_conf["use_this"] = int(_state)
             self.not_use = int(_state)
+        elif _n == "note":
+            self.show_notes_tmp = int(_state)
     
     def set_not_window_size(self, _type, _value):
         if _type == "w":
@@ -2381,6 +2397,19 @@ class MyWindow(Gtk.Window):
                 self.menu_win_position = self.menu_win_position_tmp
                 self.menu_conf["win_position"] = self.menu_win_position
                 self.menu_win_position_tmp = None
+                #
+                _w = self.menubutton.get_child()
+                _w2 = self.otherbutton.get_child()
+                if isinstance(_w, Gtk.Image) and isinstance(_w2, Gtk.Image):
+                    self.menubutton.remove(_w)
+                    self.otherbutton.remove(_w2)
+                    if self.menu_win_position in [0,1]:
+                        self.menubutton.add(self._img_menu)
+                        self.otherbutton.add(self._img_other_menu)
+                    else:
+                        self.menubutton.add(self._img_other_menu)
+                        self.otherbutton.add(self._img_menu)
+                    
             if self.menu_editor_tmp != None:
                 self.menu_editor = self.menu_editor_tmp
                 self.menu_conf["menu_editor"] = self.menu_editor
@@ -2461,6 +2490,11 @@ class MyWindow(Gtk.Window):
                 self._configuration["panel"]["label2"] = self.label2_use
                 self.terminate_thread(2)
                 self.set_timer_label2()
+            # notes at start
+            if self.show_notes_tmp != None:
+                self.show_notes = self.show_notes_tmp
+                self._configuration["panel"]["show_notes"] = self.show_notes
+                self.show_notes_tmp = None
             # volume application
             if self.volume_command_tmp != self.volume_command:
                 if self.volume_command_tmp == None:
@@ -2565,7 +2599,7 @@ class MyWindow(Gtk.Window):
             self.temp_task = None
             if self.clock_use:
                 self.time_format = self._configuration["panel"]["time_format"]
-            
+            self.show_notes_tmp = None
             self.volume_command_tmp = None
             
             self.menu_width_tmp = 0
@@ -4123,6 +4157,8 @@ class otherWin(Gtk.Window):
         
         self.on_mark_calendar(self._calendar)
         
+        
+        
         self.show_all()
         
     # def on_btn_c(self, btn):
@@ -4154,7 +4190,7 @@ class otherWin(Gtk.Window):
             el.show_all()
         
         # _notedialog = noteDialog(self, "", time_now)
-        _notedialog = noteDialog(self, "", str(time_now)+"_0_0")
+        _notedialog = noteDialog(self._parent, "", str(time_now)+"_0_0")
         _notedialog.show_all()
     
     def on_show_hide_notes(self, btn):
@@ -4304,7 +4340,7 @@ class noteDialog(Gtk.Window):
         
         # self.set_default_size(300, 300)
         # self.set_size_request(300, 300)
-        self.set_size_request(self._parent._parent.note_width, self._parent._parent.note_height)
+        self.set_size_request(self._parent.note_width, self._parent.note_height)
         
         # # do not use
         # _bc = red
@@ -4404,8 +4440,8 @@ class noteDialog(Gtk.Window):
             try:
                 with open(os.path.join(self.path_notes,self._id+"_"+str(_x)+"_"+str(_y)),"w") as ffile:
                     ffile.write(textview_text)
-                if not self._id in self._parent._parent.list_notes:
-                    self._parent._parent.list_notes.append(self)
+                if not self._id in self._parent.list_notes:
+                    self._parent.list_notes.append(self)
             except:
                 pass
     
@@ -4641,6 +4677,15 @@ class DialogConfiguration(Gtk.Dialog):
         # if USE_TASKBAR > 0:
             # clock_sw.set_sensitive(False)
             # _time_format.set_sensitive(False)
+        # notes
+        note_lbl = Gtk.Label(label=NOTES2)
+        self.page1_box.attach(note_lbl,0,11,1,1)
+        note_lbl.set_halign(1)
+        note_sw = Gtk.Switch.new()
+        note_sw.set_halign(1)
+        note_sw.set_active(self._parent.show_notes)
+        note_sw.connect('notify::active', self.on_switch, "note")
+        self.page1_box.attach_next_to(note_sw,note_lbl,1,1,1)
         
         ## MENU
         menu_lbl_w = Gtk.Label(label=WIDTH)
