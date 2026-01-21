@@ -11,6 +11,7 @@
         "tasklist": 1,
         "clock": 1,
         "time_format": 0,
-        "volume_command": "pavucontrol-qt"
+        "show_notes": 0,
+        "volume_command": ""
     }
 }

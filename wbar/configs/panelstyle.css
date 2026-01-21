@@ -42,6 +42,10 @@
   border: 1px solid black;
 }*/
 
+#tasklist button {
+  border: 1px solid transparent;
+}
+
 #tasklist button:hover,
 #tasklist button:checked {
   box-shadow: 0px 0px 5px rgba(128, 128, 128, 0.7) inset;
@@ -201,6 +205,12 @@
 .notewin * {
   background-color: @stickynote_color;
 }
+/*.notewin button:hover>label {
+  background-color: #BFBFBF;
+}*/
+.notewin button:hover:active>label {
+  background-color: #BFBFBF;
+}
 
 /*
 .notewin button {
@@ -215,3 +225,8 @@
 .notewin textview text {
   color: black;
 }*/
+
+/*
+.calendarwin {
+}
+*/
