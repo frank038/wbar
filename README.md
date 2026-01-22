@@ -36,7 +36,7 @@ Requirements:
 - pyqt6 for the internal menu editor and for the applets
 
 How to use:
-- just unzip the archive and launch waybar.sh
+- just unzip the archive and launch waybar_launch.sh/waybar.sh
 
 Options and configurations:
 - Wbar has a graphical configurator for almost all options.
