@@ -4,6 +4,7 @@
     "logout": "labwc -e",
     "reboot": "/usr/bin/systemctl reboot",
     "shutdown": "/usr/bin/systemctl poweroff",
+    "lock": "",
     "note-width": 300,
     "note-height": 300,
     "cal-width": 800,

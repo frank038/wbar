@@ -3,5 +3,6 @@
     "use-tray": 1,
     "double-click": 0,
     "use-taskbar": 3,
-    "use-css": 1
+    "use-css": 1,
+    "other_icon_size": 24
 }
