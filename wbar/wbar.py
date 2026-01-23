@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-# V. 0.9.17
+# V. 1.0
 
-import os,sys,shutil,stat
+import os,sys,shutil
 import gi
 gi.require_version('Gtk', '3.0')
 gi.require_version('Gdk', '3.0')
@@ -15,7 +15,7 @@ from threading import Thread
 from threading import Event
 import queue
 from subprocess import check_output, Popen, PIPE, CalledProcessError
-import signal
+# import signal
 import psutil
 import time, datetime
 import dbus
@@ -76,7 +76,7 @@ if not os.path.exists(os.path.join(_curr_dir,"notes")):
 # other options
 _other_settings_conf = None
 _other_settings_config_file = os.path.join(_curr_dir,"configs","other_settings.json")
-_starting_other_settings_conf = {"pad-value":4,"use-tray":0,"double-click":0,"use-taskbar":0,"use-css": 1,"other_icon_size": 0}
+_starting_other_settings_conf = {"pad-value":4,"use-tray":1,"double-click":0,"use-taskbar":1,"use-css": 1,"other_icon_size": 24}
 if not os.path.exists(_other_settings_config_file):
     try:
         _ff = open(_other_settings_config_file,"w")
@@ -114,7 +114,7 @@ if USE_TASKBAR:
     from wl_framework.protocols.foreign_toplevel import ForeignTopLevel
 
 # default configuration
-_starting_conf = {"panel":{"height":30,"width":0,"corner-top":30,\
+_starting_conf = {"panel":{"height":30,"width":0,"corner-top":0,\
     "corner-bottom":0,"position":1,"clipboard":1,\
     "label1":0,"label2":0,"tasklist":1,"clock":1,"time_format":0,\
     "show_notes":0,"volume_command":""} }
@@ -129,8 +129,9 @@ _panelconf = os.path.join(_curr_dir, "configs/panelconfg.json")
 _menu_conf = None
 _menu_config_file = os.path.join(_curr_dir,"configs","menu.json")
 # live_search: num. of chars to perform a seeking; win_position: 0 left - 1 center
-_starting_menu_conf = {"wwidth":880,"wheight":600,"terminal":"xfce4-terminal",\
-"cat_icon_size":64,"item_icon_size":64,"item_width":0,"live_search":3,"win_position":0,"menu_editor":""}
+_starting_menu_conf = {"wwidth":880,"wheight":600,"terminal":"",\
+"cat_icon_size":64,"item_icon_size":64,"item_width":0,"live_search":3,"win_position":0,"menu_editor":"_internal_",\
+"menu-style":2,"menu-label":1}
 
 if not os.path.exists(_menu_config_file):
     try:
@@ -147,10 +148,9 @@ else:
     _menu_conf = json.load(_ff)
     _ff.close()
 
-
 _service_conf = None
 _service_config_file = os.path.join(_curr_dir,"configs","service.json")
-_starting_service_conf = {"wwidth":800,"wheight":600,"logout":"","reboot":"","shutdown":"","lock":"","note-width":300,"note-height":300,"cal-width":300,"cal-height":300}
+_starting_service_conf = {"wwidth":0,"wheight":0,"logout":"","reboot":"/usr/bin/systemctl reboot","shutdown":"/usr/bin/systemctl poweroff","lock":"","note-width":300,"note-height":300,"cal-width":300,"cal-height":300}
 if not os.path.exists(_service_config_file):
     try:
         _ff = open(_service_config_file,"w")
@@ -662,6 +662,13 @@ class MyWindow(Gtk.Window):
         self.menu_win_position_tmp = None
         self.menu_editor = self.menu_conf["menu_editor"]
         self.menu_editor_tmp = None
+        #
+        # 0 top - 1 cat right - 2 cat left
+        self.user_menu_style = self.menu_conf["menu-style"]
+        self.user_menu_style_tmp = None
+        # 0 no - 1 yes (only with USER_MENU_STYLE not 0)
+        self.user_menu_label = self.menu_conf["menu-label"]
+        self.user_menu_label_tmp = None
         
         self.service_conf = _service_conf
         self.service_width = self.service_conf["wwidth"]
@@ -2147,6 +2154,10 @@ class MyWindow(Gtk.Window):
     def on_menu_win_position(self, _type, _value):
         if _type == "pos":
             self.menu_win_position_tmp = _value
+        elif _type == "style":
+            self.user_menu_style_tmp = _value
+        elif _type == "label":
+            self.user_menu_label_tmp = _value
     
     def set_width_size(self, panel_width):
         self.win_width = int(panel_width)
@@ -2425,6 +2436,16 @@ class MyWindow(Gtk.Window):
                 self.menu_conf["menu_editor"] = self.menu_editor
                 self.menu_editor_tmp = None
             
+            if self.user_menu_style_tmp != None:
+                self.user_menu_style = self.user_menu_style_tmp
+                self.menu_conf["menu-style"] = self.user_menu_style
+                self.user_menu_style_tmp = None
+                
+            if self.user_menu_label_tmp != None:
+                self.user_menu_label = self.user_menu_label_tmp
+                self.menu_conf["menu-label"] = self.user_menu_label
+                self.user_menu_label_tmp = None
+            
             ## SERVICE
             if self.service_width_tmp != self.service_width:
                 self.service_width = self.service_width_tmp
@@ -2639,6 +2660,8 @@ class MyWindow(Gtk.Window):
             self.menu_live_search_tmp = None
             self.menu_win_position_tmp = None
             self.menu_editor_tmp = None
+            self.user_menu_style_tmp = None
+            self.user_menu_label_tmp = None
             
             self.service_width_tmp = 0
             self.service_height_tmp = 0
@@ -2855,11 +2878,23 @@ class menuWin(Gtk.Window):
         self.BTN_ICON_SIZE = self._parent.menu_cat_icon_size
         self.ICON_SIZE = self._parent.menu_item_icon_size
         
-        # category box
-        self.cbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
-        self.cbox.set_homogeneous(True)
-        self.main_box.pack_start(self.cbox, False, False, 4)
+        #
+        if self._parent.user_menu_style != 0:
+            self.user_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+            self.main_box.pack_start(self.user_box, True, True, 0)
         
+        # category box
+        if self._parent.user_menu_style == 0:
+            self.cbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+            self.cbox.set_homogeneous(True)
+            self.main_box.pack_start(self.cbox, False, False, 0)
+        else:
+            self.cbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+            self.cbox.set_homogeneous(True)
+            # at left
+            if self._parent.user_menu_style == 2:
+                self.user_box.pack_start(self.cbox, False, False, 0)
+            
         # # separator
         # separator = Gtk.Separator()
         # separator.set_orientation(Gtk.Orientation.HORIZONTAL)
@@ -2870,7 +2905,15 @@ class menuWin(Gtk.Window):
         self.ivbox.set_homogeneous(True)
         self.ivbox.set_hexpand(True)
         self.ivbox.set_vexpand(True)
-        self.main_box.pack_start(self.ivbox, True, True, 0)
+        if self._parent.user_menu_style == 0:
+            self.main_box.pack_start(self.ivbox, True, True, 0)
+        # at right
+        elif self._parent.user_menu_style == 1:
+                self.user_box.pack_start(self.ivbox, True, True, 0)
+                self.user_box.pack_start(self.cbox, False, False, 0)
+        # at left
+        else:
+            self.user_box.pack_start(self.ivbox, True, True, 0)
         
         # scrolled window
         self.scrolledwindow = Gtk.ScrolledWindow()
@@ -2911,10 +2954,10 @@ class menuWin(Gtk.Window):
         self.iconview.connect("item-activated", self.on_iv_item_activated)
         self.iconview.connect("button_press_event", self.mouse_event)
         self.scrolledwindow.add(self.iconview)
-        # separator
-        separator = Gtk.Separator()
-        separator.set_orientation(Gtk.Orientation.HORIZONTAL)
-        self.main_box.pack_start(separator, False, False, 4)
+        # # separator
+        # separator = Gtk.Separator()
+        # separator.set_orientation(Gtk.Orientation.HORIZONTAL)
+        # self.main_box.pack_start(separator, False, False, 4)
         # search box
         self.scbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
         self.scbox.set_homogeneous(True)
@@ -2950,7 +2993,7 @@ class menuWin(Gtk.Window):
         # self.main_box.pack_start(separator, False, False, 4)
         
         # service buttons
-        self.btn_box = Gtk.Box.new(0,0)
+        self.btn_box = Gtk.Box.new(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
         self.main_box.pack_start(self.btn_box,False,False,0)
         self.btn_box.set_halign(2)
         
@@ -3194,7 +3237,8 @@ class menuWin(Gtk.Window):
     def perform_searching(self, _text):
         if USER_THEME == 1 and USE_LABEL_CATEGORY == 1:
             self.clabel.set_label("Searching...")
-        _cat = ["Development", "Game", "Education", "Graphics", "Multimedia", "Network", "Office", "Utility", "Settings", "System", "Other"]
+        # _cat = ["Development", "Game", "Education", "Graphics", "Multimedia", "Network", "Office", "Utility", "Settings", "System", "Other"]
+        _cat = [DEVELOPMENT, GAME, EDUCATION, GRAPHICS, MULTIMEDIA, NETWORK, OFFICE, UTILITY, SETTINGS, SYSTEM, OTHER]
         _list = []
         # [_el_name,_el_cat,_el_exec,_el_icon,_el_comment,_el_path,_el])
         for _el in the_menu:
@@ -3226,26 +3270,39 @@ class menuWin(Gtk.Window):
         self._btn_toggled = None
         #
         _cat = ["Bookmarks", "Development", "Game", "Education", "Graphics", "Multimedia", "Network", "Office", "Utility", "Settings", "System", "Other"]
+        _cat2 = [["Bookmarks",BOOKMARKS],["Development",DEVELOPMENT], ["Game",GAME], ["Education",EDUCATION], ["Graphics",GRAPHICS], ["Multimedia",MULTIMEDIA], ["Network",NETWORK], ["Office",OFFICE], ["Utility",UTILITY], ["Settings",SETTINGS], ["System",SYSTEM], ["Other",OTHER]]
         _icon = ["Bookmark.svg", "Development.svg", "Game.svg", "Education.svg", "Graphics.svg", "Multimedia.svg", "Network.svg", "Office.svg", "Utility.svg", "Settings.svg", "System.svg", "Other.svg",]
+        #
         for i,el in enumerate(_cat):
+            el2 = _cat2[i][1]
             if USER_THEME == 1:
                 _btn = Gtk.Button()
                 _btn.connect('clicked', self.on_toggle_toggled)
                 _btn.connect('focus-in-event', self.on_toggle_toggled)
+            # the default
             elif USER_THEME == 0:
                 _btn = Gtk.ToggleButton()
                 _btn.set_can_focus(False)
                 _btn.connect('button-release-event', self.on_toggle_toggled)
             _btn.set_name("mybutton")
             _btn.icat = el
-            _btn.set_tooltip_text(el)
+            #
+            if self._parent.user_menu_style == 0 or self._parent.user_menu_label == 0:
+                # _btn.set_tooltip_text(el)
+                _btn.set_tooltip_text(el2)
+                _btn.set_image_position(Gtk.PositionType.TOP)
+            else:
+                _btn.set_label(el2)
+                _btn.set_alignment(0,0)
+                _btn.set_image_position(Gtk.PositionType.LEFT)
             pix = GdkPixbuf.Pixbuf.new_from_file_at_size("icons"+"/"+_icon[i], self.BTN_ICON_SIZE, self.BTN_ICON_SIZE)
             _image = Gtk.Image.new_from_pixbuf(pix)
             _btn.set_image(_image)
-            _btn.set_image_position(Gtk.PositionType.TOP)
+            # _btn.set_image_position(Gtk.PositionType.TOP)
             _btn.set_always_show_image(True)
             _btn.set_events(Gdk.EventMask.BUTTON_RELEASE_MASK)
-            self.cbox.add(_btn)
+            # self.cbox.add(_btn)
+            self.cbox.pack_start(_btn,True,True,0)
             #
             if i == 0:
                 if USER_THEME == 0:
@@ -3253,9 +3310,10 @@ class menuWin(Gtk.Window):
                 self._btn_toggled = _btn
                 self.btn_bookmark = _btn
                 self.populate_bookmarks_at_start()
-                self.populate_category(el)
+                # self.populate_category(el)
                 if USER_THEME == 1 and USE_LABEL_CATEGORY == 1:
-                    self.clabel.set_label("Bookmarks")
+                    # self.clabel.set_label("Bookmarks")
+                    self.clabel.set_label(BOOKMARKS)
     
     def on_toggle_toggled(self, btn, e=None):
         self.searchentry.delete_text(0,-1)
@@ -3450,7 +3508,17 @@ class ynDialog(Gtk.Dialog):
         self.set_default_size(150, 100)
         label = Gtk.Label(label=_title1)
         box = self.get_content_area()
+        box.set_margin_start(_pad)
+        box.set_margin_end(_pad)
+        box.set_margin_top(_pad)
+        box.set_margin_bottom(_pad)
         box.add(label)
+        for _w in box.get_children():
+            if isinstance(_w, Gtk.Box):
+                _ww = _w.get_children()[0]
+                _ll =_ww.get_layout()
+                _ww.set_layout(Gtk.ButtonBoxStyle.EXPAND)
+                break
         self.show_all()
 
 
@@ -4241,10 +4309,9 @@ class otherWin(Gtk.Window):
         
         self.on_mark_calendar(self._calendar)
         
-        
-        
         self.show_all()
         
+    
     # def on_btn_c(self, btn):
         # cal_event(self, [])
         
@@ -4484,13 +4551,13 @@ class noteDialog(Gtk.Window):
         
         self._id,self._id_x,self._id_y = self._id_tmp.split("_")
         
-        # self.connect('hide', self.on_hide)
-        
         # self.get_window().set_events(Gdk.EventMask.PROPERTY_CHANGE_MASK)
         # # Gtk.Widget.signals.property_notify_event(self, Gdk.EventType.CONFIGURE)
         # self.connect('property-notify-event', self.on_move)
         
         # self.connect('show', self.on_show)
+        
+        # self._value = None
         
         # self.show_all()
         
@@ -4498,11 +4565,7 @@ class noteDialog(Gtk.Window):
         # pass
     
     # def on_show(self, widget):
-        # print("on show")
-        # print(self.get_window().get_geometry())
-        
-    # def on_hide(self, widget):
-        # _position = self.get_position()
+        # self._value = self.get_window().get_geometry()
     
     def on_unmap_event(self, widget, event=None):
         if self.get_property("visible"):
@@ -4871,6 +4934,29 @@ class DialogConfiguration(Gtk.Dialog):
         self.entry_menu_editor.connect('changed', self.on_entry_menu, "me")
         self.page2_box.attach_next_to(self.entry_menu_editor,menu_editor,1,1,1)
         self.entry_menu_editor.set_text(self._parent.menu_editor)
+        
+        menu_style2 = Gtk.Label(label=MENU_STYLE2)
+        menu_style2.set_halign(1)
+        self.page2_box.attach(menu_style2,0,9,1,1)
+        
+        self.menu_style2_combo = Gtk.ComboBoxText.new()
+        self.page2_box.attach_next_to(self.menu_style2_combo,menu_style2,1,1,1)
+        self.menu_style2_combo.append_text(TOP)
+        self.menu_style2_combo.append_text(RIGHT)
+        self.menu_style2_combo.append_text(LEFT)
+        self.menu_style2_combo.set_active(self._parent.user_menu_style)
+        self.menu_style2_combo.connect('changed', self.on_menu_combo, "style")
+        
+        menu_label2 = Gtk.Label(label=MENU_LABEL2)
+        menu_label2.set_halign(1)
+        self.page2_box.attach(menu_label2,0,10,1,1)
+        self.menu_label2_combo = Gtk.ComboBoxText.new()
+        self.page2_box.attach_next_to(self.menu_label2_combo,menu_label2,1,1,1)
+        self.menu_label2_combo.append_text(NO2)
+        self.menu_label2_combo.append_text(YES2)
+        self.menu_label2_combo.set_active(self._parent.user_menu_label)
+        self.menu_label2_combo.connect('changed', self.on_menu_combo, "label")
+        
         
         ## SERVICE MENU
         service_lbl_w = Gtk.Label(label=WIDTH)
