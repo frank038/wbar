@@ -56,6 +56,7 @@ The command/env "dbus-update-activation-environment --systemd WAYLAND_DISPLAY DI
 
 The taskbar uses the framework wl_framework from Consolatis.
 
+The audio and volume applets use pulsectl from Mike Kazantsev (mk-fg)
 
 About the file wclipboard.py: the clipboard stores the text of any length, unless an option to skip very large text clip is changed in the file: MAX_CHARS from 0 (that means all characters) to some number, e.g. 1000 if you want to skip text larger than 1000 characters; SKIP_FILES = 1 : with this option the text that seams from copy/cut operations on files/folders are skipped, unlsess it is setted to 0.
 
