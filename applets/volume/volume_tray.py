@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 
-# V. 0.6
+# V. 0.9
 
 from PyQt6.QtWidgets import QSystemTrayIcon, QMenu, QLabel, QWidget, QApplication, QBoxLayout, QPushButton, QSlider, QRadioButton, QCheckBox
 from PyQt6.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem, QSizePolicy, QScrollArea
-from PyQt6.QtGui import QIcon, QCursor, QPixmap
+from PyQt6.QtGui import QIcon, QCursor, QPixmap, QWheelEvent 
 from PyQt6.QtCore import Qt, QSize, QPoint, pyqtSignal, pyqtSlot, QThread, QEvent, QTimer
 
 import sys, os
@@ -92,7 +92,7 @@ class SystemTrayIcon(QSystemTrayIcon):
         self.setContextMenu(self._myMenu)
         
     def eventFilter(self, obj, event):
-        return super().eventFilter(obj, event);
+        return super().eventFilter(obj, event)
     
     def _activateMenu(self, reason):
         global menu_is_shown
@@ -141,6 +141,7 @@ class winAudio(QWidget):
         #
         self.mslider = QSlider(Qt.Orientation.Horizontal)
         self.mslider.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.mslider.setFocus()
         self.mslider.setTickPosition(QSlider.TickPosition.TicksBothSides)
         self.mslider.setMinimum(0)
         self.mslider.setMaximum(100)
@@ -148,6 +149,10 @@ class winAudio(QWidget):
         self.mslider.setSingleStep(AUDIO_STEP)
         self.mslider.setPageStep(AUDIO_STEP)
         self.mslider.valueChanged.connect(self.on_vslider_changed)
+        self.mslider.is_pressed = 0
+        self.mslider.sliderPressed.connect(self.on_vslider_pressed)
+        self.mslider.sliderReleased.connect(self.on_vslider_released)
+        self.mslider.installEventFilter(self)
         self.hbox1.addWidget(self.mslider)
         self.mbtn = QPushButton("Volume control")
         self.mbtn.clicked.connect(self.on_mbtn_mixer)
@@ -172,6 +177,22 @@ class winAudio(QWidget):
         self.athread = audioThread(_pulse)
         self.athread.sig.connect(self.athreadslot)
         self.athread.start()
+    
+    def eventFilter(self, obj, event):
+        if obj == self.mslider:
+            if isinstance(event, QWheelEvent):
+                self.on_volume_change("slider")
+        return super().eventFilter(obj, event)
+    
+    def on_vslider_pressed(self):
+        self.mslider.is_pressed = 1
+    
+    def on_vslider_released(self):
+        self.mslider.is_pressed = 0
+    
+    def on_vslider_changed(self):
+        if self.mslider.is_pressed == 1:
+            self.on_volume_change("slider")
     
     # rebuild the volume menu - sink
     def on_populate_amenu(self):
@@ -239,10 +260,6 @@ class winAudio(QWidget):
         # set the icon and tooltip - volume
         self._set_volume("start")
     
-    # mouse wheel
-    def on_vslider_changed(self):
-        self.on_volume_change("slider")
-        
     # event.angleDelta() : negative down - positive up
     def on_volume_change(self, _direction):
         dsink = None
@@ -352,8 +369,9 @@ class winAudio(QWidget):
                 del _server_info
             except:
                 self._reload_pulse()
-        if _default_sink_name:
-            self.default_sink_name = _default_sink_name
+            #
+            if _default_sink_name:
+                self.default_sink_name = _default_sink_name
         ####
         _sink = None
         try:
