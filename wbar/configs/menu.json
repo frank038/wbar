@@ -7,5 +7,7 @@
     "item_width": 0,
     "live_search": 3,
     "win_position": 0,
-    "menu_editor": "_internal_"
+    "menu_editor": "_internal_",
+    "menu-style": 2,
+    "menu-label": 1
 }
