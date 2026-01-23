@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 0.6
+# V. 0.9
 
 from PyQt6.QtWidgets import QSystemTrayIcon, QMenu, QLabel, QWidget, QApplication, QBoxLayout, QPushButton
 from PyQt6.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem, QSizePolicy, QAbstractItemView
@@ -381,7 +381,7 @@ class winMpris(QWidget):
                         try:
                             if os.path.exists(_iicon):
                                 pix = QPixmap(_iicon)
-                                pix = pix.scaled(MPRIS_IMAGE_SIZE,MPRIS_IMAGE_SIZE)#, aspectRatioMode=Qt.KeepAspectRatio)
+                                pix = pix.scaled(MPRIS_IMAGE_SIZE,MPRIS_IMAGE_SIZE, aspectRatioMode=Qt.AspectRatioMode.KeepAspectRatio)
                                 if not pix.isNull():
                                     _wdg.setPixmap(pix)
                         except:
@@ -410,7 +410,7 @@ class winMpris(QWidget):
             try:
                 if os.path.exists(_iicon):
                     pix = QPixmap(_iicon)
-                    pix = pix.scaled(MPRIS_IMAGE_SIZE,MPRIS_IMAGE_SIZE)#, aspectRatioMode=Qt.KeepAspectRatio)
+                    pix = pix.scaled(MPRIS_IMAGE_SIZE,MPRIS_IMAGE_SIZE, aspectRatioMode=Qt.AspectRatioMode.KeepAspectRatio)
                     if not pix.isNull():
                         img_lbl = QLabel()
                         img_lbl.icon = 1
@@ -480,7 +480,10 @@ class winMpris(QWidget):
             self.set_player_action(self.sender().idx, "Pause")
             # self.set_player_action(self.sender().idx, "PlayPause")
             # # verify
-            # ret = self.find_current_state(self.sender().idx)
+            ret = self.find_current_state(self.sender().idx)
+            #
+            if ret == "Playing":
+                self.set_player_action(self.sender().idx, "PlayPause")
     
     def on_list_item_remove(self, _list):
         num_items = self.textLW.count()
