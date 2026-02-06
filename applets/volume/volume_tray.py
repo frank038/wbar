@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 0.9
+# V. 0.9.1
 
 from PyQt6.QtWidgets import QSystemTrayIcon, QMenu, QLabel, QWidget, QApplication, QBoxLayout, QPushButton, QSlider, QRadioButton, QCheckBox
 from PyQt6.QtWidgets import QMainWindow, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem, QSizePolicy, QScrollArea
@@ -148,7 +148,7 @@ class winAudio(QWidget):
         self.mslider.setTickInterval(10)
         self.mslider.setSingleStep(AUDIO_STEP)
         self.mslider.setPageStep(AUDIO_STEP)
-        self.mslider.valueChanged.connect(self.on_vslider_changed)
+        # self.mslider.valueChanged.connect(self.on_vslider_changed)
         self.mslider.is_pressed = 0
         self.mslider.sliderPressed.connect(self.on_vslider_pressed)
         self.mslider.sliderReleased.connect(self.on_vslider_released)
@@ -189,10 +189,11 @@ class winAudio(QWidget):
     
     def on_vslider_released(self):
         self.mslider.is_pressed = 0
+        self.on_volume_change("slider")
     
-    def on_vslider_changed(self):
-        if self.mslider.is_pressed == 1:
-            self.on_volume_change("slider")
+    # def on_vslider_changed(self):
+        # if self.mslider.is_pressed == 1:
+            # self.on_volume_change("slider")
     
     # rebuild the volume menu - sink
     def on_populate_amenu(self):
