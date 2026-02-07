@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 1.0
+# V. 1.0.1
 
 import os,sys,shutil
 import gi
@@ -1496,7 +1496,8 @@ class MyWindow(Gtk.Window):
                     b.append(a[i])
 
                 _pb = GdkPixbuf.Pixbuf.new_from_data(b, GdkPixbuf.Colorspace.RGB, True, 8, _icon_w,_icon_h,_icon_w*4)
-                
+                if _icon_w != self._app_icon_size or _icon_h != self._app_icon_size:
+                    _pb = _pb.scale_simple(self._app_icon_size, self._app_icon_size, GdkPixbuf.InterpType.BILINEAR)
                 btn.set_from_pixbuf(_pb)
             except Exception as E:
                 print("Error icon: ", str(E))
