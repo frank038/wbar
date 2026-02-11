@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#### v 0.9
+#### v 0.9.1
 from PyQt6 import QtCore, QtGui, QtWidgets
 import sys, os
 
@@ -47,6 +47,7 @@ class appWin(QtWidgets.QWidget):
         lbl_exec = QtWidgets.QPushButton(EXECUTABLE_M)
         self.mainBox.addWidget(lbl_exec, 3, 0)
         self.le_exec = QtWidgets.QLineEdit()
+        self.le_exec.textChanged.connect(self.on_le_exec_changed)
         self.mainBox.addWidget(self.le_exec, 3, 1, 1, 5)
         lbl_exec.clicked.connect(lambda:self.f_choose(self.le_exec, "All Files (*.*)"))
         #### try executable
@@ -56,6 +57,7 @@ class appWin(QtWidgets.QWidget):
         self.mainBox.addWidget(self.le_exec_try, 4, 1, 1, 5)
         lbl_exec_try.clicked.connect(lambda:self.f_choose(self.le_exec_try, "All Files (*.*)"))
         #### path
+        self.change_path = 0
         lbl_path = QtWidgets.QPushButton(PATH_M)
         self.mainBox.addWidget(lbl_path, 5, 0)
         self.le_path = QtWidgets.QLineEdit()
@@ -123,6 +125,13 @@ class appWin(QtWidgets.QWidget):
         
     def sizeHint(self):
         return QtCore.QSize(int(WIN_WIDTH/self.pixel_ratio),int(WIN_HEIGHT/self.pixel_ratio))
+    
+    def on_le_exec_changed(self, _txt):
+        if self.change_path == 1:
+            _path = os.path.dirname(_txt)
+            if os.path.exists(_path):
+                self.le_path.setText(_path)
+            # self.change_path = 0
     
     def f_delete(self):
         if not self.le_file_name.text() or not self.le_name.text() or not self.le_exec.text():
@@ -250,10 +259,13 @@ Hidden={}
             self.close()
     
     def f_choose(self, wgt, f_type):
+        if wgt == self.le_exec:
+            self.change_path = 1
         fileName = QtWidgets.QFileDialog.getOpenFileName(self,
             "Choose", os.path.expanduser("~"), f_type)
         if fileName[0]:
             wgt.setText(fileName[0])
+        self.change_path = 0
         
 
 #############
