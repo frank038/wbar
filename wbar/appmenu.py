@@ -130,7 +130,8 @@ class appWin(QtWidgets.QWidget):
         if self.change_path == 1:
             _path = os.path.dirname(_txt)
             if os.path.exists(_path):
-                self.le_path.setText(_path)
+                if _txt[0:4] != "/usr":
+                    self.le_path.setText(_path)
             # self.change_path = 0
     
     def f_delete(self):
