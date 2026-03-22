@@ -130,6 +130,7 @@ DOUBLE_CLICK_MSG="Doppio click per avviare le applicazioni"
 USE_CUSTOM_CSS="Usa un css per usare temi personali."
 LANGUAGE_MSG="Lingue"
 OTHER_ICON_SIZE2="Dimensione delle altre icone"
+VOL_WIDGET="Volume widget"
 
 FILE_NAME_M="Nome del file *"
 NAME_M="Nome *"

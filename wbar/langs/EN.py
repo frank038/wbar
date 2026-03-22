@@ -130,6 +130,7 @@ DOUBLE_CLICK_MSG="Double click to launch apps"
 USE_CUSTOM_CSS="Use the custom css for theming."
 LANGUAGE_MSG="Language"
 OTHER_ICON_SIZE2="Other icon size"
+VOL_WIDGET="Volume widget"
 
 FILE_NAME_M="File name *"
 NAME_M="Name *"
