@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 1.0.1
+# V. 1.1.0
 
 import os,sys,shutil
 import gi
@@ -76,7 +76,7 @@ if not os.path.exists(os.path.join(_curr_dir,"notes")):
 # other options
 _other_settings_conf = None
 _other_settings_config_file = os.path.join(_curr_dir,"configs","other_settings.json")
-_starting_other_settings_conf = {"pad-value":4,"use-tray":1,"double-click":0,"use-taskbar":1,"use-css": 1,"other_icon_size": 24}
+_starting_other_settings_conf = {"pad-value":4,"use-tray":1,"double-click":0,"use-taskbar":1,"use-css": 1,"other_icon_size": 24, "volume-widget": 1}
 if not os.path.exists(_other_settings_config_file):
     try:
         _ff = open(_other_settings_config_file,"w")
@@ -99,6 +99,7 @@ DOUBLE_CLICK = _other_settings_conf["double-click"]
 USE_TASKBAR = _other_settings_conf["use-taskbar"]
 USE_CSS = _other_settings_conf["use-css"]
 OTHER_ICON_SIZE = max(_other_settings_conf["other_icon_size"], 24)
+USE_VOL_WIDGET = _other_settings_conf["volume-widget"]
 
 if USE_CSS:
     screen = Gdk.Screen.get_default()
@@ -106,6 +107,11 @@ if USE_CSS:
     provider.load_from_path(os.path.join(_curr_dir,"configs/panelstyle.css"))
     Gtk.StyleContext.add_provider_for_screen(screen, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
+if USE_VOL_WIDGET == 1:
+    import asyncio
+    import pulsectl_asyncio
+    from gi.events import GLibEventLoopPolicy
+    import pulsectl as _pulse
 
 _context = None
 if USE_TASKBAR:
@@ -907,6 +913,11 @@ class MyWindow(Gtk.Window):
         if USE_TASKBAR != 0:
             self.right_box.pack_end(self.clock_lbl,False,False,10)
         
+        # volume
+        if USE_VOL_WIDGET == 1:
+            self.vol_img = Gtk.Image.new_from_icon_name("audio-volume-muted", 64)
+            self.right_box.pack_end(self.vol_img, False,False,10)
+        
         # sticky notes list
         self.list_notes = []
         #
@@ -935,6 +946,16 @@ class MyWindow(Gtk.Window):
         if self.clipboard_use and USE_CLIPBOARD:
             self.on_set_clipboard(None)
         
+        # notification alert
+        if USE_NOTIFICATIONS == 1:
+            _ret = Gtk.IconTheme().has_icon("notification-active")
+            if _ret:
+                self.not_alert_img = Gtk.Image.new_from_icon_name("notification-active", 64)
+            else:
+                self.not_alert_img = Gtk.Image.new_from_file(os.path.join(_curr_dir,"icons","notification-active.svg"))
+            self.not_alert_img.set_pixel_size(self.win_height)
+            self.right_box.pack_start(self.not_alert_img,False,False,4)
+        
         # output2
         self.temp_out2 = None
         self.label2button = Gtk.EventBox()
@@ -962,15 +983,141 @@ class MyWindow(Gtk.Window):
         
         # self.menu_update_count = 0
         
-        self.show_all()
+        # self.show_all()
         
         if self.clock_use == 0:
             self.clock_lbl.hide()
         
         self.q2 = None
         self.set_timer_label2()
+        ###########
+        if USE_VOL_WIDGET == 1:
+            self.pulse = _pulse.Pulse()
+            # default sink name
+            self.default_sink_name = None
+            # default sink
+            self.default_sink = None
+            # volume levels at start
+            self._on_start_vol()
+            self.set_async = 0
+            _threadv = Thread(target=self.volume_async_func)
+            _threadv.start()
+        #
+        self.show_all()
+        if USE_NOTIFICATIONS == 1:
+            self.not_alert_img.set_pixel_size(self.win_height)
+            self.not_alert_img.hide()
+    
+    # at this program start
+    def _on_start_vol(self):
+        _sink_list = []
+        try:
+            _sink_list = self.pulse.sink_list()
+        except:
+            self._reload_pulse()
+        # the default sink stored
+        try:
+            _server_info = self.pulse.server_info()
+            self.default_sink_name = _server_info.default_sink_name
+            del _server_info
+        except:
+            self._reload_pulse()
+        ####
+        _sink = None
+        try:
+            for el in self.pulse.sink_list():
+                if el.name == self.default_sink_name:
+                    _sink = el
+                    break
+        except:
+            self._reload_pulse()
+            return
+        #
+        if _sink:
+            self.default_sink = _sink
+            self.set_volume(_sink, _sink.description)
+    
+    def set_volume(self, _sink, _descr):
+        _volume = _sink.volume.values
+        _level = int(round(max(_volume), 2)*100)
+        _mute = _sink.mute
+        _icon_size = 64
+        if _level < 0 or not isinstance(_level, int):
+            return
+        if _mute == 0:
+            if 0<=_level<30:
+                vol_icon = "audio-volume-low"
+            elif 30<=_level<65:
+                vol_icon = "audio-volume-medium"
+            elif 65<=_level<=100:
+                vol_icon = "audio-volume-high"
+            elif _level > 100:
+                vol_icon = "audio-volume-overamplified"
+            self.vol_img.set_tooltip_text("Volume: "+str(_level)+"%"+"\n"+_descr)
+        elif _mute == 1:
+            vol_icon = "audio-volume-muted"
+            self.vol_img.set_tooltip_text("Volume: "+str(_level)+"% - Muted"+"\n"+_descr)
+        self.vol_img.set_from_icon_name(vol_icon, _icon_size)
+        self.vol_img.set_pixel_size(self.win_height)
+    
+    def _reload_pulse(self):
+        try:
+            del self.pulse
+            self.pulse = _pulse.Pulse()
+        except:
+            pass
+    
+    async def some_callback(self):
+        async with pulsectl_asyncio.PulseAsync('event-audio') as pulse:
+            async for event in pulse.subscribe_events('sink', 'server'):
+                if self.set_async == 1:
+                    return
+                # server
+                if event.facility == pulse.event_facilities[5]:
+                    # server change
+                    if event.t == _pulse.PulseEventTypeEnum.change:
+                        _sink = None
+                        try:
+                            _server_info = self.pulse.server_info()
+                            self.default_sink_name = _server_info.default_sink_name
+                            _sink_list = self.pulse.sink_list()
+                            for el in _sink_list:
+                                if self.default_sink_name == el.name:
+                                    _sink = el
+                                    break
+                            del _server_info
+                        except:
+                            self._reload_pulse()
+                        if _sink:
+                            self.set_volume(_sink, _sink.description)
+                # sink
+                elif event.facility == pulse.event_facilities[6]:
+                    # volume change
+                    if event.t == _pulse.PulseEventTypeEnum.change:
+                        _sink = None
+                        try:
+                            _sink_list = self.pulse.sink_list()
+                        except:
+                            self._reload_pulse()
+                            return
+                        for el in _sink_list:
+                            if el.name == self.default_sink_name:
+                                _sink = el
+                                break
+                        if _sink:
+                            self.set_volume(_sink, _sink.description)
+    
+    def volume_async_func(self):
+        print("")
+        asyncio.run(self.some_callback())
         
+    def vol_widget(self):
+        self.vol_img = Gtk.Image.new_from_icon_name("audio-volume-muted", 64)
+        self.right_box.pack_end(self.vol_img, False,False,10)
         
+    def on_vol_button_clicked(self, btn):
+        self.popover.popup()
+    
     def on_set_tasklist(self):
         self.box_taskbar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
         self.center_box.add(self.box_taskbar)
@@ -1974,6 +2121,14 @@ class MyWindow(Gtk.Window):
         self.terminate_thread(None)
         if self.ClipDaemon:
             self.ClipDaemon._stop()
+        if USE_VOL_WIDGET == 1:
+            self.set_async = 1
+            _vol = self.pulse.volume_get_all_chans(self.default_sink)
+            if _vol < 0.9:
+                self.pulse.volume_set_all_chans(self.default_sink, _vol+0.0001)
+            else:
+                self.pulse.volume_set_all_chans(self.default_sink, _vol-0.0001)
+        #
         Gtk.main_quit()
         
     def on_clock(self):
@@ -4312,6 +4467,12 @@ class otherWin(Gtk.Window):
         
         self.show_all()
         
+        self._stack.connect("notify::visible-child", self._stack_child_changed)
+        
+    def _stack_child_changed(self, stack, pspec):
+        _name = stack.get_visible_child_name()
+        if _name == "Notifications":
+            self._parent.not_alert_img.hide()
     
     # def on_btn_c(self, btn):
         # cal_event(self, [])
@@ -5283,6 +5444,17 @@ class DialogConfiguration(Gtk.Dialog):
         _other_icon_spinbtn.connect('value-changed', self.on_other_icon_spinbtn)
         _other_icon_spinbtn.set_input_purpose(Gtk.InputPurpose.DIGITS)
         
+        # internal volume widget
+        lbl_vol_widget = Gtk.Label(label=VOL_WIDGET)
+        self.page6_box.attach(lbl_vol_widget,0,10,1,1)
+        lbl_vol_widget.set_halign(1)
+        vol_combo = Gtk.ComboBoxText.new()
+        vol_combo.append_text(NO2)
+        vol_combo.append_text(YES2)
+        vol_combo.set_active(USE_VOL_WIDGET)
+        vol_combo.connect('changed', self.on_other_combo, "vol")
+        self.page6_box.attach_next_to(vol_combo,lbl_vol_widget,1,1,1)
+        
         ###########
         self.show_all()
         self.set_keep_above(True)
@@ -5335,6 +5507,8 @@ class DialogConfiguration(Gtk.Dialog):
                     shutil.copyfile(_src, _dst)
                 except:
                     pass
+        elif _type == "vol":
+            _other_settings_conf["volume-widget"] = cb.get_active()
         # try:
             # _ff = open(_other_settings_config_file,"w")
             # _data_json = _other_settings_conf
@@ -5550,6 +5724,8 @@ class notificationWin(Gtk.Window):
                             ff.close()
                             if _pixbuf:
                                 _pixbuf.savev(os.path.join(_notification_path,"image.png"),"png",None,None)
+                            # if not self._notifier._parent.not_alert_img.get_visible():
+                            self._notifier._parent.not_alert_img.show()
                     except:
                         pass
             self.destroy()
@@ -5601,6 +5777,8 @@ class notificationWin(Gtk.Window):
                         ff.close()
                         if _pixbuf:
                             _pixbuf.savev(os.path.join(_notification_path,"image.png"),"png",None,None)
+                        # if not self._notifier._parent.not_alert_img.get_visible():
+                        self._notifier._parent.not_alert_img.show()
                 except:
                     pass
         #################
@@ -5631,6 +5809,7 @@ class notificationWin(Gtk.Window):
             _lbl_body.set_use_markup(True)
             _lbl_body.set_line_wrap(True)
             _lbl_body.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
+            _lbl_body.connect('activate-link', self.on_lbl_body_clicked)
             if _summary:
                 _lbl_body.set_valign(1)
             else:
@@ -5707,6 +5886,11 @@ class notificationWin(Gtk.Window):
     def _on_button_callback(self, _btn, _replaceid, _action):
         self._notifier.ActionInvoked(_replaceid, _action)
         self.close()
+    
+    def on_lbl_body_clicked(self, lbl, _url):
+        if _url:
+            Gtk.show_uri_on_window(None, _url, Gdk.CURRENT_TIME)
+        return True
     
     def on_close(self,_replaceid):
         self._notifier.NotificationClosed(_replaceid, 3)
@@ -5832,7 +6016,7 @@ class notificationWin(Gtk.Window):
         return None
     
     def play_sound(self, _sound):
-        if self._notifier._parent.not_sounds and SOUND_PLAYER == 1:
+        if self._notifier._parent.not_sounds == 1 and SOUND_PLAYER == 1:
             try:
                 ctx = GSound.Context()
                 ctx.init()
@@ -5841,8 +6025,8 @@ class notificationWin(Gtk.Window):
                     ret = ctx.play_full({GSound.ATTR_MEDIA_FILENAME: _sound})
             except:
                 pass
-        elif self._parent._parent.no_sounds not in [1,2] and SOUND_PLAYER == 1:
-            _player = self._parent._parent.no_sounds
+        elif self._notifier._parent.not_sounds not in [1,2] and SOUND_PLAYER == 1:
+            _player = self._notifier._parent.not_sounds
             try:
                 os.system("{0} {1} &".format(_player, _sound))
             except:
@@ -5988,7 +6172,9 @@ class Notifier(Service.Object):
             self._y += _NW_height
             #
             self.list_notifications.append([NW,_replaceid, self._y])
-            self._close_notification(_timeout,NW)
+            # do not close urgent notifications
+            if _urgency != 2:
+                self._close_notification(_timeout,NW)
        
     def on_close_notification(self, nw):
         nw.close()
@@ -6125,6 +6311,8 @@ if USE_TRAY:
             )
 
 try:
+    if USE_VOL_WIDGET == 1:
+        asyncio.set_event_loop_policy(GLibEventLoopPolicy())
     Gtk.main()
 finally:
     if USE_TRAY:
