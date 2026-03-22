@@ -24,6 +24,7 @@ Features:
 - a timer (gtk3 version)
 - a menu editor (gtk3 version)
 - languages (gtk3 version)
+- volume widget (experimental)
 - three applets: audio (can also manage cards and microphones); volume; mpris.
 
 Requirements:
@@ -52,6 +53,9 @@ just copy and translate in your language the content of the file EN.py, and rena
 The calendar appointments:
 just double click a day to launch a dialog; the new events will be markded in the calendar and list in the appointment section.
 
+The volume widget
+May break thing in the panel; in fact, the notification sound must be played by an external player, such as aplay.
+
 The command/env "dbus-update-activation-environment --systemd WAYLAND_DISPLAY DISPLAY XAUTHORITY" may improve the use of the gtk3/4 applications.
 
 The taskbar uses the framework wl_framework from Consolatis.
@@ -77,6 +81,8 @@ The continuous shot scripts have to be in the form output1.sh and/or output2.sh:
 ------------------------------
 
 Known issue:
+
+- the gtk3 version: the volume widget, that uses the asyncio module, may break things; in fact, the notification sounds must be played by an external player such as aplay
 
 - the gtk4 version: it seems that in some cases the lib libgtk4-layer-shell.so.1.0.4 must be preoladed before launching wbar.py (or just launch wbar.sh of the gtk4 version)
 
