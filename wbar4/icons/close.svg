@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg version="1.2" width="78.37mm" height="78.37mm" viewBox="0 0 7837 7837" preserveAspectRatio="xMidYMid" fill-rule="evenodd" stroke-width="28.222" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg" xmlns:ooo="http://xml.openoffice.org/svg/export" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:presentation="http://sun.com/xmlns/staroffice/presentation" xmlns:smil="http://www.w3.org/2001/SMIL20/" xmlns:anim="urn:oasis:names:tc:opendocument:xmlns:animation:1.0" xmlns:svg="urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0" xml:space="preserve">
+<svg version="1.2" width="135.73mm" height="135.73mm" viewBox="0 0 13573 13573" preserveAspectRatio="xMidYMid" fill-rule="evenodd" stroke-width="28.222" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg" xmlns:ooo="http://xml.openoffice.org/svg/export" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:presentation="http://sun.com/xmlns/staroffice/presentation" xmlns:smil="http://www.w3.org/2001/SMIL20/" xmlns:anim="urn:oasis:names:tc:opendocument:xmlns:animation:1.0" xmlns:svg="urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0" xml:space="preserve">
  <defs class="ClipPathGroup">
   <clipPath id="presentation_clip_path" clipPathUnits="userSpaceOnUse">
-   <rect x="0" y="0" width="7837" height="7837"/>
+   <rect x="0" y="0" width="13573" height="13573"/>
   </clipPath>
   <clipPath id="presentation_clip_path_shrink" clipPathUnits="userSpaceOnUse">
-   <rect x="7" y="7" width="7822" height="7822"/>
+   <rect x="13" y="13" width="13546" height="13546"/>
   </clipPath>
  </defs>
  <defs class="TextShapeIndex">
@@ -56,18 +56,16 @@
     <g id="id1" class="Slide" clip-path="url(#presentation_clip_path)">
      <g class="Page">
       <g class="Group">
-       <g class="com.sun.star.drawing.PolyPolygonShape">
+       <g class="com.sun.star.drawing.ClosedBezierShape">
         <g id="id3">
-         <rect class="BoundingBox" stroke="none" fill="none" x="2476" y="1608" width="2885" height="2666"/>
-         <path fill="rgb(128,128,128)" stroke="none" d="M 5359,1609 L 3910,4272 2477,1609 5359,1609 Z "/>
-         <path fill="none" stroke="rgb(128,128,128)" d="M 5359,1609 L 3910,4272 2477,1609 5359,1609 Z "/>
+         <rect class="BoundingBox" stroke="none" fill="none" x="1361" y="1361" width="10850" height="10850"/>
+         <path fill="rgb(175,208,149)" stroke="none" d="M 12209,6786 C 12209,7737 11958,8673 11482,9497 11006,10322 10322,11006 9497,11482 8673,11958 7737,12209 6786,12209 5834,12209 4898,11958 4074,11482 3249,11006 2565,10322 2089,9497 1613,8673 1362,7737 1362,6786 1362,5834 1613,4899 2089,4074 2565,3250 3249,2565 4074,2089 4898,1613 5834,1362 6786,1362 7737,1362 8673,1613 9497,2089 10322,2565 11006,3250 11482,4074 11958,4899 12209,5834 12209,6786 Z "/>
         </g>
        </g>
-       <g class="com.sun.star.drawing.ClosedBezierShape">
+       <g class="com.sun.star.drawing.PolyPolygonShape">
         <g id="id4">
-         <rect class="BoundingBox" stroke="none" fill="none" x="818" y="1098" width="6253" height="5723"/>
-         <path fill="rgb(128,128,128)" stroke="none" d="M 819,6819 L 819,1099 1717,1099 1717,1099 C 1717,1120 1717,1142 1734,1142 L 2377,2243 1700,2243 1700,5675 6188,5675 6188,2243 5511,2243 6154,1142 C 6171,1142 6171,1120 6171,1099 L 7069,1099 7069,6819 819,6819 Z "/>
-         <path fill="none" stroke="rgb(128,128,128)" d="M 819,6819 L 819,1099 1717,1099 1717,1099 C 1717,1120 1717,1142 1734,1142 L 2377,2243 1700,2243 1700,5675 6188,5675 6188,2243 5511,2243 6154,1142 C 6171,1142 6171,1120 6171,1099 L 7069,1099 7069,6819 819,6819 Z "/>
+         <rect class="BoundingBox" stroke="none" fill="none" x="3525" y="3525" width="6522" height="6522"/>
+         <path fill="rgb(237,239,241)" stroke="none" d="M 10045,4649 L 8922,3526 6786,5664 4649,3526 3526,4649 5664,6786 3526,8922 4649,10045 6786,7907 8922,10045 10045,8922 7907,6786 10045,4649 Z "/>
         </g>
        </g>
       </g>
