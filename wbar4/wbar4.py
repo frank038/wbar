@@ -3,13 +3,14 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar4.py
 
-# V. 0.9.40
+# V. 0.9.41
 
 import os,sys,shutil,stat
 import gi
 gi.require_version('Gtk', '4.0')
 gi.require_version('Gdk', '4.0')
 gi.require_version('Gtk4LayerShell', '1.0')
+from gi.repository import Gtk4LayerShell as GtkLayerShell
 from gi.repository import Gtk, Gdk, Gio, GLib, GObject, Pango
 from gi.repository import GdkPixbuf
 from gi.repository import Gtk4LayerShell as GtkLayerShell
@@ -913,7 +914,7 @@ class MyWindow(Gtk.ApplicationWindow):
         GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.NONE)
         self.on_set_win_position(self.win_position)
         
-        if USE_TASKBAR == 3:
+        if USE_TASKBAR == 3 or self.clock_use == 1 or self.label2_use == 1:
             self.main_box = Gtk.CenterBox.new()
         else:
             # 0 horizontal 1 vertical - spacing
@@ -925,7 +926,7 @@ class MyWindow(Gtk.ApplicationWindow):
         self.set_child(self.main_box)
         
         self.left_box = Gtk.Box.new(0,0)
-        if USE_TASKBAR == 3:
+        if USE_TASKBAR == 3 or self.clock_use == 1 or self.label2_use == 1:
             self.main_box.set_start_widget(self.left_box)
         else:
             self.main_box.append(self.left_box)
@@ -960,20 +961,20 @@ class MyWindow(Gtk.ApplicationWindow):
         self.set_timer_label1()
         
         self.center_box = Gtk.Box.new(0,0)
-        if USE_TASKBAR == 3:
+        if USE_TASKBAR == 3 or self.clock_use == 1 or self.label2_use == 1:
             self.main_box.set_center_widget(self.center_box)
         else:
             self.main_box.append(self.center_box)
         if USE_TASKBAR == 0:
             self.center_box.set_halign(3)
             self.center_box.set_hexpand(True)
-        
+            
         self.right_box = Gtk.Box.new(0,0)
-        if USE_TASKBAR == 3:
+        if USE_TASKBAR == 3 or self.clock_use == 1 or self.label2_use == 1:
             self.main_box.set_end_widget(self.right_box)
         else:
             self.main_box.append(self.right_box)
-            self.right_box.set_hexpand(True)
+            self.right_box.set_hexpand(False)
         
         # tasklist
         global _context
@@ -996,10 +997,10 @@ class MyWindow(Gtk.ApplicationWindow):
         self.lbl2_style_context = self.label2.get_style_context()
         self.lbl2_style_context.add_class("label2")
         # self.label2button.connect('button-press-event', self.on_label2)
-        # if self.label2_use == 1:
-            # self.center_box.append(self.label2)
-        # elif self.label2_use == 2 or self.label2_use == 0:
-            # self.right_box.append(self.label2)
+        if self.label2_use == 1:
+            self.center_box.append(self.label2)
+        elif self.label2_use == 2 or self.label2_use == 0:
+            self.right_box.prepend(self.label2)
         
         self.otherbutton = Gtk.Button()
         _icon_path = os.path.join(_curr_dir,"icons","other_menu.svg")
@@ -1383,6 +1384,7 @@ class MyWindow(Gtk.ApplicationWindow):
             # self.box_taskbar.set_hexpand(True)
         elif USE_TASKBAR == 2:
             self.right_box.prepend(self.box_taskbar)
+            self.right_box.set_hexpand(True)
         #
         self.tbox = Gtk.Box.new(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
         self.tbox.set_name("tasklist")
@@ -1444,10 +1446,53 @@ class MyWindow(Gtk.ApplicationWindow):
         self.tbutton.set_visible(False)
         # # ellipsize the button text
         # self.set_text_and_ellipsize(button, toplevel.title)
+        # mouse click - right
+        gesture = Gtk.GestureClick.new()
+        gesture.set_button(3) # right
+        gesture.connect("pressed", self.on_btn_taskbar_pressed_right, toplevel, self.tbutton)
+        self.tbutton.add_controller(gesture)
         #
         self.tbox.append(self.tbutton)
         
-
+    def on_btn_taskbar_pressed_right(self,obj,n,x,y,toplevel,btn):
+        _pop = Gtk.Popover.new()
+        _pop = Gtk.Popover()
+        # _pop.set_halign(Gtk.Align.START)
+        popover_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        #
+        lbl_max = 'Unmaximize' if 'maximized' in toplevel.states else 'Maximize'
+        button_max = Gtk.Button(label=lbl_max)
+        button_max.connect("clicked", self.on_btn_max, _pop, toplevel)
+        popover_box.append(button_max)
+        #
+        lbl_min = 'Unminimize' if 'minimized' in toplevel.states else 'Minimize'
+        button_min = Gtk.Button(label=lbl_min)
+        button_min.connect("clicked", self.on_btn_min, _pop, toplevel)
+        popover_box.append(button_min)
+        #
+        button_close = Gtk.Button(label="Close")
+        button_close.connect("clicked", self.on_btn_close, _pop, toplevel)
+        popover_box.append(button_close)
+        #
+        _pop.set_child(popover_box)
+        _pop.set_has_arrow(False)
+        _pop.set_autohide(True)
+        _pop.set_parent(btn)
+        _pop.set_offset(0, _pad)
+        _pop.popup()
+        
+    def on_btn_max(self, btn, popover, toplevel):
+        popover.popdown()
+        self.manager.app_toggle_maximize(toplevel)
+        
+    def on_btn_min(self, btn, popover, toplevel):
+        popover.popdown()
+        self.manager.app_toggle_minimize(toplevel)
+    
+    def on_btn_close(self, btn, popover, toplevel):
+        popover.popdown()
+        self.manager.app_close(toplevel)
+    
     def on_toplevel_synced(self, context, toplevel):
         # # Obviously this should do a proper diff and only update if required
         #
@@ -1966,7 +2011,7 @@ class MyWindow(Gtk.ApplicationWindow):
         popover = Gtk.PopoverMenu()
         popover.set_has_arrow(False)
         popover.set_halign(Gtk.Align.START)
-        popover.set_offset(0,8)
+        popover.set_offset(0,_pad)
         popover.connect('hide', self.on_popover_closed)
         popover.set_autohide(True)
         _scroll = Gtk.ScrolledWindow.new()
@@ -2721,7 +2766,10 @@ class MyWindow(Gtk.ApplicationWindow):
         _img.set_pixel_size(self.win_height-4)
         self.clipbutton.set_child(_img)
         self.clipbutton.connect('clicked', self.on_clipboard_button)
-        self.right_box.prepend(self.clipbutton)
+        if USE_TASKBAR == 2:
+            self.right_box.append(self.clipbutton)
+        else:
+            self.right_box.prepend(self.clipbutton)
         # # reorder
         # if _pos != None:
             # self.right_box.reorder_child(self.clipbutton, _pos)
@@ -3658,12 +3706,11 @@ class menuWin(Gtk.Window):
         GtkLayerShell.set_layer(self, GtkLayerShell.Layer.OVERLAY)
         GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.ON_DEMAND)
         
-        # self.connect('focus-out-event', self.on_focus_out)
         # self.connect('show', self.on_show)
         
-        # self.event_controller = Gtk.EventControllerFocus.new()
-        # self.event_controller.connect('leave', self.on_focus_out)
-        # self.add_controller(self.event_controller)
+        self.event_controller = Gtk.EventControllerFocus.new()
+        self.event_controller.connect('leave', self.on_focus_out)
+        self.add_controller(self.event_controller)
         
         self.set_size_request(self._parent.menu_width, self._parent.menu_height)
         
@@ -3829,7 +3876,10 @@ class menuWin(Gtk.Window):
         self.connect("close-request", self.on_menu_close)
         ###########
         self.connect("hide", self.on_hide)
+        # self.connect("show", self.on_show)
         self.set_visible(True)
+        # self.set_focus(self)
+        # self.set_focus_visible(True)
         
     def on_hide(self, widget):
         self.empty_iconview()
@@ -3839,7 +3889,9 @@ class menuWin(Gtk.Window):
         self.populate_bookmarks()
         self._btn_toggled.set_active(True)
         self.searchentry.set_text("")
-    
+        # needed to let this window to close after losing focus
+        self.close()
+        
     def empty_iconview(self):
         try:
             self.iconview.remove_all()
@@ -4332,6 +4384,7 @@ class menuWin(Gtk.Window):
         pass
     
     def on_focus_out(self, event):
+        # 
         if not self.is_visible():
             # self.event_controller.reset()
             return
@@ -4504,8 +4557,9 @@ class clipboardWin(Gtk.Window):
         GtkLayerShell.set_layer(self, GtkLayerShell.Layer.OVERLAY)
         GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.ON_DEMAND)
         
-        # self.event_controller = Gtk.EventControllerFocus.new()
-        # self.event_controller.connect('leave', self.on_focus_out)
+        self.event_controller = Gtk.EventControllerFocus.new()
+        self.event_controller.connect('leave', self.on_focus_out)
+        self.add_controller(self.event_controller)
         
         self.set_size_request(self.wwidth, self.wheight)
         self.main_box = Gtk.Box.new(1,0)
@@ -4646,7 +4700,7 @@ class clipboardWin(Gtk.Window):
         except:
             pass
     
-    def on_focus_out(self, win, event):
+    def on_focus_out(self, event):
         if self._parent.CW:
             self._parent.CW = None
         self.close()
@@ -4691,11 +4745,11 @@ class otherWin(Gtk.Window):
         GtkLayerShell.set_layer(self, GtkLayerShell.Layer.OVERLAY)
         GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.ON_DEMAND)
         
-        # self.connect('focus-out-event', self.on_focus_out)
-        # # self.connect('show', self.on_show)
+        # self.connect('show', self.on_show)
         
-        # self.event_controller = Gtk.EventControllerFocus.new()
-        # self.event_controller.connect('leave', self.on_focus_out)
+        self.event_controller = Gtk.EventControllerFocus.new()
+        self.event_controller.connect('leave', self.on_focus_out)
+        self.add_controller(self.event_controller)
         
         self.set_size_request(self._parent.service_width, self._parent.service_height)
         
@@ -5001,11 +5055,12 @@ class otherWin(Gtk.Window):
         if _y == 2024 and _m == 10 and _d == 29:
             return "10.15"
     
-    def on_focus_out(self, win, event):
+    def on_focus_out(self, event):
         # self.close()
         if self._parent.OW:
             self._parent.OW.close()
             self._parent.OW = None
+        # self.close()
         
     # def on_show(self, widget):
         # pass
@@ -6279,10 +6334,16 @@ class notificationWin(Gtk.Window):
         self._notifier.ActionInvoked(_replaceid, _action)
         self.close()
     
+    # def on_lbl_body_clicked(self, lbl, _url):
+        # if _url:
+            # Gtk.show_uri_on_window(None, _url, Gdk.CURRENT_TIME)
+        # return True
+    
     def on_lbl_body_clicked(self, lbl, _url):
         if _url:
-            Gtk.show_uri_on_window(None, _url, Gdk.CURRENT_TIME)
-        return True
+            _ul = Gtk.UriLauncher.new(_url)
+            _ul.launch(None,None,None,None)
+            return True
     
     def on_close(self,_replaceid):
         self._notifier.NotificationClosed(_replaceid, 3)
