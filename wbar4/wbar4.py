@@ -3,7 +3,7 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar4.py
 
-# V. 0.9.41
+# V. 0.9.45
 
 import os,sys,shutil,stat
 import gi
@@ -281,6 +281,7 @@ USE_CLIPBOARD = 1
 CLIP_STORAGE = {}
 clipboardpid = None
 CLIP_CHAR_PREVIEW = 499
+CLIP_MAX_SIZE = 100
 if USE_CLIPBOARD:
     SKIP_FILES = 1
     if is_x11:
@@ -321,8 +322,23 @@ if USE_CLIPBOARD:
         with open(os.path.join(CLIPS_PATH, _clip) , "r") as _f:
             _tmp_text = "".join(_f.readlines())
     
+MAX_CLIPS = _clipboard_conf["max_clips"]
 # populate the clipboard list
 def on_load_clips():
+    _clips = sorted(os.listdir(CLIPS_PATH), reverse=True)
+    #
+    # remove redundand clipboards
+    num_clips = len(_clips)
+    #
+    if num_clips > MAX_CLIPS:
+        clips_to_remove = num_clips - MAX_CLIPS
+        for i in range(clips_to_remove):
+            try:
+                iitem = _clips[-1]
+                os.remove(os.path.join(CLIPS_PATH, iitem))
+            except:
+                pass
+    #
     _clips = sorted(os.listdir(CLIPS_PATH), reverse=False)
     for _clip in _clips:
         with open(os.path.join(CLIPS_PATH, _clip)) as _f:
@@ -331,6 +347,7 @@ def on_load_clips():
             if _ctext.strip("\n"):
                 if not _clip in CLIP_STORAGE:
                     CLIP_STORAGE[_clip] = _ctext[0:CLIP_MAX_SIZE].encode()
+
 if is_x11:
     on_load_clips()
 
@@ -3773,6 +3790,8 @@ class menuWin(Gtk.Window):
         
         # when bookmark items reordering start
         self.is_dragging = 0
+        # menut item dragging
+        self.isMenuDragging = 0
         
         drop_controller = Gtk.DropTarget.new(
             type=GObject.TYPE_NONE, actions=Gdk.DragAction.COPY
@@ -3906,6 +3925,11 @@ class menuWin(Gtk.Window):
     
     # value is the path of the dragged item
     def on_drop(self, _ctrl, value, _x, _y):
+        # menu item dragging - no bookmark items
+        if self.isMenuDragging == 1:
+            self.isMenuDragging = 0
+            self.is_dragging = 0
+            return
         self.is_dragging = 0
         if value == None:
             return
@@ -4279,6 +4303,13 @@ class menuWin(Gtk.Window):
                 if _i != None:
                     _i.set_pixel_size(self.ICON_SIZE)
                     _b.append(_i)
+                    #
+                    self.isMenuDragging = 1
+                    drag_controller = Gtk.DragSource()
+                    drag_controller.connect('prepare', self.on_drag_prepare)
+                    drag_controller.connect('drag-begin', self.on_drag_begin)
+                    _i.add_controller(drag_controller)
+                    #
                 _l = Gtk.Label(label=el[0])
                 _l.set_wrap(True)
                 _l.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
@@ -5417,15 +5448,15 @@ class DialogConfiguration(Gtk.Dialog):
         if USE_TASKBAR != 0:
             clock_sw.set_sensitive(False)
         # volume
-        if USE_VOLUME:
-            volume_lbl = Gtk.Label(label="Mixer")
-            volume_lbl.set_tooltip_text("Launch the mixer by right mouse clicking\non the volume bar, if setted")
-            self.page1_box.attach(volume_lbl,0,10,1,1)
-            volume_lbl.set_halign(1)
-            volume_entry = Gtk.Entry()
-            volume_entry.set_text(self._parent.volume_command)
-            volume_entry.connect('changed', self.on_volume_entry)
-            self.page1_box.attach_next_to(volume_entry,volume_lbl,1,1,1)
+        # if USE_VOLUME:
+            # volume_lbl = Gtk.Label(label="Mixer")
+            # volume_lbl.set_tooltip_text("Launch the mixer by right mouse clicking\non the volume bar, if setted")
+            # self.page1_box.attach(volume_lbl,0,10,1,1)
+            # volume_lbl.set_halign(1)
+            # volume_entry = Gtk.Entry()
+            # volume_entry.set_text(self._parent.volume_command)
+            # volume_entry.connect('changed', self.on_volume_entry)
+            # self.page1_box.attach_next_to(volume_entry,volume_lbl,1,1,1)
         
         ## MENU
         menu_lbl_w = Gtk.Label(label="Width")
@@ -6993,10 +7024,11 @@ class daemonClipW():
         # cmd = "/usr/bin/wl-paste -t text/plain -w ./wclipboard.sh".split()
         cmd = "/usr/bin/wl-paste -t text -w ./wclipboard.py".split()
         (self.clipboardpid, _in, _out, _err) = GLib.spawn_async(cmd,flags=GLib.SpawnFlags.DEFAULT, standard_output=True, standard_error=True)
-    
+        
     def _stop(self):
         try:
-            os.system(f"kill -9 {self.clipboardpid}")
+            # os.system(f"kill -9 {self.clipboardpid}")
+            os.system("kill -9 {}".format(self.clipboardpid))
         except:
             pass
 
