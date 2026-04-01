@@ -25,7 +25,8 @@ Features:
 - a menu editor
 - languages (gtk3 version)
 - volume widget (experimental)
-- three applets: audio (can also manage cards and microphones); volume; mpris.
+- three applets: audio (can also manage cards and microphones); volume; mpris
+- the gtk4 version can drop each menu item on to my wdesktop4 application.
 
 Requirements:
 - a wayland display server with layer-shell support
