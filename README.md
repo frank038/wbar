@@ -18,13 +18,13 @@ Features:
 - taskbar with scrolling support
 - tray
 - notifications (with history)
-- calendar appointments
+- calendar appointments (gtk3 version)
 - two command outputs
 - sticky notes
 - a timer (gtk3 version)
 - a menu editor
-- languages (gtk3 version)
-- volume widget (experimental)
+- languages
+- volume widget (deprecated in the gtk3 version)
 - three applets: audio (can also manage cards and microphones); volume; mpris
 - the gtk4 version can drop each menu item on to my wdesktop4 application.
 
