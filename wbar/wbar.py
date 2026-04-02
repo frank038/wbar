@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 1.1.0
+# V. 1.1.1
 
 import os,sys,shutil
 import gi
@@ -322,7 +322,7 @@ CLIP_CHAR_PREVIEW = 499
 if USE_CLIPBOARD:
     SKIP_FILES = 1
     CLIPS_PATH = os.path.join(_curr_dir, "clips")
-    _starting_clipboard_conf = {"wwidth":600,"wheight":600, "max_chars":500, "max_clips":100, "chars_preview": 50}
+    _starting_clipboard_conf = {"wwidth":600,"wheight":600, "max_chars":500, "max_clips":30, "chars_preview": 50}
     _clipboard_config_file = os.path.join(_curr_dir,"configs", "clipboard.json")
     _clipboard_conf = None
     if not os.path.exists(_clipboard_config_file):
@@ -357,14 +357,30 @@ if USE_CLIPBOARD:
     
 # populate the clipboard list
 def on_load_clips():
+    MAX_CLIPS = _clipboard_conf["max_clips"]
+    _clips = sorted(os.listdir(CLIPS_PATH), reverse=True)
+    # remove redundand clipboards
+    num_clips = len(_clips)
+    #
+    if num_clips > MAX_CLIPS:
+        clips_to_remove = num_clips - MAX_CLIPS
+        for i in range(clips_to_remove):
+            try:
+                iitem = _clips[-1]
+                os.remove(os.path.join(CLIPS_PATH, iitem))
+            except:
+                pass
+    #
     _clips = sorted(os.listdir(CLIPS_PATH), reverse=False)
+    global CLIP_STORAGE
+    CLIP_STORAGE = {}
     for _clip in _clips:
         with open(os.path.join(CLIPS_PATH, _clip)) as _f:
             _ctext_tmp = _f.readlines()
             _ctext = "".join(_ctext_tmp)
             if _ctext.strip("\n"):
-                if not _clip in CLIP_STORAGE:
-                    CLIP_STORAGE[_clip] = _ctext[0:CLIP_MAX_SIZE].encode()
+                # if not _clip in CLIP_STORAGE:
+                CLIP_STORAGE[_clip] = _ctext[0:CLIP_MAX_SIZE].encode()
 
 if USE_CLIPBOARD and is_wayland:
     if shutil.which("wl-copy"):
@@ -631,13 +647,13 @@ class MyWindow(Gtk.Window):
                 _error_log("The clips folder do not exists.")
                 sys.exit()
             #
-            self.clip_width_tmp = 0
             self.clip_width = self.clipboard_conf["wwidth"]
-            self.clip_height_tmp = 0
+            self.clip_width_tmp = 0
             self.clip_height = self.clipboard_conf["wheight"]
-            self.clip_max_chars = 500
+            self.clip_height_tmp = 0
+            self.clip_max_chars = self.clipboard_conf["max_chars"]
             self.clip_max_chars_tmp = 0
-            self.clip_max_clips = 100
+            self.clip_max_clips = self.clipboard_conf["max_clips"]
             self.clip_max_clips_tmp = 0
             self.chars_preview = self.clipboard_conf["chars_preview"]
             self.chars_preview_tmp = 0
@@ -814,6 +830,7 @@ class MyWindow(Gtk.Window):
         
         GtkLayerShell.init_for_window(self)
         GtkLayerShell.auto_exclusive_zone_enable(self)
+        GtkLayerShell.set_layer(self, GtkLayerShell.Layer.TOP)
         GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.NONE)
         self.on_set_win_position(self.win_position)
         
@@ -3681,9 +3698,9 @@ class ynDialog(Gtk.Dialog):
 class clipboardWin(Gtk.Window):
     def __init__(self, parent):
         super().__init__()
-        
+        global CLIP_STORAGE
         if is_wayland:
-            CLIP_STORAGE = {}
+            # CLIP_STORAGE = {}
             on_load_clips()
         
         self._parent = parent
@@ -4740,7 +4757,6 @@ class noteDialog(Gtk.Window):
         text_view_text = self.text_buffer.get_text(self.text_buffer.get_start_iter(),self.text_buffer.get_end_iter(),False)
         return text_view_text
     
-    # print - find the x and y
     def on_accept(self, btn=None):
         textview_text = self.get_textview_text()
         if textview_text == None or textview_text == "":
@@ -4748,9 +4764,6 @@ class noteDialog(Gtk.Window):
         else:
             _x = 0
             _y = 0
-            # print - to do position
-            # (x=0, y=0, width=300, height=300)
-            # print(self.get_window().get_geometry())
             try:
                 with open(os.path.join(self.path_notes,self._id+"_"+str(_x)+"_"+str(_y)),"w") as ffile:
                     ffile.write(textview_text)
