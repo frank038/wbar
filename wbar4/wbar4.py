@@ -4906,34 +4906,35 @@ class otherWin(Gtk.Window):
             _remove_btn.connect('clicked', self.on_remove_btn, el, row)
             hbox.append(_remove_btn)
             
-            #
-            _expander = Gtk.Expander.new(label=None)
-            vbox.append(_expander)
             ###########
             
             # body
-            # _scrolledwin = Gtk.ScrolledWindow()
-            # _scrolledwin.set_overlay_scrolling(True)
-            # _scrolledwin.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-            # _stack_vbox2.append(_scrolledwin)
-            body_lbl = Gtk.Label()
-            body_lbl.set_use_markup(True)
-            # body_lbl.set_markup(" ")
-            body_lbl.set_selectable(True)
-            body_lbl.connect("activate-link", self.on_link_activate)
-            body_lbl.set_xalign(0)
-            body_lbl.set_wrap(True)
-            body_lbl.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
-            body_lbl.set_markup(_body)
-            body_lbl.set_tooltip_text(body_lbl.get_current_uri())
-            self.self_style_context = body_lbl.get_style_context()
-            self.self_style_context.add_class("mynotbodylbl")
-            # _scrolledwin.set_size_request(-1,max(int(self._parent.service_height/2),150))
-            # _scrolledwin.set_child(body_lbl)
-            # _scrolledwin.set_hexpand(True)
-            # _expander.set_child(_scrolledwin)
-            #
-            _expander.set_child(body_lbl)
+            if _body != "":
+                #
+                _expander = Gtk.Expander.new(label=None)
+                vbox.append(_expander)
+                # _scrolledwin = Gtk.ScrolledWindow()
+                # _scrolledwin.set_overlay_scrolling(True)
+                # _scrolledwin.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+                # _stack_vbox2.append(_scrolledwin)
+                body_lbl = Gtk.Label()
+                body_lbl.set_use_markup(True)
+                # body_lbl.set_markup(" ")
+                body_lbl.set_selectable(True)
+                body_lbl.connect("activate-link", self.on_link_activate)
+                body_lbl.set_xalign(0)
+                body_lbl.set_wrap(True)
+                body_lbl.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
+                body_lbl.set_markup(_body)
+                body_lbl.set_tooltip_text(body_lbl.get_current_uri())
+                self.self_style_context = body_lbl.get_style_context()
+                self.self_style_context.add_class("mynotbodylbl")
+                # _scrolledwin.set_size_request(-1,max(int(self._parent.service_height/2),150))
+                # _scrolledwin.set_child(body_lbl)
+                # _scrolledwin.set_hexpand(True)
+                # _expander.set_child(_scrolledwin)
+                #
+                _expander.set_child(body_lbl)
             
             ###########
             self.list_box.append(row)
