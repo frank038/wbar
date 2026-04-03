@@ -3,7 +3,7 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar4.py
 
-# V. 0.9.50
+# V. 0.9.51
 
 from wbar4lang import *
 import os,sys,shutil,stat
@@ -6271,7 +6271,7 @@ class notificationWin(Gtk.Window):
         self.da_gesture_l = Gtk.GestureClick.new()
         self.da_gesture_l.set_button(1)
         self.add_controller(self.da_gesture_l)
-        self.da_gesture_l.connect('pressed', self.on_da_gesture_l)
+        self.da_gesture_l.connect('released', self.on_da_gesture_l)
         #################
         #
         # also above
