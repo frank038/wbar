@@ -3,7 +3,7 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar4.py
 
-# V. 0.9.51
+# V. 0.9.52
 
 from wbar4lang import *
 import os,sys,shutil,stat
@@ -4498,7 +4498,7 @@ class ynDialog(Gtk.Dialog):
     def __init__(self, parent, _title1, _type):
         super().__init__(title=_type, transient_for=parent)
         
-        self.add_buttons("OK", Gtk.ResponseType.OK, "Cancel", Gtk.ResponseType.CANCEL)
+        self.add_buttons(WBOK1, Gtk.ResponseType.OK, WBCANCEL1, Gtk.ResponseType.CANCEL)
         self.set_name(WBINFO)
         # self.set_default_size(150, 100)
         label = Gtk.Label(label=_title1)
@@ -4510,7 +4510,7 @@ class infoDialog(Gtk.Dialog):
     def __init__(self, parent, _title1, _type):
         super().__init__(title=_type, transient_for=parent)
         
-        self.add_buttons(" Close ", Gtk.ResponseType.OK)
+        self.add_buttons(WBCLOSE, Gtk.ResponseType.OK)
         self.set_name(WBINFO)
         # self.set_default_size(150, 100)
         label = Gtk.Label(label=_title1)
@@ -5278,7 +5278,7 @@ class DialogConfiguration(Gtk.Dialog):
     def __init__(self, parent):
         super().__init__(title=WBSETTINGS, transient_for=None)
         
-        self.add_buttons("OK", Gtk.ResponseType.OK, "Cancel", Gtk.ResponseType.CANCEL)
+        self.add_buttons(WBOK1, Gtk.ResponseType.OK, WBCANCEL1, Gtk.ResponseType.CANCEL)
         
         self._parent = parent
         
