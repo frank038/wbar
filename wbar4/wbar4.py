@@ -3,7 +3,7 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar4.py
 
-# V. 0.9.52
+# V. 0.9.53
 
 from wbar4lang import *
 import os,sys,shutil,stat
@@ -12,7 +12,7 @@ gi.require_version('Gtk', '4.0')
 gi.require_version('Gdk', '4.0')
 gi.require_version('Gtk4LayerShell', '1.0')
 from gi.repository import Gtk4LayerShell as GtkLayerShell
-from gi.repository import Gtk, Gdk, Gio, GLib, GObject, Pango
+from gi.repository import Gtk, Gdk, Gio, GLib, GObject, Pango, Graphene, Gsk
 from gi.repository import GdkPixbuf
 from gi.repository import Gtk4LayerShell as GtkLayerShell
 from pathlib import Path
@@ -30,6 +30,9 @@ import dbus.service as Service
 
 # enable the application server
 APP_SERVER = 1
+
+# rounded corners of the notification and list images
+ROUNDED_CORNER = 30
 
 # 0 for using the internal method
 _USE_PIL = 0
@@ -234,7 +237,8 @@ _notification_config_file = os.path.join(_curr_dir,"configs", "notifications.jso
 # sound_play: 0 no sounds - 1 use gsound - 2 string: audio player
 # max_chars: the lenght of the notification window based on text - 0 to disable this option
 # pad_pixels: the pad between the notifications - bottom_limit: maximum height of all notifications
-_starting_notification_conf = {"use_this":1,"nwidth":500,"nheight":200,"icon_size":64,"dnd":0,"sound_play":1,"max_chars":0,"pad_pixels":2,"bottom_limit":200,"volume_change":0}
+# rounded-images in the notification or list: 0 no - 1 only images - 2 also icons 
+_starting_notification_conf = {"use_this":1,"nwidth":500,"nheight":200,"icon_size":64,"dnd":0,"sound_play":1,"max_chars":0,"pad_pixels":2,"bottom_limit":200,"volume_change":0,"rounded-images":0}
 if not os.path.exists(_notification_config_file):
     try:
         _ff = open(_notification_config_file,"w")
@@ -855,6 +859,8 @@ class MyWindow(Gtk.ApplicationWindow):
             self.not_bottom_limit_tmp = None
             self.not_vol_change = self.notification_conf["volume_change"]
             self.not_vol_change_tmp = None
+            self.not_rounded_img = self.notification_conf["rounded-images"]
+            self.not_rounded_img_tmp = -1
             # notifications skipped
             self.not_skip_apps = []
             self.not_skip_apps_tmp = None
@@ -3062,9 +3068,13 @@ class MyWindow(Gtk.ApplicationWindow):
             except:
                 pass
     
-    # 0 not active - 1 not active for urgent - 2 always active
-    def set_dnd_combo(self, _type):
-        self.not_dnd_tmp = _type
+    # # 0 not active - 1 not active for urgent - 2 always active
+    # def set_dnd_combo(self, _type):
+        # self.not_dnd_tmp = _type
+    
+    # 0 no - 1 only images - 2 also icons
+    def set_round_combo(self, _type):
+        self.not_rounded_img_tmp = _type
     
     def set_not_max_chars(self, _n):
         self.not_max_chars_tmp = _n
@@ -3392,6 +3402,10 @@ class MyWindow(Gtk.ApplicationWindow):
                 self.notification_conf["icon_size"] = self.not_icon_size_tmp
                 self.not_icon_size = self.not_icon_size_tmp
                 self.not_icon_size_tmp = 0
+            if self.not_rounded_img_tmp != -1:
+                self.notification_conf["rounded-images"] = self.not_rounded_img_tmp
+                self.not_rounded_img = self.not_rounded_img_tmp
+                self.not_rounded_img_tmp = -1
             if self.not_dnd_tmp != -1:
                 self.notification_conf["dnd"] = self.not_dnd_tmp
                 self.not_dnd = self.not_dnd_tmp
@@ -3501,6 +3515,7 @@ class MyWindow(Gtk.ApplicationWindow):
         self.not_width_tmp = 0
         self.not_height_tmp = 0
         self.not_icon_size_tmp = 0
+        self.not_rounded_img_tmp = -1
         self.not_dnd_tmp = -1
         self.not_max_chars_tmp = None
         self.not_sounds_tmp = -1
@@ -4854,6 +4869,25 @@ class otherWin(Gtk.Window):
             if os.path.exists(_image_path):
                 _pix = GdkPixbuf.Pixbuf.new_from_file_at_scale(_image_path,64,64,True)
                 _pb = Gdk.Texture.new_for_pixbuf(_pix)
+                #
+                if self._parent.not_rounded_img:
+                    _snapshot = Gtk.Snapshot.new()
+                    #
+                    _r = Graphene.Rect.alloc()
+                    _r.init(0,0,self._parent.not_icon_size,self._parent.not_icon_size)
+                    #
+                    _rr = Gsk.RoundedRect()
+                    _rr.init_from_rect(_r, ROUNDED_CORNER)
+                    _rr.normalize()
+                    #
+                    _snapshot.push_rounded_clip(_rr)
+                    _snapshot.append_texture(_pb, _r)
+                    _snapshot.pop()
+                    #
+                    _rs = Graphene.Size()
+                    _rs.init(self._parent.not_icon_size,self._parent.not_icon_size)
+                    _pb = _snapshot.to_paintable(_rs)
+                #
                 _img = Gtk.Image.new_from_paintable(_pb)
                 _img.set_pixel_size(64)
                 hbox.append(_img)
@@ -5771,6 +5805,17 @@ class DialogConfiguration(Gtk.Dialog):
         # dnd_combo.connect('changed', self.on_dnd_combo)
         # self.page5_box.attach_next_to(dnd_combo,not_lbl_dnd,1,1,1)
         #
+        # rounded images
+        not_lbl_rounded = Gtk.Label(label=WBROUNDEDIMG)
+        self.page5_box.attach(not_lbl_rounded,0,4,1,1)
+        not_lbl_rounded.set_halign(1)
+        round_combo = Gtk.ComboBoxText.new()
+        round_combo.append_text(WBNO)
+        round_combo.append_text(WBROUNDEDONLYIMG)
+        round_combo.append_text(WBROUNDEDALLIMG)
+        round_combo.set_active(self._parent.not_rounded_img)
+        round_combo.connect('changed', self.on_round_combo)
+        self.page5_box.attach_next_to(round_combo,not_lbl_rounded,1,1,1)
         # summary and body max chars lenght
         max_chars_lbl = Gtk.Label(label=WBTXT60)
         max_chars_lbl.set_tooltip_text(WBTXT61)
@@ -6086,8 +6131,11 @@ class DialogConfiguration(Gtk.Dialog):
     def on_not_wh_spinbtn(self, btn, _type):
         self._parent.set_not_window_size (_type, btn.get_value_as_int())
     
-    def on_dnd_combo(self, cb):
-        self._parent.set_dnd_combo(cb.get_active())
+    # def on_dnd_combo(self, cb):
+        # self._parent.set_dnd_combo(cb.get_active())
+    
+    def on_round_combo(self, cb):
+        self._parent.set_round_combo(cb.get_active())
     
     def on_entry_max_chars(self, _entry):
         try:
@@ -6215,8 +6263,10 @@ class notificationWin(Gtk.Window):
             ret_icon = self._on_desktop_entry(os.path.basename(_desktop_entry))
         _not_name =  str(int(time.time()))
         _notification_path = os.path.join(self._not_path, _not_name)
-        _pixbuf = self._find_icon(ret_icon, _icon, _hints, _ICON_SIZE)
-        
+        _pixbuf_data = self._find_icon(ret_icon, _icon, _hints, _ICON_SIZE)
+        _pixbuf = _pixbuf_data[0]
+        # 0 for images - 1 from iconTheme
+        _pixbuf_rounded = _pixbuf_data[1]
         # only register
         if _x == -99999:
             # also below
@@ -6293,6 +6343,25 @@ class notificationWin(Gtk.Window):
         #################
         if _pixbuf:
             texture = Gdk.Texture.new_for_pixbuf(_pixbuf)
+            ##
+            if (self._notifier._parent.not_rounded_img == 1 and _pixbuf_rounded == 0) or self._notifier._parent.not_rounded_img == 2:
+                _snapshot = Gtk.Snapshot.new()
+                #
+                _r = Graphene.Rect.alloc()
+                _r.init(0,0,self._notifier._parent.not_icon_size,self._notifier._parent.not_icon_size)
+                #
+                _rr = Gsk.RoundedRect()
+                _rr.init_from_rect(_r, ROUNDED_CORNER)
+                _rr.normalize()
+                #
+                _snapshot.push_rounded_clip(_rr)
+                _snapshot.append_texture(texture, _r)
+                _snapshot.pop()
+                #
+                _rs = Graphene.Size()
+                _rs.init(self._notifier._parent.not_icon_size,self._notifier._parent.not_icon_size)
+                texture = _snapshot.to_paintable(_rs)
+            ##
             _img = Gtk.Image.new_from_paintable(texture)
             _img.set_pixel_size(self._notifier._parent.not_icon_size)
             _img.set_halign(3)
@@ -6495,7 +6564,7 @@ class notificationWin(Gtk.Window):
             except:
                 pass
             if pixbuf:
-                return pixbuf.scale_simple(ICON_SIZE,ICON_SIZE,GdkPixbuf.InterpType.BILINEAR)
+                return [pixbuf.scale_simple(ICON_SIZE,ICON_SIZE,GdkPixbuf.InterpType.BILINEAR), 0]
         
         _image_path = _on_hints(_hints, "image-path")
         if _image_path:
@@ -6509,7 +6578,7 @@ class notificationWin(Gtk.Window):
                 except:
                     pass
                 if pixbuf:
-                    return pixbuf
+                    return [pixbuf,0]
             else:
                 try:
                     pixbuf = Gtk.IconTheme().load_icon(_image_path, ICON_SIZE, Gtk.IconLookupFlags.FORCE_SVG)
@@ -6517,7 +6586,7 @@ class notificationWin(Gtk.Window):
                 except:
                     pass
                 if pixbuf:
-                    return pixbuf
+                    return [pixbuf,1]
         
         if _icon:
             try:
@@ -6528,23 +6597,28 @@ class notificationWin(Gtk.Window):
                 except:
                     pass
             if pixbuf:
-                return pixbuf
+                return [pixbuf,0]
         
         if ret_icon:
+            _pix_data = None
             try:
                 pixbuf = Gtk.IconTheme().load_icon(ret_icon, ICON_SIZE, Gtk.IconLookupFlags.FORCE_SVG)
+                _pix_data = [pixbuf, 1]
             except:
                 try:
                     pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(os.path.join(_curr_dir,"icons","wicon.png"), ICON_SIZE, ICON_SIZE, 1)
+                    _pix_data = [pixbuf, 0]
                 except:
                     pass
-            if pixbuf:
-                return pixbuf
+            # if pixbuf:
+                # return pixbuf
+            if _pix_data:
+                return _pix_data
         
         try:
             pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(os.path.join(_curr_dir,"icons","wicon.png"), ICON_SIZE, ICON_SIZE, 1)
             if pixbuf:
-                return pixbuf
+                return [pixbuf,1]
         except:
             pass
         
