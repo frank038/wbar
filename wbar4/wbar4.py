@@ -3,7 +3,7 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar4.py
 
-# V. 0.9.54
+# V. 0.9.55
 
 from wbar4lang import *
 import os,sys,shutil,stat
@@ -17,7 +17,7 @@ from gi.repository import GdkPixbuf
 from gi.repository import Gtk4LayerShell as GtkLayerShell
 from pathlib import Path
 import json
-from threading import Thread
+from threading import Thread, Lock
 from threading import Event
 import queue
 from subprocess import Popen, PIPE, CalledProcessError
@@ -27,6 +27,8 @@ import subprocess
 import time, datetime
 import dbus
 import dbus.service as Service
+
+lock = Lock()
 
 # enable the application server
 APP_SERVER = 1
@@ -6301,7 +6303,7 @@ def _on_hints(_hints, _value):
 
 class notificationWin(Gtk.Window):
 
-    def __init__(self, _parent, args):
+    def __init__(self, _parent, args, l):
         super().__init__()
         self._notifier = _parent
         # self.set_transient_for(self._parent)
@@ -6317,6 +6319,8 @@ class notificationWin(Gtk.Window):
         _actions = args[8]
         _replaceid = args[9]
         self.__replaceid = _replaceid
+        if l != None:
+            self._lock = l
         
         _is_transient = _on_hints(_hints, "transient")
         
@@ -6379,7 +6383,7 @@ class notificationWin(Gtk.Window):
         self.self_style_context = self.get_style_context()
         self.self_style_context.add_class("notificationwin")
         
-        self.connect('show', self.on_show)
+        # self.connect('show', self.on_show)
         
         self.set_size_request(self.not_width, self.not_height)
         self.main_box = Gtk.Box.new(1,0)
@@ -6487,6 +6491,7 @@ class notificationWin(Gtk.Window):
         
         self.connect('close-request', self.on_close_win,_replaceid)
         self.connect('destroy', self.on_close_win,_replaceid)
+        self.connect('realize', self.on_win_realize)
         
         # the geometry of this window
         self._value = None
@@ -6574,6 +6579,13 @@ class notificationWin(Gtk.Window):
         self._notifier._y += (_NW_height+self._notifier._parent.not_pad_pixels)
         #
         self._notifier.list_notifications.append([self, self.__replaceid, self._notifier._y])
+        #
+        GLib.timeout_add(1000, self._lock.release)
+    
+    def on_win_realize(self, w):
+        self._surface = self.get_surface()
+        self.surface_id_connect = self._surface.connect("layout",self.on_surface)
+    
     
     # def on_get_height(self):
         # return self._value
@@ -6841,7 +6853,14 @@ class Notifier(Service.Object):
             # NW = notificationWin(self, (0, self._y, _appname, _icon, _summ, _body, _timeout, _hints, _actions, _replaceid))
             # if _urgency != 2:
                 # self._close_notification(_timeout,NW)
-            GLib.idle_add(self.on_notification, (0, self._y, _appname, _icon, _summ, _body, _timeout, _hints, _actions, _replaceid))
+            #######
+            # GLib.idle_add(self.on_notification, (0, self._y, _appname, _icon, _summ, _body, _timeout, _hints, _actions, _replaceid))
+            ######
+            _d = (0, self._y, _appname, _icon, _summ, _body, _timeout, _hints, _actions, _replaceid)
+            global lock
+            _thread = Thread(target=self.on_notification_t, args=(_d, lock, ))#, daemon=True)
+            _thread.start()
+            ######
             #
             # # # _NW_height = NW.get_size_request().height
             # # # _NW_height = NW._value.height
@@ -6853,21 +6872,15 @@ class Notifier(Service.Object):
             # if _urgency != 2:
                 # self._close_notification(_timeout,NW)
         
-    def on_notification(self, _data):
-        time.sleep(0.8)
-        NW = notificationWin(self, _data)
+    def on_notification_t(self, _data, l):
+        l.acquire()
+        GLib.idle_add(self.on_notification, _data, l)
+    
+    def on_notification(self, _data, l=None):
+        NW = notificationWin(self, _data, l)
         # _urgency - _type
         if _data[6] != 2 and _data[0] != -99999:
             self._close_notification(_data[6],NW)
-        # GLib.timeout_add(10, self.show_notification, _data)
-        
-    # def show_notification(self, _data):
-        # time.sleep(0.8)
-        # NW = notificationWin(self, _data)
-        # # _urgency - _type
-        # if _data[6] != 2 and _data[0] != -99999:
-            # self._close_notification(_data[6],NW)
-        # return False
         
     def on_close_notification(self, nw):
         nw.close()
