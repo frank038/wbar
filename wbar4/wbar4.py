@@ -2733,26 +2733,26 @@ class MyWindow(Gtk.ApplicationWindow):
         if APP_SERVER:
             ret = self._appExec.setStatus()
         #
-        try:
-            self.terminate_thread(None)
-        except:
-            pass
-        try:
-            if self.ClipDaemon:
-                self.ClipDaemon._stop()
-        except:
-            pass
+        # try:
+        self.terminate_thread(None)
+        # except:
+            # pass
+        # try:
+        if self.ClipDaemon:
+            self.ClipDaemon._stop()
+        # except:
+            # pass
         #
-        try:
-            if USE_VOLUME == 1:
-                self.set_async = 1
-                _vol = self.pulse.volume_get_all_chans(self.default_sink)
-                if _vol < 0.9:
-                    self.pulse.volume_set_all_chans(self.default_sink, _vol+0.0001)
-                else:
-                    self.pulse.volume_set_all_chans(self.default_sink, _vol-0.0001)
-        except:
-            pass
+        # try:
+        if USE_VOLUME == 1:
+            self.set_async = 1
+            _vol = self.pulse.volume_get_all_chans(self.default_sink)
+            if _vol < 0.9:
+                self.pulse.volume_set_all_chans(self.default_sink, _vol+0.0001)
+            else:
+                self.pulse.volume_set_all_chans(self.default_sink, _vol-0.0001)
+        # except:
+            # pass
         #
         # self._app.quit()
         global QUIT
