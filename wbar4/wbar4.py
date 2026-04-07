@@ -3,7 +3,7 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar4.py
 
-# V. 0.9.55
+# V. 0.9.56
 
 from wbar4lang import *
 import os,sys,shutil,stat
@@ -32,9 +32,6 @@ lock = Lock()
 
 # enable the application server
 APP_SERVER = 1
-
-# rounded corners of the notification and list images
-ROUNDED_CORNER = 90
 
 # 0 for using the internal method
 _USE_PIL = 0
@@ -902,7 +899,11 @@ class MyWindow(Gtk.ApplicationWindow):
             conn = dbus.SessionBus(mainloop = mainloop)
             # Notifier(conn, "org.freedesktop.Notifications", self, self._signal2)
             Notifier(conn, "org.freedesktop.Notifications", self)
-            #
+            # do not disturb mode: 0 inactive - 1 active
+            self.not_do_not_disturb = 0
+            _dnd_file = os.path.join(_curr_dir,"do_not_disturb_mode")
+            if os.path.exists(_dnd_file):
+                self.not_do_not_disturb = 1
             # notification to be skipped completely
             _not_to_skip_path = os.path.join(_curr_dir,"configs","notifications_skipped")
             _not_to_skip_ret = None
@@ -1081,6 +1082,23 @@ class MyWindow(Gtk.ApplicationWindow):
         
         # notification alert
         if USE_NOTIFICATIONS == 1:
+            # after enabling the notifications again, show the alert image for newer notifications
+            self.to_show_alert_img = 0
+            # notifications to read
+            self.not_to_read = 0
+            #
+            _ret0 = Gtk.IconTheme().has_icon("notifications-disabled")
+            if _ret0:
+                self.not_disabled_img = Gtk.Image.new_from_icon_name("notification-disabled", 64)
+            else:
+                self.not_disabled_img = Gtk.Image.new_from_file(os.path.join(_curr_dir,"icons","notifications_disabled.svg"))
+            self.not_disabled_img.set_pixel_size(self.win_height-4)
+            if self.not_do_not_disturb == 1:
+                self.not_disabled_img.set_visible(True)
+            else:
+                self.not_disabled_img.set_visible(False)
+            self.right_box.prepend(self.not_disabled_img)
+            #
             _ret = Gtk.IconTheme().has_icon("notification-active")
             if _ret:
                 self.not_alert_img = Gtk.Image.new_from_icon_name("notification-active", 64)
@@ -1170,65 +1188,66 @@ class MyWindow(Gtk.ApplicationWindow):
             except:
                 APP_SERVER = 0
     
-    def nthreadslot(self,_signal,_param):
-        _list = _signal.propList[0]
-        _code = _list[0]
-        if _code == "not-write":
-            _appname = _list[1]
-            _summ = _list[2]
-            _body = _list[3]
-            _urgency = _list[4]
-            _pix = _list[5]
-            try:
-                _not_name = str(int(time.time()))
-                # self._not_path = os.path.join(_curr_dir,"mynots")
-                PATH_TO_STORE = os.path.join(_curr_dir, "mynots")
-                _not_path = os.path.join(PATH_TO_STORE, _not_name)
-                os.makedirs(_not_path)
-                ff = open(os.path.join(_not_path, "notification"), "w")
-                ff.write(_appname+"\n\n\n@\n\n\n"+_summ+"\n\n\n@\n\n\n"+_body)
-                ff.close()
-                # image
-                if _pix:
-                    _pb = _pix.get_paintable()
-                    _pb.save_to_png(os.path.join(_not_path,"image.png"))
-                # sound
-                _no_sound = _list[6]
-                ####
-                # deactivated
-                # _hints = _list[6]
-                # _no_sound = _on_hints(_hints, "suppress-sound")
-                    # _soundfile = _on_hints(_hints, "sound-file")
-                    # if not _soundfile:
-                        # _soundfile = _on_hints(_hints, "sound-name")
-                    ###
-                if not _no_sound:
-                    # deactivated
-                    # if _soundfile:
-                        # self.play_sound(_soundfile)
-                    # else:
-                    if _urgency == 1 or _urgency == None:
-                        self.play_sound(os.path.join(_curr_dir, "sounds/urgency-normal.wav"))
-                    elif _urgency == 2:
-                        self.play_sound(os.path.join(_curr_dir, "sounds/urgency-critical.wav"))
-            except:
-                pass
-        elif _code == "not-sound":
-            _urgency = _list[4]
-            _no_sound = _list[6]
-            _dnd_file = os.path.join(_curr_dir,"do_not_disturb_mode")
-            try:
-                if not _no_sound and not os.path.exists(_dnd_file):
-                    # deactivated
-                    # if _soundfile:
-                        # self.play_sound(_soundfile)
-                    # else:
-                    if _urgency == 1 or _urgency == None:
-                        self.play_sound(os.path.join(_curr_dir, "sounds/urgency-normal.wav"))
-                    elif _urgency == 2:
-                        self.play_sound(os.path.join(_curr_dir, "sounds/urgency-critical.wav"))
-            except:
-                pass
+    # # disabled
+    # def nthreadslot(self,_signal,_param):
+        # _list = _signal.propList[0]
+        # _code = _list[0]
+        # if _code == "not-write":
+            # _appname = _list[1]
+            # _summ = _list[2]
+            # _body = _list[3]
+            # _urgency = _list[4]
+            # _pix = _list[5]
+            # try:
+                # _not_name = str(int(time.time()))
+                # # self._not_path = os.path.join(_curr_dir,"mynots")
+                # PATH_TO_STORE = os.path.join(_curr_dir, "mynots")
+                # _not_path = os.path.join(PATH_TO_STORE, _not_name)
+                # os.makedirs(_not_path)
+                # ff = open(os.path.join(_not_path, "notification"), "w")
+                # ff.write(_appname+"\n\n\n@\n\n\n"+_summ+"\n\n\n@\n\n\n"+_body)
+                # ff.close()
+                # # image
+                # if _pix:
+                    # _pb = _pix.get_paintable()
+                    # _pb.save_to_png(os.path.join(_not_path,"image.png"))
+                # # sound
+                # _no_sound = _list[6]
+                # ####
+                # # deactivated
+                # # _hints = _list[6]
+                # # _no_sound = _on_hints(_hints, "suppress-sound")
+                    # # _soundfile = _on_hints(_hints, "sound-file")
+                    # # if not _soundfile:
+                        # # _soundfile = _on_hints(_hints, "sound-name")
+                    # ###
+                # if not _no_sound:
+                    # # deactivated
+                    # # if _soundfile:
+                        # # self.play_sound(_soundfile)
+                    # # else:
+                    # if _urgency == 1 or _urgency == None:
+                        # self.play_sound(os.path.join(_curr_dir, "sounds/urgency-normal.wav"))
+                    # elif _urgency == 2:
+                        # self.play_sound(os.path.join(_curr_dir, "sounds/urgency-critical.wav"))
+            # except:
+                # pass
+        # elif _code == "not-sound":
+            # _urgency = _list[4]
+            # _no_sound = _list[6]
+            # _dnd_file = os.path.join(_curr_dir,"do_not_disturb_mode")
+            # try:
+                # if not _no_sound and not os.path.exists(_dnd_file):
+                    # # deactivated
+                    # # if _soundfile:
+                        # # self.play_sound(_soundfile)
+                    # # else:
+                    # if _urgency == 1 or _urgency == None:
+                        # self.play_sound(os.path.join(_curr_dir, "sounds/urgency-normal.wav"))
+                    # elif _urgency == 2:
+                        # self.play_sound(os.path.join(_curr_dir, "sounds/urgency-critical.wav"))
+            # except:
+                # pass
             
     # find and return the hint
     def _on_hints(self, _hints, _value):
@@ -4929,7 +4948,7 @@ class otherWin(Gtk.Window):
                     _r.init(0,0,self._parent.not_icon_size2,self._parent.not_icon_size2)
                     #
                     _rr = Gsk.RoundedRect()
-                    _rr.init_from_rect(_r, ROUNDED_CORNER)
+                    _rr.init_from_rect(_r, (self._parent.not_icon_size2/2))
                     _rr.normalize()
                     #
                     _snapshot.push_rounded_clip(_rr)
@@ -5082,6 +5101,8 @@ class otherWin(Gtk.Window):
     def _stack_child_changed(self, stack, pspec):
         _name = stack.get_visible_child_name()
         if _name == "Notifications":
+            self._parent.to_show_alert_img = 0
+            self._parent.not_to_read = 0
             self._parent.not_alert_img.set_visible(False)
         
     def on_menu_close(self, w):
@@ -5175,8 +5196,14 @@ class otherWin(Gtk.Window):
         self._parent.on_button_conf_clicked(btn)
     
     def on_dnd_btn(self, btn):
-        _dnd_file = os.path.join(_curr_dir,"do_not_disturb_mode")
-        if not os.path.exists(_dnd_file):
+        if self._parent.not_do_not_disturb == 0:
+            self._parent.not_do_not_disturb = 1
+            if self._parent.not_alert_img.is_visible():
+                self._parent.to_show_alert_img = 1
+                self._parent.not_alert_img.set_visible(False)
+            self._parent.not_disabled_img.set_visible(True)
+            _dnd_file = os.path.join(_curr_dir,"do_not_disturb_mode")
+            # if not os.path.exists(_dnd_file):
             try:
                 _f =  open(_dnd_file,"w")
                 _f.close()
@@ -5184,7 +5211,13 @@ class otherWin(Gtk.Window):
             except:
                 pass
         else:
+            self._parent.not_do_not_disturb = 0
+            self._parent.not_disabled_img.set_visible(False)
+            if self._parent.to_show_alert_img == 1:
+                self._parent.to_show_alert_img = 0
+                self._parent.not_alert_img.set_visible(True)
             try:
+                _dnd_file = os.path.join(_curr_dir,"do_not_disturb_mode")
                 os.remove(_dnd_file)
                 self.dnd_btn.set_label(WBDONOTDISTURB)
             except:
@@ -6356,7 +6389,13 @@ class notificationWin(Gtk.Window):
                         if _pixbuf:
                             _pixbuf.savev(os.path.join(_notification_path,"image.png"),"png",None,None)
                         # if not self._notifier._parent.not_alert_img.get_visible():
-                        self._notifier._parent.not_alert_img.set_visible(True)
+                        # do not show whether do not disturb is setted - just to not make too much confusion in the bar
+                        if self._notifier._parent.not_do_not_disturb == 0:
+                            self._notifier._parent.not_alert_img.set_visible(True)
+                        else:
+                            self._notifier._parent.to_show_alert_img = 1
+                        # counter 
+                        self._notifier._parent.not_to_read += 1
                 except:
                     pass
         # only register - do not show
@@ -6409,7 +6448,7 @@ class notificationWin(Gtk.Window):
                 _r.init(0,0,self._notifier._parent.not_icon_size,self._notifier._parent.not_icon_size)
                 #
                 _rr = Gsk.RoundedRect()
-                _rr.init_from_rect(_r, ROUNDED_CORNER)
+                _rr.init_from_rect(_r, int(self._notifier._parent.not_icon_size))
                 _rr.normalize()
                 #
                 _snapshot.push_rounded_clip(_rr)
@@ -6532,15 +6571,16 @@ class notificationWin(Gtk.Window):
         self._notifier.ActionInvoked(_replaceid, _action)
         self.close()
     
-    # def on_lbl_body_clicked(self, lbl, _url):
-        # if _url:
-            # Gtk.show_uri_on_window(None, _url, Gdk.CURRENT_TIME)
-        # return True
-    
     def on_lbl_body_clicked(self, lbl, _url):
         if _url:
             _ul = Gtk.UriLauncher.new(_url)
             _ul.launch(None,None,None,None)
+            #
+            self._notifier._parent.not_to_read -= 1
+            if self._notifier._parent.not_to_read == 0:
+                self._notifier._parent.not_alert_img.set_visible(False)
+            self.close()
+            #
             return True
     
     def on_close(self,_replaceid):
@@ -6557,6 +6597,9 @@ class notificationWin(Gtk.Window):
         self.close()
     
     def on_da_gesture_l(self, o,n,x,y):
+        self._notifier._parent.not_to_read -= 1
+        if self._notifier._parent.not_to_read == 0:
+            self._notifier._parent.not_alert_img.set_visible(False)
         self.close()
     
     # def on_close_btn(self, btn):
@@ -6858,7 +6901,7 @@ class Notifier(Service.Object):
             ######
             _d = (0, self._y, _appname, _icon, _summ, _body, _timeout, _hints, _actions, _replaceid)
             global lock
-            _thread = Thread(target=self.on_notification_t, args=(_d, lock, ))#, daemon=True)
+            _thread = Thread(target=self.on_notification_t, args=(_d, _urgency, lock, ))#, daemon=True)
             _thread.start()
             ######
             #
@@ -6872,14 +6915,14 @@ class Notifier(Service.Object):
             # if _urgency != 2:
                 # self._close_notification(_timeout,NW)
         
-    def on_notification_t(self, _data, l):
+    def on_notification_t(self, _data, _urgency, l):
         l.acquire()
-        GLib.idle_add(self.on_notification, _data, l)
+        GLib.idle_add(self.on_notification, _data, _urgency, l)
     
-    def on_notification(self, _data, l=None):
+    def on_notification(self, _data, _urgency=None, l=None):
         NW = notificationWin(self, _data, l)
         # _urgency - _type
-        if _data[6] != 2 and _data[0] != -99999:
+        if _urgency != 2 and _data[0] != -99999:
             self._close_notification(_data[6],NW)
         
     def on_close_notification(self, nw):
