@@ -3,7 +3,7 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar4.py
 
-# V. 0.9.56
+# V. 0.9.57
 
 from wbar4lang import *
 import os,sys,shutil,stat
@@ -233,11 +233,13 @@ _notification_conf = None
 _notification_config_file = os.path.join(_curr_dir,"configs", "notifications.json")
 # use_this: 1 yes - 0 no - 2 external server (the notification keep storing)
 # do not disturb (dnd): 0 not active - 1 except urgent - 2 always active
+# "icon_size": window is the notification window; list is the list in the service menu
 # sound_play: 0 no sounds - 1 use gsound - 2 string: audio player
 # max_chars: the lenght of the notification window based on text - 0 to disable this option
 # pad_pixels: the pad between the notifications - bottom_limit: maximum height of all notifications
 # rounded-images in the notification or list: 0 no - 1 only images - 2 also icons 
-_starting_notification_conf = {"use_this":1,"nwidth":500,"nheight":200,"icon_size":64,"icon_size_list":64,"dnd":0,"sound_play":1,"max_chars":0,"pad_pixels":2,"bottom_limit":200,"volume_change":0,"rounded-images":0}
+# "icon_roundness": 0 square - 1.0 full rounded (increment/decrement: 0.01)
+_starting_notification_conf = {"use_this":1,"nwidth":500,"nheight":200,"icon_size":64,"icon_size_list":64,"dnd":0,"sound_play":1,"max_chars":0,"pad_pixels":2,"bottom_limit":200,"volume_change":0,"rounded-images":0,"icon_roundness":1}
 if not os.path.exists(_notification_config_file):
     try:
         _ff = open(_notification_config_file,"w")
@@ -880,6 +882,8 @@ class MyWindow(Gtk.ApplicationWindow):
             self.not_vol_change_tmp = None
             self.not_rounded_img = self.notification_conf["rounded-images"]
             self.not_rounded_img_tmp = -1
+            self.not_icon_roundeness = self.notification_conf["icon_roundness"]
+            self.not_icon_roundeness_tmp = -1
             # notifications skipped
             self.not_skip_apps = []
             self.not_skip_apps_tmp = None
@@ -1070,10 +1074,6 @@ class MyWindow(Gtk.ApplicationWindow):
                             _notedialog.set_visible(True)
         except:
             pass
-        
-        # # clock
-        # if self.clock_use:
-            # self.on_set_clock(None)
         
         # clipboard
         self.temp_clip = None
@@ -1660,28 +1660,30 @@ class MyWindow(Gtk.ApplicationWindow):
         return None
     
     def on_label1(self, btn):
-        return
-        if event.button == 1:
-            _script1 = os.path.join(_curr_dir,"scripts","label1.script")
-            if os.path.exists(_script1):
-                if not os.access(_script1, os.X_OK):
-                    os.chmod(_script1, 0o740)
-                try:
-                    os.system(f"{_script1} &")
-                except:
-                    pass
+        # return
+        _script1 = os.path.join(_curr_dir,"scripts","label1.script")
+        if os.path.exists(_script1):
+            if not os.access(_script1, os.X_OK):
+                os.chmod(_script1, 0o740)
+            try:
+                # os.system("{} &".format(_script1))
+                cmd = "{}".format(_script1)
+                Popen(["sh", cmd, "&"])
+            except:
+                pass
     
     def on_label2(self, btn):
-        return
-        if event.button == 1:
-            _script2 = os.path.join(_curr_dir,"scripts","label2.script")
-            if os.path.exists(_script2):
-                if not os.access(_script2, os.X_OK):
-                    os.chmod(_script2, 0o740)
-                try:
-                    os.system(f"{_script2} &")
-                except:
-                    pass
+        # return
+        _script2 = os.path.join(_curr_dir,"scripts","label2.script")
+        if os.path.exists(_script2):
+            if not os.access(_script2, os.X_OK):
+                os.chmod(_script2, 0o740)
+            try:
+                # os.system("{} &".format(_script2))
+                cmd = "{} &".format(_script2)
+                Popen(["sh", cmd, "&"])
+            except:
+                pass
     
     def clipboard_ready(self):
         _ret = 1
@@ -2635,8 +2637,16 @@ class MyWindow(Gtk.ApplicationWindow):
                 if _script1 and os.access(_script1,os.X_OK):
                     self.event1 = Event()
                     self.q1 = queue.Queue(maxsize=1)
-                    self.thread_label1 = Thread(target=labelThread, args=(self.label1,_script1,self.q1,self.event1,_type))
+                    # self.thread_label1 = Thread(target=labelThread, args=(self.label1,_script1,self.q1,self.event1,_type))
+                    self._signal_label1 = SignalObject()
+                    self._signal_label1.connect("notify::propList", self.label1_threadslot)
+                    self.thread_label1 = Thread(target=label1Thread, args=(self._signal_label1,_script1, self.q1,self.event1,_type))
                     self.thread_label1.start()
+    
+    def label1_threadslot(self,_signal,_param):
+        _list = _signal.propList[0]
+        _label = _list[0]
+        GLib.idle_add(lambda: self.label1.set_label(_label))
     
     def on_script1(self, _script1):
         ret = subprocess.check_output(_script1, shell=False, universal_newlines=True)
@@ -2684,8 +2694,16 @@ class MyWindow(Gtk.ApplicationWindow):
                 if _script2 and os.access(_script2,os.X_OK):
                     self.event2 = Event()
                     self.q2 = queue.Queue(maxsize=1)
-                    self.thread_label2 = Thread(target=labelThread, args=(self.label2,_script2,self.q2,self.event2,_type))
+                    # self.thread_label2 = Thread(target=labelThread, args=(self.label2,_script2,self.q2,self.event2,_type))
+                    self._signal_label2 = SignalObject()
+                    self._signal_label2.connect("notify::propList", self.label2_threadslot)
+                    self.thread_label2 = Thread(target=label2Thread, args=(self._signal_label2,_script2, self.q2,self.event2,_type))
                     self.thread_label2.start()
+    
+    def label2_threadslot(self,_signal,_param):
+        _list = _signal.propList[0]
+        _label = _list[0]
+        GLib.idle_add(lambda: self.label2.set_label(_label))
     
     def on_script2(self, _script2):
         ret = subprocess.check_output(_script2, shell=False, universal_newlines=True)
@@ -2796,10 +2814,10 @@ class MyWindow(Gtk.ApplicationWindow):
             # self.right_box.reorder_child(self.clipbutton, _pos)
             # self.right_box.show_all()
     
-    def on_clock(self):
-        if self._timer:
-            self.set_on_clock()
-        return self._timer
+    # def on_clock(self):
+        # if self._timer:
+            # self.set_on_clock()
+        # return self._timer
     
     def set_on_clock(self):
         if self.time_format == 0:
@@ -2851,7 +2869,12 @@ class MyWindow(Gtk.ApplicationWindow):
                 self.right_box.insert_child_after(self.clock_lbl, self.clipbutton)
             else:
                 self.right_box.append(self.clock_lbl)
-        self._t_id = GLib.timeout_add(60000, self.on_clock)
+        ###
+        # self._t_id = GLib.timeout_add(60000, self.on_clock)
+        ###
+        self.clock_is_started = 0
+        self.start_clock()
+        ###
         # # reorder
         # if _pos != None:
             # # if self.win_position == 0 and self.label2.get_text() != "":
@@ -2869,6 +2892,22 @@ class MyWindow(Gtk.ApplicationWindow):
             # # self.center_box.reorder_child(self.clock_lbl, _pos)
             # # self.center_box.show_all()
     
+    def start_clock(self):
+        if self.clock_is_started == 0:
+            self.clock_is_started = 1
+            self._signal_clock = SignalObject()
+            self._signal_clock.connect("notify::propList", self.clock_threadslot)
+            self.thread_clock = clockThread(self._signal_clock, self.clock_is_started)
+            self.thread_clock.daemon = True
+            self.thread_clock.start()
+    
+    def clock_threadslot(self,_signal,_param):
+        _list = _signal.propList[0]
+        if _list[0] == "new":
+            GLib.idle_add(self.set_on_clock)
+        elif _list[0] == "stopped":
+            self.clock_is_started = 0
+        
     def on_pressed_right_clock(self, o,n,x,y):
         _pop = Gtk.Popover.new()
         _pop = Gtk.Popover()
@@ -2890,7 +2929,7 @@ class MyWindow(Gtk.ApplicationWindow):
             self._t_id = None
         self.clock_lbl.set_label("")
         self.set_on_clock()
-        self._t_id = GLib.timeout_add(60000, self.on_clock)
+        # self._t_id = GLib.timeout_add(60000, self.on_clock)
     
     def load_conf(self):
         if not os.path.exists(_panelconf):
@@ -3137,6 +3176,10 @@ class MyWindow(Gtk.ApplicationWindow):
     # 0 no - 1 only images - 2 also icons
     def set_round_combo(self, _type):
         self.not_rounded_img_tmp = _type
+    
+    # 0 square - 1.0 full rounded
+    def set_roundness_spin(self, _n):
+        self.not_icon_roundeness_tmp = _n
     
     def set_not_max_chars(self, _n):
         self.not_max_chars_tmp = _n
@@ -3389,7 +3432,8 @@ class MyWindow(Gtk.ApplicationWindow):
                             if self.clock_lbl in self.center_box:
                                 self.center_box.remove(self.clock_lbl)
                         self.on_set_clock2(self.clock_use_tmp)
-                        self._t_id = GLib.timeout_add(60000, self.on_clock)
+                        # self._t_id = GLib.timeout_add(60000, self.on_clock)
+                        self.start_clock()
                     self.clock_use = self.clock_use_tmp
                     self._configuration["panel"]["clock"] = self.clock_use_tmp
                 self.clock_use_tmp = None
@@ -3403,7 +3447,8 @@ class MyWindow(Gtk.ApplicationWindow):
                     GLib.source_remove(self._t_id)
                     self._t_id = None
                 self.set_on_clock()
-                self._t_id = GLib.timeout_add(60000, self.on_clock)
+                # self._t_id = GLib.timeout_add(60000, self.on_clock)
+                self.start_clock()
                 
             # volume application
             if self.volume_command_tmp != self.volume_command:
@@ -3472,6 +3517,10 @@ class MyWindow(Gtk.ApplicationWindow):
                 self.notification_conf["rounded-images"] = self.not_rounded_img_tmp
                 self.not_rounded_img = self.not_rounded_img_tmp
                 self.not_rounded_img_tmp = -1
+            if self.not_icon_roundeness_tmp != -1:
+                self.notification_conf["icon_roundness"] = self.not_icon_roundeness_tmp
+                self.not_icon_roundeness = self.not_icon_roundeness_tmp
+                self.not_icon_roundeness_tmp = -1
             if self.not_dnd_tmp != -1:
                 self.notification_conf["dnd"] = self.not_dnd_tmp
                 self.not_dnd = self.not_dnd_tmp
@@ -3583,6 +3632,7 @@ class MyWindow(Gtk.ApplicationWindow):
         self.not_icon_size_tmp = 0
         self.not_icon_size2_tmp = 0
         self.not_rounded_img_tmp = -1
+        self.not_icon_roundeness_tmp = -1
         self.not_dnd_tmp = -1
         self.not_max_chars_tmp = None
         self.not_sounds_tmp = -1
@@ -4948,7 +4998,7 @@ class otherWin(Gtk.Window):
                     _r.init(0,0,self._parent.not_icon_size2,self._parent.not_icon_size2)
                     #
                     _rr = Gsk.RoundedRect()
-                    _rr.init_from_rect(_r, (self._parent.not_icon_size2/2))
+                    _rr.init_from_rect(_r, ((self._parent.not_icon_size2*self._parent.not_icon_roundeness)/2))
                     _rr.normalize()
                     #
                     _snapshot.push_rounded_clip(_rr)
@@ -5910,6 +5960,7 @@ class DialogConfiguration(Gtk.Dialog):
         #
         # rounded images
         not_lbl_rounded = Gtk.Label(label=WBROUNDEDIMG)
+        not_lbl_rounded.set_tooltip_text(WBROUNDEDIMG2)
         self.page5_box.attach(not_lbl_rounded,0,4,1,1)
         not_lbl_rounded.set_halign(1)
         round_combo = Gtk.ComboBoxText.new()
@@ -5919,6 +5970,12 @@ class DialogConfiguration(Gtk.Dialog):
         round_combo.set_active(self._parent.not_rounded_img)
         round_combo.connect('changed', self.on_round_combo)
         self.page5_box.attach_next_to(round_combo,not_lbl_rounded,1,1,1)
+        # roundness
+        roundness_spin = Gtk.SpinButton.new_with_range(0,1,0.01)
+        roundness_spin.set_value(self._parent.not_icon_roundeness)
+        roundness_spin.connect('value-changed', self.on_roundness_spinbtn)
+        roundness_spin.set_numeric(True)
+        self.page5_box.attach_next_to(roundness_spin,round_combo,1,1,1)
         # summary and body max chars lenght
         max_chars_lbl = Gtk.Label(label=WBTXT60)
         max_chars_lbl.set_tooltip_text(WBTXT61)
@@ -6240,6 +6297,10 @@ class DialogConfiguration(Gtk.Dialog):
     def on_round_combo(self, cb):
         self._parent.set_round_combo(cb.get_active())
     
+    def on_roundness_spinbtn(self, btn):
+        value = btn.get_value()
+        self._parent.set_roundness_spin(value)
+        
     def on_entry_max_chars(self, _entry):
         try:
             _text = _entry.get_text()
@@ -6275,33 +6336,91 @@ class DialogConfiguration(Gtk.Dialog):
         self._parent.set_sound_combo(cb.get_active())
 
 
-class labelThread(Thread):
-    
-    def __init__(self, label, _file, q, event, _type):
-        self.label = label
+class label1Thread(Thread):
+    def __init__(self, _signal, _file, q, event, _type):
+        self._signal = _signal
         self._file = _file
         self.q = q
         self.event = event
         self._type = _type
         self.run()
-    
+        
     def run(self):
         is_true = 1
         if is_true == 0:
             return
         if self.event.is_set():
             return
-        
+        #
         cmd = [self._file]
-        
         if self._type == 2:
-            p = Popen(cmd, stdout=PIPE, bufsize=1, shell=False, universal_newlines=True)
-            self.q.put_nowait(p)
-            _line = p.stdout.readline()
-            self.label.set_text(_line.strip("\n"))
-            while _line and is_true:
+            try:
+                p = Popen(cmd, stdout=PIPE, bufsize=1, shell=False, universal_newlines=True)
+                self.q.put_nowait(p)
                 _line = p.stdout.readline()
-                self.label.set_text(_line.strip("\n"))
+                self._signal.propList = [_line.strip("\n")]
+                while _line and is_true:
+                    _line = p.stdout.readline()
+                    self._signal.propList = [_line.strip("\n")]
+            except:
+                self._signal.propList = ["Error"]
+
+class label2Thread(Thread):
+    def __init__(self, _signal, _file, q, event, _type):
+        self._signal = _signal
+        self._file = _file
+        self.q = q
+        self.event = event
+        self._type = _type
+        self.run()
+        
+    def run(self):
+        is_true = 1
+        if is_true == 0:
+            return
+        if self.event.is_set():
+            return
+        #
+        cmd = [self._file]
+        if self._type == 2:
+            try:
+                p = Popen(cmd, stdout=PIPE, bufsize=1, shell=False, universal_newlines=True)
+                self.q.put_nowait(p)
+                _line = p.stdout.readline()
+                self._signal.propList = [_line.strip("\n")]
+                while _line and is_true:
+                    _line = p.stdout.readline()
+                    self._signal.propList = [_line.strip("\n")]
+            except:
+                self._signal.propList = ["Error"]
+
+
+# class labelThread(Thread):
+    # def __init__(self, label, _file, q, event, _type):
+        # self.label = label
+        # self._file = _file
+        # self.q = q
+        # self.event = event
+        # self._type = _type
+        # self.run()
+    # 
+    # def run(self):
+        # is_true = 1
+        # if is_true == 0:
+            # return
+        # if self.event.is_set():
+            # return
+        # 
+        # cmd = [self._file]
+        # 
+        # if self._type == 2:
+            # p = Popen(cmd, stdout=PIPE, bufsize=1, shell=False, universal_newlines=True)
+            # self.q.put_nowait(p)
+            # _line = p.stdout.readline()
+            # self.label.set_text(_line.strip("\n"))
+            # while _line and is_true:
+                # _line = p.stdout.readline()
+                # self.label.set_text(_line.strip("\n"))
         
 ############## notifications ##############
 
@@ -6448,7 +6567,7 @@ class notificationWin(Gtk.Window):
                 _r.init(0,0,self._notifier._parent.not_icon_size,self._notifier._parent.not_icon_size)
                 #
                 _rr = Gsk.RoundedRect()
-                _rr.init_from_rect(_r, int(self._notifier._parent.not_icon_size))
+                _rr.init_from_rect(_r, ((self._notifier._parent.not_icon_size2*self._notifier._parent.not_icon_roundeness)/2))
                 _rr.normalize()
                 #
                 _snapshot.push_rounded_clip(_rr)
@@ -7121,6 +7240,21 @@ class TaskManager:
 
 ####################
 
+class clockThread(Thread):
+    
+    def __init__(self, _signal, _clock_started):
+        super(clockThread, self).__init__()
+        self._signal = _signal
+        self._clock_started = _clock_started
+    
+    def run(self):
+        while self._clock_started:
+            time.sleep(60)
+            self._signal.propList = ["new"]
+        else:
+            self._signal.propList = ["stopped"]
+
+#####################
 
 owner_id = None
 
