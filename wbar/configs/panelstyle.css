@@ -1,50 +1,47 @@
-/* the window border colour #00B300 */
-@define-color border_color #6cb6ff;
+/* the window border colour */
+@define-color border_color #00B300;
 @define-color stickynote_color #F3C000;
-/*
-.window-frame, .window-frame:backdrop {
- box-shadow: 0 0 0 black;
- border-style: none;
- margin: 0;
- border-radius: 0;
-}
 
-.titlebar {
- border-radius: 0;
+* {
+  font-size: 28px;
 }
-
-.window-frame.csd.popup {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(0, 0, 0, 0.13);
-}
-
-.header-bar {
-  background-image: none;
-  box-shadow: none;
-}*/
 
 /* the panel */
-/*
 .mywindow {
+  border-radius: 30px 30px 30px 30px;
   border-bottom-width: 2px;
   border-color: @border_color;
   border-style: solid;
-}*/
+  font-size: 24px;
+}
 
+.mywindow button {
+  background: #cecece;
+}
 
 /* taskbar buttons - type togglebutton */ 
 /* .mywindow #btn-taskbar:checked {
   background-color: yellow;
 }*/
 
+
+/* the expander arrow size */
+/*
+expander {
+  min-width: 32px;
+  min-height: 32px;
+}*/
+
+/* link colour of the notification in the list*/
+.mynotbodylbl link {
+  color: #000099;
+}
+
 /* tasklist */
 /* #tasklist {
   background-color: red;
   border: 1px solid black;
 }*/
-
-#tasklist button {
-  border: 1px solid transparent;
-}
 
 #tasklist button:hover,
 #tasklist button:checked {
@@ -60,13 +57,22 @@
   margin-bottom: 0px;
 }
 
+popover * {
+  background: #cecece;
+}
+
+/* grid widget */
+grid {
+  background:#E0E0E0;
+}
+
 /* the menu window */
-/*
 .menuwin { 
   border-radius: 10px 10px 10px 10px;
   border-width: 2px;
   border-color: @border_color;
   border-style: solid;
+  font-size: 24px;
 }
 
 .menuwin button {
@@ -75,16 +81,16 @@
   border-width: 1px;
   border-color: #7F7F7F;
   margin: 2px;
+  font-size: 24px;
 }
-*/
 
 /* the shutdown/reboot/logout dialog */
-/*
 .commandwin { 
   border-radius: 10px 10px 10px 10px;
   border-width: 2px;
   border-color: @border_color;
   border-style: solid;
+  font-size: 24px;
 }
 
 .commandwin button {
@@ -93,16 +99,16 @@
   border-width: 1px;
   border-color: #7F7F7F;
   margin: 2px;
+  font-size: 24px;
 }
-*/
 
 /* the clipboard window */
-/*
 .clipboardwin { 
   border-radius: 10px 10px 10px 10px;
   border-width: 2px;
   border-color: @border_color;
   border-style: solid;
+  font-size: 24px;
 }
 
 .clipboardwin button {
@@ -111,6 +117,7 @@
   border-width: 1px;
   border-color: #7F7F7F;
   margin: 2px;
+  font-size: 24px;
 }
 
 .clipboardwin #cliprow {
@@ -119,16 +126,17 @@
   border-width: 1px;
   border-color: #7F7F7F;
   margin: 2px;
+  font-size: 24px;
 }
-*/
 
 /* the service window */
-/*
 .servicewin { 
   border-radius: 10px 10px 10px 10px;
   border-width: 2px;
   border-color: @border_color;
   border-style: solid;
+  font-size: 22px;
+  font-size: 24px;
 }
 .servicewin button {
   border-radius: 6px;
@@ -136,6 +144,7 @@
   border-width: 1px;
   border-color: #7F7F7F;
   margin: 2px;
+  font-size: 24px;
 }
 
 .servicewin #notrow {
@@ -144,16 +153,23 @@
   border-width: 1px;
   border-color: #7F7F7F;
   margin: 2px;
+  font-size: 24px;
 }
-*/
+
+/* notifications in the list - mouse over custom colours */
+/*.servicewin #notrow > *:hover {
+  background-color: #eeeeee;
+  color: #000000;
+  border-width: 0px;
+}*/
 
 /* the notification window */
-/*
 .notificationwin { 
   border-radius: 10px 10px 10px 10px;
   border-width: 2px;
   border-color: @border_color;
   border-style: solid;
+  font-size: 24px;
 }
 
 .notificationwin button ~#closebtn {
@@ -162,71 +178,99 @@
   border-width: 1px;
   border-color: #7F7F7F;
   margin: 2px;
+  font-size: 24px;
 }
-*/
 
-/* the volume meter - unused */
+/* the volume meter */
 /*
 .vollevelbar trough, progress {
   background-color: white;
 }*/
 
+.vollerbar, slider {
+  background: #00000000;
+}
+
 /* the output command left label */
-/*
 .label1 {
-}*/
+  font-size: 24px;
+}
 
 /* the output command center label */
 /*
 .label2 {
+  font-size: 24px;
 }*/
 
 /* the clock label */
-/*
 .clocklabel {
   font-family: DIGITALDREAMFAT;
   font-size: 21px;
-  color: black;
 }
-*/
 
 /* the timer win */
-/*
 .timerwin button {
   border-radius: 6px;
   border: solid;
   border-width: 1px;
   border-color: #7F7F7F;
   margin: 2px;
+  font-size: 24px;
 }
-*/
 
 /* the note window */
 .notewin * {
   background-color: @stickynote_color;
-}
-/*.notewin button:hover>label {
-  background-color: #BFBFBF;
-}*/
-.notewin button:hover:active>label {
-  background-color: #BFBFBF;
+  font-size: 24px;
+  margin: 0px;
 }
 
-/*
-.notewin button {
+.notewin button label {
   border-radius: 6px;
   border: solid;
   border-width: 1px;
   border-color: #7F7F7F;
-  margin: 2px;
+  margin: 0px;
+  font-size: 24px;
+  background-color: white;
 }
-*/
+
 /*
 .notewin textview text {
   color: black;
+  font-size: 24px;
 }*/
 
-/*
-.calendarwin {
+.configuratorwin {
+  border-radius: 10px 10px 10px 10px;
+  border-width: 2px;
+  border-color: @border_color;
+  border-style: solid;
+  font-size: 24px;
 }
-*/
+
+#popovertray {
+  border-radius: 10px 10px 10px 10px;
+  border-width: 0px;
+  border-color: @border_color;
+  border-style: solid;
+  font-size: 24px;
+}
+
+#popovertray * {
+  border-width: 0px;
+  font-size: 24px;
+}
+
+/*
+#mysearchentry {
+  background: white;
+}*/
+
+#yndialog {
+  border-radius: 10px 10px 10px 10px;
+  border-width: 0px;
+  border-color: @border_color;
+  border-style: solid;
+  font-size: 24px;
+}

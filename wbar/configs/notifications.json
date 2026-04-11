@@ -3,9 +3,13 @@
     "nwidth": 500,
     "nheight": 100,
     "icon_size": 64,
+    "icon_size_list": 64,
     "dnd": 0,
     "sound_play": 1,
+    "max_chars": 50,
+    "pad_pixels": 2,
     "bottom_limit": 200,
-    "skip_apps": "",
-    "skip_apps2": ""
+    "volume_change": 0,
+    "rounded-images": 1,
+    "icon_roundness": 0
 }
