@@ -160,8 +160,7 @@ grid {
 /*.servicewin #notrow > *:hover {
   background-color: #eeeeee;
   color: #000000;
-  border-width: 0px solid transparent;
-  
+  border-width: 0px;
 }*/
 
 /* the notification window */

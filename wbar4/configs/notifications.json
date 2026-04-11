@@ -10,5 +10,6 @@
     "pad_pixels": 2,
     "bottom_limit": 200,
     "volume_change": 0,
-    "rounded-images": 1
+    "rounded-images": 1,
+    "icon_roundness": 0
 }
