@@ -3,7 +3,7 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar4.py
 
-# V. 0.9.57
+# V. 0.9.58
 
 from wbar4lang import *
 import os,sys,shutil,stat
@@ -1030,6 +1030,11 @@ class MyWindow(Gtk.ApplicationWindow):
             self.manager = self.context.manager
             self.on_set_tasklist()
         
+        # clipboard
+        self.temp_clip = None
+        if self.clipboard_use and USE_CLIPBOARD:
+            self.on_set_clipboard(None)
+        
         # output2
         self.temp_out2 = None
         # self.label2button = Gtk.EventBox()
@@ -1075,18 +1080,13 @@ class MyWindow(Gtk.ApplicationWindow):
         except:
             pass
         
-        # clipboard
-        self.temp_clip = None
-        if self.clipboard_use and USE_CLIPBOARD:
-            self.on_set_clipboard(None)
-        
         # notification alert
         if USE_NOTIFICATIONS == 1:
             # after enabling the notifications again, show the alert image for newer notifications
             self.to_show_alert_img = 0
             # notifications to read
             self.not_to_read = 0
-            #
+            # notification disbled icon
             _ret0 = Gtk.IconTheme().has_icon("notifications-disabled")
             if _ret0:
                 self.not_disabled_img = Gtk.Image.new_from_icon_name("notification-disabled", 64)
@@ -1098,7 +1098,7 @@ class MyWindow(Gtk.ApplicationWindow):
             else:
                 self.not_disabled_img.set_visible(False)
             self.right_box.prepend(self.not_disabled_img)
-            #
+            # new notification has appeared
             _ret = Gtk.IconTheme().has_icon("notification-active")
             if _ret:
                 self.not_alert_img = Gtk.Image.new_from_icon_name("notification-active", 64)
@@ -5148,6 +5148,7 @@ class otherWin(Gtk.Window):
         
         self._stack.connect("notify::visible-child", self._stack_child_changed)
         
+    # the tab notification has been activated
     def _stack_child_changed(self, stack, pspec):
         _name = stack.get_visible_child_name()
         if _name == "Notifications":
@@ -5245,6 +5246,7 @@ class otherWin(Gtk.Window):
             _this.destroy()
         self._parent.on_button_conf_clicked(btn)
     
+    # do not disturb button - notifications
     def on_dnd_btn(self, btn):
         if self._parent.not_do_not_disturb == 0:
             self._parent.not_do_not_disturb = 1
@@ -6717,7 +6719,7 @@ class notificationWin(Gtk.Window):
     
     def on_da_gesture_l(self, o,n,x,y):
         self._notifier._parent.not_to_read -= 1
-        if self._notifier._parent.not_to_read == 0:
+        if self._notifier._parent.not_to_read == 0 and self._notifier._parent.to_show_alert_img == 1:
             self._notifier._parent.not_alert_img.set_visible(False)
         self.close()
     
