@@ -27,6 +27,7 @@ Features:
 - volume widget (deprecated in the gtk3 version)
 - three applets: audio (can also manage cards and microphones); volume; mpris
 - the gtk4 version can drop each menu item on to my wdesktop4 application.
+- gtk4 version: addons: right mouse button on the bar to add custom modules in the bar; two useless examples are provided.
 
 Requirements:
 - a wayland display server with layer-shell support
