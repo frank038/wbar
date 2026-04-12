@@ -1,9 +1,13 @@
 {
     "pad-value": 4,
     "audio-start-value": 25,
-    "use-volume": 0,
+    "use-volume": 1,
     "use-tray": 1,
     "double-click": 0,
     "use-taskbar": 3,
-    "launch-mode": 0
+    "launch-mode": 0,
+    "menu-type": 0,
+    "menu-show-labels": 1,
+    "menu-item-type": 0,
+    "menu-item-label-pos": 0
 }
