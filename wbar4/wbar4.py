@@ -3,7 +3,7 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar4.py
 
-# V. 0.9.58
+# V. 0.9.59
 
 from wbar4lang import *
 import os,sys,shutil,stat
@@ -21,12 +21,14 @@ from threading import Thread, Lock
 from threading import Event
 import queue
 from subprocess import Popen, PIPE, CalledProcessError
+# import shlex
 import signal
 import psutil
 import subprocess
 import time, datetime
 import dbus
 import dbus.service as Service
+import importlib
 
 lock = Lock()
 
@@ -86,7 +88,7 @@ if not os.path.exists(os.path.join(_curr_dir,"notes")):
 # other options
 _other_settings_conf = None
 _other_settings_config_file = os.path.join(_curr_dir,"configs","other_settings.json")
-_starting_other_settings_conf = {"pad-value":4,"audio-start-value":0,"use-volume":0,"use-tray":0,"double-click":0,"use-taskbar":0,"launch-mode":0}
+_starting_other_settings_conf = {"pad-value":4,"audio-start-value":0,"use-volume":0,"use-tray":0,"double-click":0,"use-taskbar":0,"launch-mode":0,"menu-type":0,"menu-item-type":0,"menu-item-label-pos":0,"menu-show-labels":0}
 if not os.path.exists(_other_settings_config_file):
     try:
         _ff = open(_other_settings_config_file,"w")
@@ -111,6 +113,14 @@ USE_TRAY = _other_settings_conf["use-tray"]
 USE_TASKBAR = _other_settings_conf["use-taskbar"]
 # 0 internal - 1 dbus (use gtk-lauch) - 2 gtk-launch
 LAUNCH_MODE = _other_settings_conf["launch-mode"]
+# category position: 0 top - 1 left - 2 right
+MENU_TYPE = _other_settings_conf["menu-type"]
+# items in the menu: 0 icons - 1 list
+MENU_ITEM_TYPE = _other_settings_conf["menu-item-type"]
+# if MENU_ITEM_TYPE > 0: 1 right - 2 left
+MENU_SHOW_ITEM_LABEL = _other_settings_conf["menu-item-label-pos"]
+# whether to show the labels in the categories: 0 no - 1 left - 2 right
+MENU_SHOW_LABELS = _other_settings_conf["menu-show-labels"]
 
 _context = None
 if USE_TASKBAR:
@@ -193,12 +203,40 @@ if not os.path.exists(_menu_favorites):
     _f.close()
 
 # check files are executable
-_file_to_check_exec = ["wclipboard.py","volume_set.sh","volume_volume.sh","volume_up.sh","volume_toggle.sh","volume_mute.sh","volume_down.sh","restart.sh","poweroff.sh","menu_editor","logout.sh"]
+_file_to_check_exec = ["wclipboard.py","volume_set.sh","volume_volume.sh","volume_up.sh","volume_toggle.sh","volume_mute.sh","volume_down.sh","restart.sh","poweroff.sh","menu_editor","logout.sh","file_manager.sh","file_manager_media.sh","file_manager_trash.sh"]
 for _ff in _file_to_check_exec:
     if os.path.exists(os.path.join(_curr_dir, _ff)):
         if not os.access(_ff,os.X_OK):
             st = os.stat(_ff)
             os.chmod(_ff, st.st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
+
+##########
+POPOVER_WIDGET_SIZE = 30
+list_addons = []
+
+def import_from_path(module_name, file_path):
+    spec = importlib.util.spec_from_file_location(module_name, file_path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+def load_addons():
+    global list_addons
+    list_addons = []
+    mmod_custom = []
+    if os.path.exists(os.path.join(_curr_dir, "addons")):
+        mmod_custom = os.listdir(os.path.join(_curr_dir, "addons"))
+        for el in mmod_custom:
+            try:
+                file_path = os.path.join(_curr_dir, "addons", el, "addon_custom.py")
+                _module = import_from_path("customWidget", file_path)
+                list_addons.append(_module)
+            except:
+                pass
+load_addons()
+
+#################
 
 def MyDialog(data1, data2, parent):
     dialog = Gtk.AlertDialog()
@@ -684,7 +722,10 @@ class MyWindow(Gtk.ApplicationWindow):
         # self.load_css('main.css')
         
         self.set_decorated(False)
+        self.connect("show", self.on_main_show)
         self.connect("destroy", self._to_close)
+        self.connect("close-request", self._to_close)
+        
         
         # for menu rebuild
         self.q = queue.Queue(maxsize=1)
@@ -1187,7 +1228,184 @@ class MyWindow(Gtk.ApplicationWindow):
                 self._appExec = bus.get_object('com.appExec.Execapp', '/Application')
             except:
                 APP_SERVER = 0
+        #
+        # list of the addon enabled
+        self.custom_addons_list = []
+        # right button
+        self.self_gesture_r = Gtk.GestureClick.new()
+        self.self_gesture_r.set_button(3)
+        self.add_controller(self.self_gesture_r)
+        self.self_gesture_r.connect('pressed', self.on_self_gesture_r)
+        
     
+    def on_self_gesture_r(self, o,n,x,y):
+        self.background_context_menu_center(x, y)
+        
+    def background_context_menu_center(self, _x, _y):
+        popover = Gtk.Popover()
+        popover.set_autohide(True)
+        popover.set_has_arrow(False)
+        popover.set_halign(Gtk.Align.START)
+        popover.set_parent(self)
+        
+        popover_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        btn_widgets = Gtk.Button(label=MWADDONS)
+        btn_widgets.connect("clicked", self.on_addons, popover, _x)
+        popover_box.append(btn_widgets)
+        
+        popover.set_child(popover_box)
+        #
+        _rect = Gdk.Rectangle()
+        _rect.x = _x
+        _rect.y = self._configuration["panel"]["height"] + 1
+        _rect.width = 1
+        _rect.height = 1
+        popover.set_pointing_to(_rect)
+        popover.popup()
+    
+    def on_addons(self, btn, popover, _x):
+        popover.popdown()
+        # rebuild the addon list
+        load_addons()
+        #
+        _popover = Gtk.Popover()
+        # _popover.set_autohide(True)
+        _popover.set_has_arrow(False)
+        _popover.set_halign(Gtk.Align.START)
+        _popover.set_parent(self)
+        #
+        _stack = Gtk.Stack.new()
+        _scrolled = Gtk.ScrolledWindow.new()
+        _stack.add_child(_scrolled)
+        _popover_box = Gtk.Box.new(1,0)
+        _scrolled.set_child(_popover_box)
+        _scrolled.set_min_content_width(POPOVER_WIDGET_SIZE)
+        _scrolled.set_min_content_height(POPOVER_WIDGET_SIZE)
+        _scrolled.set_max_content_width(POPOVER_WIDGET_SIZE)
+        _scrolled.set_max_content_height(POPOVER_WIDGET_SIZE)
+        #
+        for el in reversed(list_addons):
+            wbtn = Gtk.Button(label=el._NAME)
+            _box = Gtk.Box.new(1,0)
+            _stack.add_child(_box)
+            wbtn.connect("clicked", self.on_change_stack, _stack, _box)
+            _popover_box.append(wbtn)
+            #
+            lbl_name = Gtk.Label(label="<b>"+el._NAME+"</b>")
+            lbl_name.set_use_markup(True)
+            _box.append(lbl_name)
+            #
+            lbl_desc = Gtk.Label(label=el._COMMENT)
+            _box.append(lbl_desc)
+            #
+            lbl_vers = Gtk.Label(label=el._VERSION)
+            _box.append(lbl_vers)
+            #
+            lbl_data = Gtk.Label(label=el._DATA)
+            _box.append(lbl_data)
+            #
+            btn_exec = Gtk.Button.new()
+            if not os.path.exists(os.path.join(_curr_dir,"addons",el._MODULE,"enabled")):
+                btn_exec.set_label(MWLAUNCH)
+            else:
+                btn_exec.set_label(MWLAUNCH2)
+            _box.append(btn_exec)
+            btn_exec.connect("clicked", self.on_addon_launched, el, _popover)
+            #
+            _btn_back = Gtk.Button(label=MWBACK)
+            _box.append(_btn_back)
+            _btn_back.connect("clicked", lambda w: _stack.set_visible_child(_scrolled))
+        #
+        _popover.set_child(_stack)
+        #
+        _rect = Gdk.Rectangle()
+        _rect.x = _x
+        _rect.y = self._configuration["panel"]["height"] + 1
+        _rect.width = 1
+        _rect.height = 1
+        _popover.set_pointing_to(_rect)
+        #
+        _popover.popup()
+        
+    def on_addon_launched(self, btn, item, popover):
+        popover.popdown()
+        module_path = os.path.join(_curr_dir,"addons",item._MODULE)
+        enabled_file_path = os.path.join(module_path,"enabled")
+        if os.path.exists(enabled_file_path):
+            _w = None
+            for el in self.custom_addons_list[:]:
+                if el._module == item._MODULE:
+                    _w = el
+                    break
+            if _w != None:
+                try:
+                    _position = _w._position
+                    if _position == 0:
+                        self.left_box.remove(_w)
+                        self.custom_addons_list.remove(_w)
+                    elif _position == 1:
+                        self.center_box.remove(_w)
+                        self.custom_addons_list.remove(_w)
+                    elif _position == 2:
+                        self.right_box.remove(_w)
+                        self.custom_addons_list.remove(_w)
+                    elif _position == 99:
+                        _w.on_remove()
+                        self.custom_addons_list.remove(_w)
+                        del _w
+                    os.unlink(enabled_file_path)
+                except:
+                    pass
+        else:
+            try:
+                _w = item.customWidget(self)
+                _position = _w._position
+                if _position == 99:
+                    _w.set_visible(True)
+                    self.custom_addons_list.append(_w)
+                    _f = open(enabled_file_path, "w")
+                    _f.write("")
+                    _f.close()
+                    return
+                if _position == 0:
+                    self.left_box.append(_w)
+                elif _position == 1:
+                    self.center_box.append(_w)
+                elif _position == 2:
+                    self.right_box.prepend(_w)
+                #
+                _f = open(enabled_file_path, "w")
+                _f.write("")
+                _f.close()
+                self.custom_addons_list.append(_w)
+            except:
+                pass
+                
+    def on_change_stack(self, btn, _stack, _w):
+        _stack.set_visible_child(_w)
+        
+    def on_load_addons(self):
+        for el in list_addons:
+            module_path = os.path.join(_curr_dir,"addons",el._MODULE)
+            if os.path.exists(os.path.join(module_path, "enabled")):
+                _position = el._POSITION
+                _w = el.customWidget(self)
+                if _position == 99:
+                    _w.set_visible(True)
+                    self.custom_addons_list.append(_w)
+                    continue
+                if _position == 0:
+                    self.left_box.append(_w)
+                elif _position == 1:
+                    self.center_box.append(_w)
+                elif _position == 2:
+                    self.right_box.prepend(_w)
+                self.custom_addons_list.append(_w)
+    
+    def on_main_show(self, w):
+        ###### addons
+        self.on_load_addons()
+        
     # # disabled
     # def nthreadslot(self,_signal,_param):
         # _list = _signal.propList[0]
@@ -3845,22 +4063,39 @@ class menuWin(Gtk.Window):
         self.BTN_ICON_SIZE = self._parent.menu_cat_icon_size
         self.ICON_SIZE = self._parent.menu_item_icon_size
         
-        # category box
-        self.cbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
-        self.cbox.set_homogeneous(True)
-        self.main_box.append(self.cbox)
+        # 0 top - 1 left - 2 right
+        self.menu_type = MENU_TYPE
+        # if self.menu_type > 0: 1 right - 2 left
+        self.menu_show_item_label = MENU_SHOW_ITEM_LABEL
+        # items in the menu: 0 icons - 1 list
+        self.menu_item_type = MENU_ITEM_TYPE
+        # whether to show the labels in the category buttons: 0 no - 1 right - 2 left
+        self.menu_show_labels = MENU_SHOW_LABELS
+        
+        if self.menu_type == 0:
+            # category box
+            self.cbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+            self.cbox.set_homogeneous(True)
+            self.main_box.append(self.cbox)
         
         # # separator
         # separator = Gtk.Separator()
         # separator.set_orientation(Gtk.Orientation.HORIZONTAL)
         # self.main_box.pack_start(separator, False, False, 4)
         
-        # iconview
+        # iconview box
         self.ivbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
         self.ivbox.set_homogeneous(True)
         self.ivbox.set_hexpand(True)
         self.ivbox.set_vexpand(True)
         self.main_box.append(self.ivbox)
+        
+        if self.menu_type == 1:
+            # category box
+            self.cbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+            self.cbox.set_homogeneous(True)
+            self.ivbox.append(self.cbox)
+            self.ivbox.set_homogeneous(False)
         
         # scrolled window
         self.scrolledwindow = Gtk.ScrolledWindow()
@@ -3871,19 +4106,32 @@ class menuWin(Gtk.Window):
         self.ivbox.append(self.scrolledwindow)
         
         ##############
-        self.iconview = Gtk.FlowBox()
-        self.iconview.set_activate_on_single_click(True)
-        self.iconview.set_selection_mode(0)
-        self.iconview.set_homogeneous(True)
-        self.iconview.set_max_children_per_line(self._parent.menu_n_items)
-        self.iconview.set_min_children_per_line(self._parent.menu_n_items)
-        self.scrolledwindow.set_child(self.iconview)
-        self.iconview.connect('child-activated', self.on_iv_item_activated)
+        if self.menu_item_type == 0:
+            self.iconview = Gtk.FlowBox()
+            self.iconview.set_activate_on_single_click(True)
+            self.iconview.set_selection_mode(0)
+            self.iconview.set_homogeneous(True)
+            self.iconview.set_max_children_per_line(self._parent.menu_n_items)
+            self.iconview.set_min_children_per_line(self._parent.menu_n_items)
+            self.scrolledwindow.set_child(self.iconview)
+            self.iconview.connect('child-activated', self.on_iv_item_activated)
+        elif self.menu_item_type == 1:
+            self.iconview = Gtk.ListBox.new()
+            self.scrolledwindow.set_child(self.iconview)
+            self.iconview.connect('row-activated', self.on_iv_item_activated)
+        
         #
         self.gesture_iv = Gtk.GestureClick.new()
         self.gesture_iv.set_button(3)
         self.iconview.add_controller(self.gesture_iv)
         self.gesture_iv.connect('pressed', self.on_iv_gesture)
+        
+        if self.menu_type == 2:
+            # category box
+            self.cbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+            self.cbox.set_homogeneous(True)
+            self.ivbox.append(self.cbox)
+            self.ivbox.set_homogeneous(False)
         
         # when bookmark items reordering start
         self.is_dragging = 0
@@ -4261,12 +4509,33 @@ class menuWin(Gtk.Window):
             _btn.set_name("mybutton")
             _btn.icat = el
             # _btn.set_tooltip_text(el)
-            _btn.set_tooltip_text(_cat_tooltip[i])
             pix = GdkPixbuf.Pixbuf.new_from_file_at_size("icons"+"/"+_icon[i], self.BTN_ICON_SIZE, self.BTN_ICON_SIZE)
             _pb = Gdk.Texture.new_for_pixbuf(pix)
             _image = Gtk.Image.new_from_paintable(_pb)
             _image.set_pixel_size(self.BTN_ICON_SIZE)
-            _btn.set_child(_image)
+            # _btn.set_child(_image)
+            # not at top
+            if self.menu_type != 0:
+                btn_box = Gtk.Box.new(0,0)
+                # label at right
+                if self.menu_show_labels == 1:
+                    btn_box.set_halign(Gtk.Align.START)
+                    btn_box.append(_image)
+                    btn_box.append(Gtk.Label(label=_cat_tooltip[i]))
+                    _btn.set_child(btn_box)
+                # label at left
+                elif self.menu_show_labels == 2:
+                    btn_box.set_halign(Gtk.Align.END)
+                    btn_box.append(Gtk.Label(label=_cat_tooltip[i]))
+                    btn_box.append(_image)
+                    _btn.set_child(btn_box)
+                # no label
+                else:
+                    _btn.set_child(_image)
+                    _btn.set_tooltip_text(_cat_tooltip[i])
+            elif self.menu_type == 0:
+                _btn.set_child(_image)
+                _btn.set_tooltip_text(_cat_tooltip[i])
             self.cbox.append(_btn)
             #
             if i == 0:
@@ -4372,21 +4641,49 @@ class menuWin(Gtk.Window):
             pixbuf = None
             if _icon != None:
                 _i = self._find_the_icon(_icon)
-            _b = Gtk.Box.new(1,0)
+            if self.menu_item_type == 0:
+                _b = Gtk.Box.new(1,0)
+            else:
+                _b = Gtk.Box.new(0,0)
+            # list view - label at right
+            if self.menu_item_type == 1 and self.menu_show_item_label == 0:
+                _b.set_hexpand(True)
+                _b.set_halign(Gtk.Align.START)
+            # list view - label at left
+            elif self.menu_item_type == 1 and self.menu_show_item_label == 1:
+                _b.set_hexpand(True)
+                _b.set_halign(Gtk.Align.END)
+            # iconview none
             _b.set_tooltip_text(_description)
-            if _i != None:
-                _i.set_pixel_size(self.ICON_SIZE)
-                _b.append(_i)
-                drag_controller = Gtk.DragSource()
-                drag_controller.connect('prepare', self.on_drag_prepare)
-                drag_controller.connect('drag-begin', self.on_drag_begin)
-                _i.add_controller(drag_controller)
             _l = Gtk.Label(label=_name)
             _l.set_wrap(True)
             _l.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
             _l.set_xalign(0.5)
             _l.set_justify(Gtk.Justification.CENTER)
-            _b.append(_l)
+            #
+            if _i != None:
+                drag_controller = Gtk.DragSource()
+                drag_controller.connect('prepare', self.on_drag_prepare)
+                drag_controller.connect('drag-begin', self.on_drag_begin)
+                _i.add_controller(drag_controller)
+            # list view - label at left - icon at right
+            if self.menu_item_type == 1 and self.menu_show_item_label == 1:
+                _b.append(_l)
+                if _i != None:
+                    _i.set_pixel_size(self.ICON_SIZE)
+                    _b.append(_i)
+            # list view - label at right - icon at left
+            elif self.menu_item_type == 1 and self.menu_show_item_label == 0:
+                if _i != None:
+                    _i.set_pixel_size(self.ICON_SIZE)
+                    _b.append(_i)
+                _b.append(_l)
+            # icon view
+            else:
+                if _i != None:
+                    _i.set_pixel_size(self.ICON_SIZE)
+                    _b.append(_i)
+                _b.append(_l)
             _b._description = _description
             _b._exec = _exec
             _b._path = _path
@@ -4408,23 +4705,49 @@ class menuWin(Gtk.Window):
         for el in the_menu:
             if el[1] == cat_name:
                 _i = self._find_the_icon(el[3])
-                _b = Gtk.Box.new(1,0)
-                if _i != None:
-                    _i.set_pixel_size(self.ICON_SIZE)
-                    _b.append(_i)
-                    #
-                    self.isMenuDragging = 1
-                    drag_controller = Gtk.DragSource()
-                    drag_controller.connect('prepare', self.on_drag_prepare)
-                    drag_controller.connect('drag-begin', self.on_drag_begin)
-                    _i.add_controller(drag_controller)
-                    #
+                if self.menu_item_type == 0:
+                    _b = Gtk.Box.new(1,0)
+                else:
+                    _b = Gtk.Box.new(0,0)
+                # list view - label at right
+                if self.menu_item_type == 1 and self.menu_show_item_label == 0:
+                    _b.set_hexpand(True)
+                    _b.set_halign(Gtk.Align.START)
+                # list view - label at left
+                elif self.menu_item_type == 1 and self.menu_show_item_label == 1:
+                    _b.set_hexpand(True)
+                    _b.set_halign(Gtk.Align.END)
+                # iconview none
                 _l = Gtk.Label(label=el[0])
                 _l.set_wrap(True)
                 _l.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
                 _l.set_xalign(0.5)
                 _l.set_justify(Gtk.Justification.CENTER)
-                _b.append(_l)
+                if _i != None:
+                    self.isMenuDragging = 1
+                    drag_controller = Gtk.DragSource()
+                    drag_controller.connect('prepare', self.on_drag_prepare)
+                    drag_controller.connect('drag-begin', self.on_drag_begin)
+                    _i.add_controller(drag_controller)
+                # list view - label at left - icon at right
+                if self.menu_item_type == 1 and self.menu_show_item_label == 1:
+                    _b.append(_l)
+                    if _i != None:
+                        _i.set_pixel_size(self.ICON_SIZE)
+                        _b.append(_i)
+                # list view - label at right - icon at left
+                elif self.menu_item_type == 1 and self.menu_show_item_label == 0:
+                    if _i != None:
+                        _i.set_pixel_size(self.ICON_SIZE)
+                        _b.append(_i)
+                    _b.append(_l)
+                # icon view
+                else:
+                    if _i != None:
+                        _i.set_pixel_size(self.ICON_SIZE)
+                        _b.append(_i)
+                    _b.append(_l)
+                #
                 _b._description = el[4]
                 _b._exec = el[3]
                 _b._path = el[5]
@@ -4833,7 +5156,12 @@ class clipboardWin(Gtk.Window):
                 #
                 # subprocess.Popen("wl-copy --clear",shell=True)
                 # # subprocess.Popen(f"wl-copy {_text}",shell=True)
-                subprocess.Popen('wl-copy "{}"'.format(_text),shell=True)
+                # removes " and ' from the text to copy
+                cmd = 'wl-copy -- "{}"'.format(_text)
+                subprocess.Popen(cmd,shell=True)
+                # args = shlex.split(cmd)
+                # subprocess.Popen(args)
+                # subprocess.Popen('wl-copy -- "{}"'.format(_text),shell=True)
                 # subprocess.Popen("echo '{}' | wl-copy -t text".format(_text),shell=True)
             except:
                 pass
@@ -6151,6 +6479,49 @@ class DialogConfiguration(Gtk.Dialog):
         launch_combo.connect('changed', self.on_other_combo, "launch")
         self.page6_box.attach_next_to(launch_combo,launch_lbl,1,1,1)
         
+        # menu position
+        menu_cat_pos_lbl = Gtk.Label(label=MWMENUPOS)
+        self.page6_box.attach(menu_cat_pos_lbl,0,8,1,1)
+        menu_cat_pos_lbl.set_halign(1)
+        menu_cat_pos_combo = Gtk.ComboBoxText.new()
+        menu_cat_pos_combo.append_text(MWMENUPOS2)
+        menu_cat_pos_combo.append_text(MWMENUPOS3)
+        menu_cat_pos_combo.append_text(MWMENUPOS4)
+        menu_cat_pos_combo.set_active(MENU_TYPE)
+        menu_cat_pos_combo.connect('changed', self.on_other_combo, "menu-pos")
+        self.page6_box.attach_next_to(menu_cat_pos_combo,menu_cat_pos_lbl,1,1,1)
+        
+        # menu label category position
+        menu_cat_pos_lbl2 = Gtk.Label(label=MWMENULBLPOS)
+        menu_cat_pos_lbl2.set_tooltip_text(MWMENULBLPOS1)
+        self.page6_box.attach(menu_cat_pos_lbl2,0,9,1,1)
+        menu_cat_pos_lbl2.set_halign(1)
+        menu_cat_pos_combo2 = Gtk.ComboBoxText.new()
+        menu_cat_pos_combo2.append_text(MWMENULBLPOS2)
+        menu_cat_pos_combo2.append_text(MWMENULBLPOS3)
+        menu_cat_pos_combo2.set_active(MENU_SHOW_ITEM_LABEL)
+        menu_cat_pos_combo2.connect('changed', self.on_other_combo, "menu-item-lbl-pos")
+        self.page6_box.attach_next_to(menu_cat_pos_combo2,menu_cat_pos_lbl2,1,1,1)
+        #
+        menu_cat_pos_combo3 = Gtk.ComboBoxText.new()
+        menu_cat_pos_combo3.append_text(MWMENULBLPOS4)
+        menu_cat_pos_combo3.append_text(MWMENULBLPOS2)
+        menu_cat_pos_combo3.append_text(MWMENULBLPOS3)
+        menu_cat_pos_combo3.set_active(MENU_SHOW_ITEM_LABEL)
+        menu_cat_pos_combo3.connect('changed', self.on_other_combo, "menu-cat-lbl-pos")
+        self.page6_box.attach_next_to(menu_cat_pos_combo3,menu_cat_pos_combo2,1,1,1)
+        
+        # 
+        menu_item_pos_lbl = Gtk.Label(label=MWMENUITEMTYPE)
+        self.page6_box.attach(menu_item_pos_lbl,0,10,1,1)
+        menu_item_pos_lbl.set_halign(1)
+        menu_item_pos_combo = Gtk.ComboBoxText.new()
+        menu_item_pos_combo.append_text(MWMENUITEMTYPE2)
+        menu_item_pos_combo.append_text(MWMENUITEMTYPE3)
+        menu_item_pos_combo.set_active(MENU_ITEM_TYPE)
+        menu_item_pos_combo.connect('changed', self.on_other_combo, "menu-item-type")
+        self.page6_box.attach_next_to(menu_item_pos_combo,menu_item_pos_lbl,1,1,1)
+        
         # # double click
         # _lbl_double_click = Gtk.Label(label="Double click to launch apps")
         # self.page6_box.attach(_lbl_double_click,0,6,1,1)
@@ -6211,6 +6582,22 @@ class DialogConfiguration(Gtk.Dialog):
             _other_settings_conf["launch-mode"] = cb.get_active()
             global LAUNCH_MODE
             LAUNCH_MODE = cb.get_active()
+        elif _type == "menu-pos":
+            _other_settings_conf["menu-type"] = cb.get_active()
+            global MENU_TYPE
+            MENU_TYPE = cb.get_active()
+        elif _type == "menu-item-lbl-pos":
+            _other_settings_conf["menu-item-label-pos"] = cb.get_active()
+            global MENU_SHOW_ITEM_LABEL
+            MENU_SHOW_ITEM_LABEL = cb.get_active()
+        elif _type == "menu-cat-lbl-pos":
+            _other_settings_conf["menu-show-labels"] = cb.get_active()
+            global MENU_SHOW_LABELS
+            MENU_SHOW_LABELS = cb.get_active()
+        elif _type == "menu-item-type":
+            _other_settings_conf["menu-item-type"] = cb.get_active()
+            global MENU_ITEM_TYPE
+            MENU_ITEM_TYPE = cb.get_active()
         try:
             _ff = open(_other_settings_config_file,"w")
             _data_json = _other_settings_conf
@@ -6719,7 +7106,8 @@ class notificationWin(Gtk.Window):
     
     def on_da_gesture_l(self, o,n,x,y):
         self._notifier._parent.not_to_read -= 1
-        if self._notifier._parent.not_to_read == 0 and self._notifier._parent.to_show_alert_img == 1:
+        # if self._notifier._parent.not_to_read == 0 and self._notifier._parent.to_show_alert_img == 1:
+        if self._notifier._parent.not_to_read == 0:
             self._notifier._parent.not_alert_img.set_visible(False)
         self.close()
     
