@@ -3,7 +3,7 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar4.py
 
-# V. 0.9.59
+# V. 1.0
 
 from wbar4lang import *
 import os,sys,shutil,stat
@@ -1009,6 +1009,9 @@ class MyWindow(Gtk.ApplicationWindow):
         self.set_child(self.main_box)
         
         self.left_box = Gtk.Box.new(0,0)
+        self.left_box.set_vexpand(False)
+        self.left_box.style_context = self.get_style_context()
+        self.left_box.style_context.add_class("mybox")
         if USE_TASKBAR == 3 or self.clock_use == 1 or self.label2_use == 1:
             self.main_box.set_start_widget(self.left_box)
         else:
@@ -1044,6 +1047,9 @@ class MyWindow(Gtk.ApplicationWindow):
         self.set_timer_label1()
         
         self.center_box = Gtk.Box.new(0,0)
+        self.center_box.set_vexpand(False)
+        self.center_box.style_context = self.get_style_context()
+        self.center_box.style_context.add_class("mybox")
         if USE_TASKBAR == 3 or self.clock_use == 1 or self.label2_use == 1:
             self.main_box.set_center_widget(self.center_box)
         else:
@@ -1053,6 +1059,9 @@ class MyWindow(Gtk.ApplicationWindow):
             self.center_box.set_hexpand(True)
             
         self.right_box = Gtk.Box.new(0,0)
+        self.right_box.set_vexpand(False)
+        self.right_box.style_context = self.get_style_context()
+        self.right_box.style_context.add_class("mybox")
         if USE_TASKBAR == 3 or self.clock_use == 1 or self.label2_use == 1:
             self.main_box.set_end_widget(self.right_box)
         else:
@@ -2190,14 +2199,18 @@ class MyWindow(Gtk.ApplicationWindow):
                 else:
                     input_stream = Gio.MemoryInputStream.new_from_data(_icon_data, None)
                     pb = GdkPixbuf.Pixbuf.new_from_stream(input_stream, None)
+                    #
+                    _pb = Gdk.Texture.new_for_pixbuf(pb)
+                    img = Gtk.Image.new_from_paintable(_pb)
+                    #
                     # ret should be None
                     # ret = input_stream.close_async(2)
                     # ret should be True if closed properly
                     ret = input_stream.close(None)
                 #
-                if img:
-                    _pb = Gdk.Texture.new_for_pixbuf(pb)
-                    img = Gtk.Image.new_from_paintable(_pb)
+                # if img:
+                    # _pb = Gdk.Texture.new_for_pixbuf(pb)
+                    # img = Gtk.Image.new_from_paintable(_pb)
                 #
                 _b = Gtk.Box.new(0,0)
                 if img:
@@ -2267,12 +2280,13 @@ class MyWindow(Gtk.ApplicationWindow):
         popover.set_autohide(True)
         _scroll = Gtk.ScrolledWindow.new()
         _scroll.set_propagate_natural_width(True)
+        _scroll.set_propagate_natural_height(True)
         _scroll.set_overlay_scrolling(False)
         _scroll.set_placement(0)
         # self._scroll.set_policy(Gtk.PolicyType.NEVER,Gtk.PolicyType.NEVER)
         _scroll.set_policy(Gtk.PolicyType.NEVER,Gtk.PolicyType.AUTOMATIC)
-        _scroll.set_min_content_width(self.service_tray_menu_width)
-        _scroll.set_min_content_height(self.service_tray_menu_height)
+        # _scroll.set_min_content_width(self.service_tray_menu_width)
+        # _scroll.set_min_content_height(self.service_tray_menu_height)
         #
         _scroll.set_child(main_box_popover)
         #
@@ -3013,6 +3027,7 @@ class MyWindow(Gtk.ApplicationWindow):
         global QUIT
         QUIT = 0
         self.close()
+        sys.exit()
     
     def on_set_clipboard(self, _pos):
         self.clipbutton = Gtk.Button()

@@ -1,0 +1,16 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Appmenu6
+GenericName=
+Exec=/FULL_PATH/wbar4/appmenu/appmenu6.py
+TryExec=/FULL_PATH/wbar4/appmenu/appmenu6.py
+Path=/FULL_PATH/wbar4/appmenu
+Categories=Utility;
+MimeType=application/x-desktop;
+Keywords=menu;editor;
+Icon=/FULL_PATH/wbar4/appmenu/icons/menu.svg
+Comment=Desktop file editor
+Terminal=false
+NoDisplay=true
+Hidden=false
