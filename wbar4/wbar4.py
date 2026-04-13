@@ -2195,6 +2195,8 @@ class MyWindow(Gtk.ApplicationWindow):
                         data = GLib.Bytes.new(data)
                         pb = GdkPixbuf.Pixbuf.new_from_bytes(data, GdkPixbuf.Colorspace.RGB,
                                 True, 8, w, h, w * 4)
+                        _pb = Gdk.Texture.new_for_pixbuf(pb)
+                        img = Gtk.Image.new_from_paintable(_pb)
                 #
                 else:
                     input_stream = Gio.MemoryInputStream.new_from_data(_icon_data, None)
