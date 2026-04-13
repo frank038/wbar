@@ -6,6 +6,12 @@
   font-size: 28px;
 }
 
+/*  */
+.mybox {
+  margin: 0px;
+  padding: 0px;
+}
+
 /* the panel */
 .mywindow {
   border-radius: 30px 30px 30px 30px;
