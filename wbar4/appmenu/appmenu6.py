@@ -338,6 +338,7 @@ class MyDialog(QtWidgets.QMessageBox):
 ################
 if __name__ == '__main__':
     app = QtWidgets.QApplication(sys.argv)
+    QtGui.QGuiApplication.setDesktopFileName("appmenu6")
     if len(sys.argv) > 1:
         if sys.argv[1]:
             if not os.path.exists(sys.argv[1]):
