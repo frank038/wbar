@@ -7,7 +7,7 @@ Download the latest package from the release section.
 
 Wbar is a panel to be used under wayland, if the display server support the layer-shell protocols. All the wlroots based window managers should support wbar.
 
-There is a Gtk3 and a Gtk4 version of wbar.
+There is a Gtk3 and a Gtk4 version of wbar. The Gkt4 version is preferred.
 
 Features:
 - graphical configurator
