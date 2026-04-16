@@ -3,7 +3,7 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar4.py
 
-# V. 1.0
+# V. 1.1
 
 from wbar4lang import *
 import os,sys,shutil,stat
@@ -29,6 +29,8 @@ import time, datetime
 import dbus
 import dbus.service as Service
 import importlib
+
+NOTIFICATION_FADE = 1
 
 lock = Lock()
 
@@ -868,8 +870,9 @@ class MyWindow(Gtk.ApplicationWindow):
             self.screen_height = self._monitor.get_geometry().height
             self.set_size_request(screen_width-self.win_width,self.win_height)
             #
-            self.self_style_context = self.get_style_context()
-            self.self_style_context.add_class("mywindow")
+            # self.self_style_context = self.get_style_context()
+            # self.self_style_context.add_class("mywindow")
+            self.set_name("mywindow")
             
             css_provider = Gtk.CssProvider()
             css_provider.load_from_path("configs/panelstyle.css")
@@ -1010,8 +1013,9 @@ class MyWindow(Gtk.ApplicationWindow):
         
         self.left_box = Gtk.Box.new(0,0)
         self.left_box.set_vexpand(False)
-        self.left_box.style_context = self.get_style_context()
-        self.left_box.style_context.add_class("mybox")
+        # self.left_box.style_context = self.get_style_context()
+        # self.left_box.style_context.add_class("mybox")
+        self.left_box.set_name("mybox")
         if USE_TASKBAR == 3 or self.clock_use == 1 or self.label2_use == 1:
             self.main_box.set_start_widget(self.left_box)
         else:
@@ -1021,6 +1025,8 @@ class MyWindow(Gtk.ApplicationWindow):
             self.left_box.set_hexpand(True)
         
         self.menubutton = Gtk.Button()
+        self.menubutton.add_css_class("flat")
+        self.menubutton.set_name("menubutton")
         _icon_path = os.path.join(_curr_dir,"icons","menu.svg")
         _pixbf = GdkPixbuf.Pixbuf.new_from_file_at_size(_icon_path, self.win_height,self.win_height)
         _pb = Gdk.Texture.new_for_pixbuf(_pixbf)
@@ -1031,25 +1037,27 @@ class MyWindow(Gtk.ApplicationWindow):
         self.left_box.append(self.menubutton)
         # output1
         self.temp_out1 = None
-        # self.label1button = Gtk.EventBox()
         self.label1button = Gtk.Button()
-        # self.label1button.connect('button-press-event', self.on_label1)
+        self.label1button.add_css_class("flat")
+        self.label1button.set_name("label1button")
         self.label1button.connect('clicked', self.on_label1)
         self.label1 = Gtk.Label(label="")
         self.label1.set_use_markup(True)
         self.label1button.set_child(self.label1)
-        self.lbl1_style_context = self.label1.get_style_context()
-        self.lbl1_style_context.add_class("label1")
+        # self.lbl1_style_context = self.label1.get_style_context()
+        # self.lbl1_style_context.add_class("label1")
         self.label1.set_halign(1)
         self.left_box.append(self.label1button)
+        self.label1button.set_visible(False)
         
         self.q1 = None
         self.set_timer_label1()
         
         self.center_box = Gtk.Box.new(0,0)
         self.center_box.set_vexpand(False)
-        self.center_box.style_context = self.get_style_context()
-        self.center_box.style_context.add_class("mybox")
+        # self.center_box.style_context = self.get_style_context()
+        # self.center_box.style_context.add_class("mybox")
+        self.center_box.set_name("mybox")
         if USE_TASKBAR == 3 or self.clock_use == 1 or self.label2_use == 1:
             self.main_box.set_center_widget(self.center_box)
         else:
@@ -1060,8 +1068,9 @@ class MyWindow(Gtk.ApplicationWindow):
             
         self.right_box = Gtk.Box.new(0,0)
         self.right_box.set_vexpand(False)
-        self.right_box.style_context = self.get_style_context()
-        self.right_box.style_context.add_class("mybox")
+        # self.right_box.style_context = self.get_style_context()
+        # self.right_box.style_context.add_class("mybox")
+        self.right_box.set_name("mybox")
         if USE_TASKBAR == 3 or self.clock_use == 1 or self.label2_use == 1:
             self.main_box.set_end_widget(self.right_box)
         else:
@@ -1087,19 +1096,24 @@ class MyWindow(Gtk.ApplicationWindow):
         
         # output2
         self.temp_out2 = None
-        # self.label2button = Gtk.EventBox()
+        self.label2button = Gtk.Button()
+        self.label2button.add_css_class("flat")
+        self.label2button.set_name("label2button")
+        self.label2button.connect('clicked', self.on_label2)
         self.label2 = Gtk.Label(label="")
         self.label2.set_use_markup(True)
-        # self.label2button.add(self.label2)
-        self.lbl2_style_context = self.label2.get_style_context()
-        self.lbl2_style_context.add_class("label2")
-        # self.label2button.connect('button-press-event', self.on_label2)
+        self.label2button.set_child(self.label2)
+        # self.lbl2_style_context = self.label2.get_style_context()
+        # self.lbl2_style_context.add_class("label2")
         if self.label2_use == 1:
-            self.center_box.append(self.label2)
+            self.center_box.append(self.label2button)
         elif self.label2_use == 2 or self.label2_use == 0:
-            self.right_box.prepend(self.label2)
+            self.right_box.prepend(self.label2button)
+        self.label2button.set_visible(False)
         
         self.otherbutton = Gtk.Button()
+        self.otherbutton.add_css_class("flat")
+        self.otherbutton.set_name("otherbutton")
         _icon_path = os.path.join(_curr_dir,"icons","other_menu.svg")
         _pixbf = GdkPixbuf.Pixbuf.new_from_file_at_size(_icon_path, self.win_height,self.win_height)
         _pb = Gdk.Texture.new_for_pixbuf(_pixbf)
@@ -1176,8 +1190,9 @@ class MyWindow(Gtk.ApplicationWindow):
             self.volume_bar.connect("change-value", self.on_volume_bar)
             self.volume_bar.set_valign(3)
             self.volume_bar.set_size_request(100,-1)
-            self.vol_style_context = self.volume_bar.get_style_context()
-            self.vol_style_context.add_class("vollevelbar")
+            # self.vol_style_context = self.volume_bar.get_style_context()
+            # self.vol_style_context.add_class("vollevelbar")
+            self.volume_bar.set_name("vollevelbar")
             self.volume_bar.set_tooltip_text(WBNODEVICES)
             self.vol_box.append(self.volume_bar)
             
@@ -1719,6 +1734,7 @@ class MyWindow(Gtk.ApplicationWindow):
     def on_toplevel_new(self, context, toplevel):
         self.tbutton = Gtk.ToggleButton()
         self.tbutton.set_name("btn-taskbar")
+        self.tbutton.add_css_class("flat")
         self.tbutton.set_hexpand(False)
         self.tbutton.set_vexpand(False)
         self.tbutton.connect('clicked', self.manager.app_toggle, toplevel)
@@ -1818,7 +1834,8 @@ class MyWindow(Gtk.ApplicationWindow):
                     toplevel.button._icon = 1
             # in this case the tooltip will not change
             toplevel.button.set_tooltip_text(toplevel.title)
-            toplevel.button.set_size_request(toplevel.button.get_allocated_height(),self.win_height)
+            # toplevel.button.set_size_request(toplevel.button.get_allocated_height(),self.win_height)
+            toplevel.button.set_size_request(toplevel.button.get_height(),self.win_height)
             toplevel.button.set_visible(True)
         else:
             # the tooltip will refresh
@@ -1887,7 +1904,6 @@ class MyWindow(Gtk.ApplicationWindow):
         return None
     
     def on_label1(self, btn):
-        # return
         _script1 = os.path.join(_curr_dir,"scripts","label1.script")
         if os.path.exists(_script1):
             if not os.access(_script1, os.X_OK):
@@ -1900,14 +1916,13 @@ class MyWindow(Gtk.ApplicationWindow):
                 pass
     
     def on_label2(self, btn):
-        # return
         _script2 = os.path.join(_curr_dir,"scripts","label2.script")
         if os.path.exists(_script2):
             if not os.access(_script2, os.X_OK):
                 os.chmod(_script2, 0o740)
             try:
                 # os.system("{} &".format(_script2))
-                cmd = "{} &".format(_script2)
+                cmd = "{}".format(_script2)
                 Popen(["sh", cmd, "&"])
             except:
                 pass
@@ -2174,6 +2189,7 @@ class MyWindow(Gtk.ApplicationWindow):
             #
             menu_item = Gtk.Button.new()
             menu_item.set_hexpand(True)
+            menu_item.add_css_class("flat")
             # #
             _enabled = True
             if 'enabled' in _dict:
@@ -2231,8 +2247,12 @@ class MyWindow(Gtk.ApplicationWindow):
                 _b.append(_l)
                 menu_item.set_child(_b)
             else:
-                menu_item.set_label(_label_name)
-                menu_item.set_halign(1)
+                _b = Gtk.Box.new(0,0)
+                _l = Gtk.Label(label=" "+_label_name)
+                _b.append(_l)
+                menu_item.set_child(_b)
+                # menu_item.set_label(_label_name)
+                # menu_item.set_halign(1)
             #
             # _enabled = True
             # if 'enabled' in _dict:
@@ -2275,6 +2295,7 @@ class MyWindow(Gtk.ApplicationWindow):
         main_box_popover = Gtk.Box.new(1,0)
         # popover
         popover = Gtk.PopoverMenu()
+        popover.set_name("popovertraymenu")
         popover.set_has_arrow(False)
         popover.set_halign(Gtk.Align.START)
         popover.set_offset(0,_pad)
@@ -2305,6 +2326,8 @@ class MyWindow(Gtk.ApplicationWindow):
     
     def add_btn(self, _label, name=None, path=None, menu=None):
         btn_i = MyButton()
+        btn_i.add_css_class("flat")
+        btn_i.set_name("traybutton")
         btn_i.set_tooltip_text(_label)
         btn_i.set_property('property_one',name)
         if menu != None:
@@ -2835,6 +2858,7 @@ class MyWindow(Gtk.ApplicationWindow):
         self.event1 = None
         self.thread_label1 = None
         if self.label1_use == 1:
+            self.label1button.set_visible(True)
             _script1 = None
             self._script1_return = True
             _files = os.listdir(_curr_dir+"/scripts")
@@ -2876,6 +2900,8 @@ class MyWindow(Gtk.ApplicationWindow):
                     self._signal_label1.connect("notify::propList", self.label1_threadslot)
                     self.thread_label1 = Thread(target=label1Thread, args=(self._signal_label1,_script1, self.q1,self.event1,_type))
                     self.thread_label1.start()
+        else:
+            self.label1button.set_visible(False)
     
     def label1_threadslot(self,_signal,_param):
         _list = _signal.propList[0]
@@ -2893,6 +2919,7 @@ class MyWindow(Gtk.ApplicationWindow):
         self.event2 = None
         self.thread_label2 = None
         if self.label2_use == 1 or self.label2_use == 2:
+            self.label2button.set_visible(True)
             _script2 = None
             self._script2_return = True
             _files = os.listdir(_curr_dir+"/scripts")
@@ -2933,6 +2960,8 @@ class MyWindow(Gtk.ApplicationWindow):
                     self._signal_label2.connect("notify::propList", self.label2_threadslot)
                     self.thread_label2 = Thread(target=label2Thread, args=(self._signal_label2,_script2, self.q2,self.event2,_type))
                     self.thread_label2.start()
+        else:
+            self.label2button.set_visible(False)
     
     def label2_threadslot(self,_signal,_param):
         _list = _signal.propList[0]
@@ -3033,6 +3062,8 @@ class MyWindow(Gtk.ApplicationWindow):
     
     def on_set_clipboard(self, _pos):
         self.clipbutton = Gtk.Button()
+        self.clipbutton.add_css_class("flat")
+        self.clipbutton.set_name("clipboardbutton")
         _icon_path = os.path.join(_curr_dir,"icons","clipboard.svg")
         _pixbf = GdkPixbuf.Pixbuf.new_from_file_at_size(_icon_path, self.win_height,self.win_height)
         _pb = Gdk.Texture.new_for_pixbuf(_pixbf)
@@ -3089,8 +3120,9 @@ class MyWindow(Gtk.ApplicationWindow):
         self.clock_lbl.add_controller(gesture)
         #
         self.set_on_clock()
-        self.clock_lbl_style_context = self.clock_lbl.get_style_context()
-        self.clock_lbl_style_context.add_class("clocklabel")
+        # self.clock_lbl_style_context = self.clock_lbl.get_style_context()
+        # self.clock_lbl_style_context.add_class("clocklabel")
+        self.clock_lbl.set_name("clocklabel")
         if _pos == 1:
             self.center_box.insert_child_after(self.clock_lbl, None)
         elif _pos == 2:
@@ -3947,8 +3979,9 @@ class commandWin(Gtk.Window):
         
         # self.connect('focus-out-event', self.on_focus_out)
         
-        self.self_style_context = self.get_style_context()
-        self.self_style_context.add_class("commandwin")
+        # self.self_style_context = self.get_style_context()
+        # self.self_style_context.add_class("commandwin")
+        self.set_name("commandwin")
         
         _pad1 = 10
         self.main_box = Gtk.Box.new(orientation=Gtk.Orientation.VERTICAL,spacing=_pad1)
@@ -4070,8 +4103,9 @@ class menuWin(Gtk.Window):
         self.main_box.set_margin_end(_pad)
         self.set_child(self.main_box)
         
-        self.self_style_context = self.get_style_context()
-        self.self_style_context.add_class("menuwin")
+        # self.self_style_context = self.get_style_context()
+        # self.self_style_context.add_class("menuwin")
+        self.set_name("menuwin")
         
         ###############
         self.q = qq
@@ -4125,6 +4159,7 @@ class menuWin(Gtk.Window):
         ##############
         if self.menu_item_type == 0:
             self.iconview = Gtk.FlowBox()
+            self.iconview.set_name("mymenuflowbox")
             self.iconview.set_activate_on_single_click(True)
             self.iconview.set_selection_mode(0)
             self.iconview.set_homogeneous(True)
@@ -4134,6 +4169,7 @@ class menuWin(Gtk.Window):
             self.iconview.connect('child-activated', self.on_iv_item_activated)
         elif self.menu_item_type == 1:
             self.iconview = Gtk.ListBox.new()
+            self.iconview.set_name("mymenulistview")
             self.scrolledwindow.set_child(self.iconview)
             self.iconview.connect('row-activated', self.on_iv_item_activated)
         
@@ -4196,6 +4232,8 @@ class menuWin(Gtk.Window):
         ## menu editor button
         if self._parent.menu_editor:
             self.modify_menu_btn = Gtk.Button()
+            self.modify_menu_btn.set_name("menuservicebutton")
+            self.modify_menu_btn.add_css_class("flat")
             self.modify_menu_btn.set_tooltip_text(WBTXT101)
             self.modify_menu_btn.connect('clicked', self.on_modify_menu)
             pix = GdkPixbuf.Pixbuf.new_from_file_at_size(os.path.join(_curr_dir,"icons","modify_menu.svg"), int(self.BTN_ICON_SIZE/2), int(self.BTN_ICON_SIZE/2))
@@ -4213,6 +4251,8 @@ class menuWin(Gtk.Window):
         # self.main_box.append(separator)
         
         self.lockscreen = Gtk.Button()
+        self.lockscreen.set_name("menuservicebutton")
+        self.lockscreen.add_css_class("flat")
         pix = GdkPixbuf.Pixbuf.new_from_file_at_size(os.path.join(_curr_dir,"icons","lock.svg"), int(self.BTN_ICON_SIZE/2), int(self.BTN_ICON_SIZE/2))
         _pb = Gdk.Texture.new_for_pixbuf(pix)
         _image = Gtk.Image.new_from_paintable(_pb)
@@ -4223,6 +4263,8 @@ class menuWin(Gtk.Window):
         self.btn_box.append(self.lockscreen)
         
         self.logout_btn = Gtk.Button()
+        self.logout_btn.set_name("menuservicebutton")
+        self.logout_btn.add_css_class("flat")
         pix = GdkPixbuf.Pixbuf.new_from_file_at_size(os.path.join(_curr_dir,"icons","system-logout.svg"), int(self.BTN_ICON_SIZE/2), int(self.BTN_ICON_SIZE/2))
         _pb = Gdk.Texture.new_for_pixbuf(pix)
         _image = Gtk.Image.new_from_paintable(_pb)
@@ -4233,6 +4275,8 @@ class menuWin(Gtk.Window):
         self.btn_box.append(self.logout_btn)
         
         self.reboot_btn = Gtk.Button()
+        self.reboot_btn.set_name("menuservicebutton")
+        self.reboot_btn.add_css_class("flat")
         pix = GdkPixbuf.Pixbuf.new_from_file_at_size(os.path.join(_curr_dir,"icons","system-restart.svg"), int(self.BTN_ICON_SIZE/2), int(self.BTN_ICON_SIZE/2))
         _pb = Gdk.Texture.new_for_pixbuf(pix)
         _image = Gtk.Image.new_from_paintable(_pb)
@@ -4243,6 +4287,8 @@ class menuWin(Gtk.Window):
         self.btn_box.append(self.reboot_btn)
         
         self.shutdown_btn = Gtk.Button()
+        self.shutdown_btn.set_name("menuservicebutton")
+        self.shutdown_btn.add_css_class("flat")
         pix = GdkPixbuf.Pixbuf.new_from_file_at_size(os.path.join(_curr_dir,"icons","system-shutdown.svg"), int(self.BTN_ICON_SIZE/2), int(self.BTN_ICON_SIZE/2))
         _pb = Gdk.Texture.new_for_pixbuf(pix)
         _image = Gtk.Image.new_from_paintable(_pb)
@@ -5058,8 +5104,9 @@ class clipboardWin(Gtk.Window):
         self.list_box.connect('row-activated', self.on_list_box)
         scroll_win.set_child(self.list_box)
         
-        self.self_style_context = self.get_style_context()
-        self.self_style_context.add_class("clipboardwin")
+        # self.self_style_context = self.get_style_context()
+        # self.self_style_context.add_class("clipboardwin")
+        self.set_name("clipboardwin")
         
         self.list_box_items = []
         self.populate_clips()
@@ -5241,8 +5288,9 @@ class otherWin(Gtk.Window):
         
         self.set_size_request(self._parent.service_width, self._parent.service_height)
         
-        self.self_style_context = self.get_style_context()
-        self.self_style_context.add_class("servicewin")
+        # self.self_style_context = self.get_style_context()
+        # self.self_style_context.add_class("servicewin")
+        self.set_name("servicewin")
         
         self.main_box = Gtk.Box.new(orientation=Gtk.Orientation.VERTICAL,spacing=0)
         self.main_box.set_margin_start(_pad)
@@ -5431,8 +5479,10 @@ class otherWin(Gtk.Window):
                 body_lbl.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
                 body_lbl.set_markup(_body)
                 body_lbl.set_tooltip_text(body_lbl.get_current_uri())
-                self.self_style_context = body_lbl.get_style_context()
-                self.self_style_context.add_class("mynotbodylbl")
+                # self.self_style_context = body_lbl.get_style_context()
+                # self.self_style_context.add_class("mynotbodylbl")
+                body_lbl.set_name("mynotbodylbl")
+                
                 # _scrolledwin.set_size_request(-1,max(int(self._parent.service_height/2),150))
                 # _scrolledwin.set_child(body_lbl)
                 # _scrolledwin.set_hexpand(True)
@@ -5659,8 +5709,9 @@ class noteDialog(Gtk.Window):
         self.connect('destroy', self.delete_event)
         self.connect('close-request', self.delete_event)
         
-        self.self_style_context = self.get_style_context()
-        self.self_style_context.add_class("notewin")
+        # self.self_style_context = self.get_style_context()
+        # self.self_style_context.add_class("notewin")
+        self.set_name("notewin")
         
         self.set_size_request(int(self._parent.note_size)+50, int(self._parent.note_size))
         
@@ -5759,8 +5810,9 @@ class timerDialog(Gtk.Dialog):
         
         self._parent = parent
         
-        self.self_style_context = self.get_style_context()
-        self.self_style_context.add_class("timerwin")
+        # self.self_style_context = self.get_style_context()
+        # self.self_style_context.add_class("timerwin")
+        self.set_name("timerwin")
         
         self.set_default_size(100, 100)
         box = self.get_child()
@@ -5812,8 +5864,9 @@ class DialogConfiguration(Gtk.Dialog):
         
         self.set_default_size(100, 100)
         
-        self.self_style_context = self.get_style_context()
-        self.self_style_context.add_class("configuratorwin")
+        # self.self_style_context = self.get_style_context()
+        # self.self_style_context.add_class("configuratorwin")
+        self.set_name("configuratorwin")
         
         box = self.get_child()
         
@@ -5904,12 +5957,15 @@ class DialogConfiguration(Gtk.Dialog):
         pos_lbl.set_tooltip_text(WBTXT9)
         self.page1_box.attach(pos_lbl,0,4,1,1)
         pos_lbl.set_halign(1)
-        pos_combo = Gtk.ComboBoxText.new()
-        pos_combo.append_text(WBTOP)
-        pos_combo.append_text(WBBOTTOM)
-        pos_combo.set_active(self._parent.win_position)
+        # pos_combo = Gtk.ComboBoxText.new()
+        # pos_combo.append_text(WBTOP)
+        # pos_combo.append_text(WBBOTTOM)
+        # pos_combo.set_active(self._parent.win_position)
+        pos_combo = Gtk.DropDown.new_from_strings([WBTOP,WBBOTTOM])
+        pos_combo.set_selected(self._parent.win_position)
         self.page1_box.attach_next_to(pos_combo,pos_lbl,1,1,1)
-        pos_combo.connect('changed', self.on_pos_combo)
+        # pos_combo.connect('changed', self.on_pos_combo)
+        pos_combo.connect("notify::selected-item", self.on_pos_combo)
         # clipboard
         if USE_CLIPBOARD:
             clip_lbl = Gtk.Label(label=WBCLIPBOARD1)
@@ -5917,13 +5973,16 @@ class DialogConfiguration(Gtk.Dialog):
             self.page1_box.attach(clip_lbl,0,5,1,1)
             clip_lbl.set_halign(1)
             # clip_sw = Gtk.Switch.new()
-            clip_sw = Gtk.ComboBoxText.new()
-            clip_sw.append_text(WBNO)
-            clip_sw.append_text(WBYES)
-            clip_sw.set_active(self._parent.clipboard_use)
+            # clip_sw = Gtk.ComboBoxText.new()
+            # clip_sw.append_text(WBNO)
+            # clip_sw.append_text(WBYES)
+            # clip_sw.set_active(self._parent.clipboard_use)
+            clip_sw = Gtk.DropDown.new_from_strings([WBNO,WBYES])
+            clip_sw.set_selected(self._parent.clipboard_use)
             # clip_sw.set_halign(1)
             # clip_sw.connect('notify::active', self.on_switch, "clipboard")
-            clip_sw.connect('changed', self.on_switch, None, "clipboard")
+            # clip_sw.connect('changed', self.on_switch, None, "clipboard")
+            clip_sw.connect("notify::selected-item", self.on_switch, "clipboard")
             self.page1_box.attach_next_to(clip_sw,clip_lbl,1,1,1)
         # label1
         label1_lbl = Gtk.Label(label=WBTXT11)
@@ -5931,26 +5990,31 @@ class DialogConfiguration(Gtk.Dialog):
         self.page1_box.attach(label1_lbl,0,6,1,1)
         label1_lbl.set_halign(1)
         # out1_sw = Gtk.Switch.new()
-        out1_sw = Gtk.ComboBoxText.new()
-        out1_sw.append_text(WBNO)
-        out1_sw.append_text(WBYES)
-        out1_sw.set_active(self._parent.label1_use)
+        # out1_sw = Gtk.ComboBoxText.new()
+        # out1_sw.append_text(WBNO)
+        # out1_sw.append_text(WBYES)
+        # out1_sw.set_active(self._parent.label1_use)
+        out1_sw = Gtk.DropDown.new_from_strings([WBNO,WBYES])
+        out1_sw.set_selected(self._parent.label1_use)
         # out1_sw.set_halign(1)
-        # out1_sw.connect('notify::active', self.on_switch, "out1")
-        out1_sw.connect('changed', self.on_switch, None, "out1")
+        # out1_sw.connect('changed', self.on_switch, None, "out1")
+        out1_sw.connect("notify::selected-item", self.on_switch, "out1")
         self.page1_box.attach_next_to(out1_sw,label1_lbl,1,1,1)
         # label2
         label2_lbl = Gtk.Label(label=WBTXT13)
         label2_lbl.set_tooltip_text(WBTXT14)
         self.page1_box.attach(label2_lbl,0,7,1,1)
         label2_lbl.set_halign(1)
-        label2_combo = Gtk.ComboBoxText.new()
-        label2_combo.append_text(WBOFF)
-        label2_combo.append_text(WBCENTER)
-        label2_combo.append_text(WBRIGHT)
-        label2_combo.set_active(self._parent.label2_use)
+        # label2_combo = Gtk.ComboBoxText.new()
+        # label2_combo.append_text(WBOFF)
+        # label2_combo.append_text(WBCENTER)
+        # label2_combo.append_text(WBRIGHT)
+        # label2_combo.set_active(self._parent.label2_use)
+        label2_combo = Gtk.DropDown.new_from_strings([WBOFF,WBCENTER,WBRIGHT])
+        label2_combo.set_selected(self._parent.label2_use)
         self.page1_box.attach_next_to(label2_combo,label2_lbl,1,1,1)
-        label2_combo.connect('changed', self.on_label2_combo)
+        # label2_combo.connect('changed', self.on_label2_combo)
+        label2_combo.connect("notify::selected-item", self.on_label2_combo)
         # out2_sw = Gtk.Switch.new()
         # out2_sw.set_active(self._parent.label2_use)
         # out2_sw.set_halign(1)
@@ -5976,24 +6040,30 @@ class DialogConfiguration(Gtk.Dialog):
         # clock_sw.set_halign(1)
         # clock_sw.connect('notify::active', self.on_switch, "clock")
         # self.page1_box.attach_next_to(clock_sw,clock_lbl,1,1,1)
-        clock_sw = Gtk.ComboBoxText.new()
-        clock_sw.append_text(WBOFF)
-        clock_sw.append_text(WBCENTER)
-        clock_sw.append_text(WBRIGHT)
-        clock_sw.set_active(self._parent.clock_use)
-        clock_sw.connect('changed', self.on_time_combo_use)
+        # clock_sw = Gtk.ComboBoxText.new()
+        # clock_sw.append_text(WBOFF)
+        # clock_sw.append_text(WBCENTER)
+        # clock_sw.append_text(WBRIGHT)
+        # clock_sw.set_active(self._parent.clock_use)
+        # clock_sw.connect('changed', self.on_time_combo_use)
+        clock_sw = Gtk.DropDown.new_from_strings([WBOFF,WBCENTER,WBRIGHT])
+        clock_sw.set_selected(self._parent.clock_use)
+        clock_sw.connect("notify::selected-item", self.on_time_combo_use)
         self.page1_box.attach_next_to(clock_sw,clock_lbl,1,1,1)
         # 
-        _time_format = Gtk.ComboBoxText.new()
-        _time_format.set_tooltip_text(WBTXT17)
-        _time_format.append_text(WBTXT18)
-        _time_format.append_text(WBTXT19)
-        _time_format.append_text(WBTXT20)
-        _time_format.set_active(self._parent.time_format)
-        _time_format.connect('changed', self.on_time_combo)
+        # _time_format = Gtk.ComboBoxText.new()
+        # _time_format.set_tooltip_text(WBTXT17)
+        # _time_format.append_text(WBTXT18)
+        # _time_format.append_text(WBTXT19)
+        # _time_format.append_text(WBTXT20)
+        # _time_format.set_active(self._parent.time_format)
+        # _time_format.connect('changed', self.on_time_combo)
+        _time_format = Gtk.DropDown.new_from_strings([WBTXT18,WBTXT19,WBTXT20])
+        _time_format.set_selected(self._parent.time_format)
+        _time_format.connect("notify::selected-item", self.on_time_combo)
         self.page1_box.attach_next_to(_time_format,clock_sw,1,1,1)
-        if USE_TASKBAR != 0:
-            clock_sw.set_sensitive(False)
+        # if USE_TASKBAR != 0:
+            # clock_sw.set_sensitive(False)
         # volume
         # if USE_VOLUME:
             # volume_lbl = Gtk.Label(label="Mixer")
@@ -6069,11 +6139,14 @@ class DialogConfiguration(Gtk.Dialog):
         menu_lbl_wp.set_tooltip_text(WBTXT32)
         self.page2_box.attach(menu_lbl_wp,0,6,1,1)
         menu_lbl_wp.set_halign(1)
-        menu_combo_p = Gtk.ComboBoxText.new()
-        menu_combo_p.append_text(WBLEFT)
-        menu_combo_p.append_text(WBRIGHT)
-        menu_combo_p.set_active(self._parent.menu_win_position)
-        menu_combo_p.connect('changed', self.on_menu_combo, "pos")
+        # menu_combo_p = Gtk.ComboBoxText.new()
+        # menu_combo_p.append_text(WBLEFT)
+        # menu_combo_p.append_text(WBRIGHT)
+        # menu_combo_p.set_active(self._parent.menu_win_position)
+        # menu_combo_p.connect('changed', self.on_menu_combo, "pos")
+        menu_combo_p = Gtk.DropDown.new_from_strings([WBLEFT,WBRIGHT])
+        menu_combo_p.set_selected(self._parent.menu_win_position)
+        menu_combo_p.connect("notify::selected-item", self.on_menu_combo, "pos")
         self.page2_box.attach_next_to(menu_combo_p,menu_lbl_wp,1,1,1)
         
         menu_n_item_lbl = Gtk.Label(label=WBTXT33)
@@ -6148,14 +6221,17 @@ class DialogConfiguration(Gtk.Dialog):
         lbl_note_show.set_tooltip_text(WBTXT41)
         lbl_note_show.set_halign(1)
         self.page3_box.attach(lbl_note_show,0,6,1,1)
-        # note_sw = Gtk.Switch.new()
-        note_sw = Gtk.ComboBoxText.new()
-        note_sw.append_text(WBNO)
-        note_sw.append_text(WBYES)
-        note_sw.set_active(self._parent.note_show_at_start)
+        # # note_sw = Gtk.Switch.new()
+        # note_sw = Gtk.ComboBoxText.new()
+        # note_sw.append_text(WBNO)
+        # note_sw.append_text(WBYES)
+        # note_sw.set_active(self._parent.note_show_at_start)
+        note_sw = Gtk.DropDown.new_from_strings([WBNO,WBYES])
+        note_sw.set_selected(self._parent.note_show_at_start)
         # note_sw.set_halign(1)
         # note_sw.connect('notify::active', self.on_switch, "note")
-        note_sw.connect('changed', self.on_switch, None, "note")
+        # note_sw.connect('changed', self.on_switch, None, "note")
+        note_sw.connect("notify::selected-item", self.on_switch, "note")
         self.page3_box.attach_next_to(note_sw,lbl_note_show,1,1,1)
         
         lbl_note_size = Gtk.Label(label=WBTXT42)
@@ -6310,12 +6386,15 @@ class DialogConfiguration(Gtk.Dialog):
         not_lbl_rounded.set_tooltip_text(WBROUNDEDIMG2)
         self.page5_box.attach(not_lbl_rounded,0,4,1,1)
         not_lbl_rounded.set_halign(1)
-        round_combo = Gtk.ComboBoxText.new()
-        round_combo.append_text(WBNO)
-        round_combo.append_text(WBROUNDEDONLYIMG)
-        round_combo.append_text(WBROUNDEDALLIMG)
-        round_combo.set_active(self._parent.not_rounded_img)
-        round_combo.connect('changed', self.on_round_combo)
+        # round_combo = Gtk.ComboBoxText.new()
+        # round_combo.append_text(WBNO)
+        # round_combo.append_text(WBROUNDEDONLYIMG)
+        # round_combo.append_text(WBROUNDEDALLIMG)
+        # round_combo.set_active(self._parent.not_rounded_img)
+        # round_combo.connect('changed', self.on_round_combo)
+        round_combo = Gtk.DropDown.new_from_strings([WBNO,WBROUNDEDONLYIMG,WBROUNDEDALLIMG])
+        round_combo.set_selected(self._parent.not_rounded_img)
+        round_combo.connect("notify::selected-item", self.on_round_combo)
         self.page5_box.attach_next_to(round_combo,not_lbl_rounded,1,1,1)
         # roundness
         roundness_spin = Gtk.SpinButton.new_with_range(0,1,0.01)
@@ -6338,21 +6417,25 @@ class DialogConfiguration(Gtk.Dialog):
         not_lbl_sound.set_tooltip_text(WBTXT63)
         self.page5_box.attach(not_lbl_sound,0,6,1,1)
         not_lbl_sound.set_halign(1)
-        snd_combo = Gtk.ComboBoxText.new()
-        snd_combo.append_text(WBTXT64)
-        snd_combo.append_text(WBTXT65)
-        snd_combo.append_text(WBTXT66)
-        snd_combo.connect('changed', self.on_snd_combo)
+        # snd_combo = Gtk.ComboBoxText.new()
+        # snd_combo.append_text(WBTXT64)
+        # snd_combo.append_text(WBTXT65)
+        # snd_combo.append_text(WBTXT66)
+        # snd_combo.connect('changed', self.on_snd_combo)
+        snd_combo = Gtk.DropDown.new_from_strings([WBTXT64,WBTXT65,WBTXT66])
+        snd_combo.connect("notify::selected-item", self.on_snd_combo)
         self.page5_box.attach_next_to(snd_combo,not_lbl_sound,1,1,1)
         self.entry_sound = Gtk.Entry.new()
         self.entry_sound.set_tooltip_text(WBTXT67)
         self.entry_sound.connect('changed', self.on_entry_sound)
         self.page5_box.attach(self.entry_sound,1,7,1,1)
         if self._parent.not_sounds in [0,1]:
-            snd_combo.set_active(self._parent.not_sounds)
+            # snd_combo.set_active(self._parent.not_sounds)
+            snd_combo.set_selected(self._parent.not_sounds)
             self.entry_sound.set_state_flags(Gtk.StateFlags.INSENSITIVE, True)
         elif isinstance(self._parent.not_sounds, str):
-            snd_combo.set_active(2)
+            # snd_combo.set_active(2)
+            snd_combo.set_selected(2)
             self.entry_sound.set_text(self._parent.not_sounds)
         # pad
         not_lbl_pad = Gtk.Label(label=WBTXT68)
@@ -6434,21 +6517,27 @@ class DialogConfiguration(Gtk.Dialog):
         _lbl_use_volume = Gtk.Label(label=WBTXT82)
         self.page6_box.attach(_lbl_use_volume,0,3,1,1)
         _lbl_use_volume.set_halign(1)
-        use_volume_combo = Gtk.ComboBoxText.new()
-        use_volume_combo.append_text(WBNO)
-        use_volume_combo.append_text(WBYES)
-        use_volume_combo.set_active(USE_VOLUME)
-        use_volume_combo.connect('changed', self.on_other_combo, "volume")
+        # use_volume_combo = Gtk.ComboBoxText.new()
+        # use_volume_combo.append_text(WBNO)
+        # use_volume_combo.append_text(WBYES)
+        # use_volume_combo.set_active(USE_VOLUME)
+        # use_volume_combo.connect('changed', self.on_other_combo, "volume")
+        use_volume_combo = Gtk.DropDown.new_from_strings([WBNO,WBYES])
+        use_volume_combo.set_selected(USE_VOLUME)
+        use_volume_combo.connect("notify::selected-item", self.on_other_combo, "volume")
         self.page6_box.attach_next_to(use_volume_combo,_lbl_use_volume,1,1,1)
         
         _lbl_use_tray = Gtk.Label(label=WBTXT83)
         self.page6_box.attach(_lbl_use_tray,0,4,1,1)
         _lbl_use_tray.set_halign(1)
-        use_tray_combo = Gtk.ComboBoxText.new()
-        use_tray_combo.append_text(WBNO)
-        use_tray_combo.append_text(WBYES)
-        use_tray_combo.set_active(USE_TRAY)
-        use_tray_combo.connect('changed', self.on_other_combo, "tray")
+        # use_tray_combo = Gtk.ComboBoxText.new()
+        # use_tray_combo.append_text(WBNO)
+        # use_tray_combo.append_text(WBYES)
+        # use_tray_combo.set_active(USE_TRAY)
+        # use_tray_combo.connect('changed', self.on_other_combo, "tray")
+        use_tray_combo = Gtk.DropDown.new_from_strings([WBNO,WBYES])
+        use_tray_combo.set_selected(USE_TRAY)
+        use_tray_combo.connect("notify::selected-item", self.on_other_combo, "tray")
         self.page6_box.attach_next_to(use_tray_combo,_lbl_use_tray,1,1,1)
         
         # tray enable/disable
@@ -6461,12 +6550,15 @@ class DialogConfiguration(Gtk.Dialog):
         # not_lbl_enabled_sw.set_active(self._parent.not_use)
         # not_lbl_enabled_sw.connect('notify::active', self.on_switch, "notification")
         # self.page6_box.attach_next_to(not_lbl_enabled_sw,not_lbl_enabled,1,1,1)
-        use_notif_combo = Gtk.ComboBoxText.new()
-        use_notif_combo.append_text(WBNO)
-        use_notif_combo.append_text(WBYES)
-        use_notif_combo.append_text(WBTXT86)
-        use_notif_combo.set_active(self._parent.not_use)
-        use_notif_combo.connect('changed', self.on_other_combo, "notification")
+        # use_notif_combo = Gtk.ComboBoxText.new()
+        # use_notif_combo.append_text(WBNO)
+        # use_notif_combo.append_text(WBYES)
+        # use_notif_combo.append_text(WBTXT86)
+        # use_notif_combo.set_active(self._parent.not_use)
+        # use_notif_combo.connect('changed', self.on_other_combo, "notification")
+        use_notif_combo = Gtk.DropDown.new_from_strings([WBNO,WBYES,WBTXT86])
+        use_notif_combo.set_selected(self._parent.not_use)
+        use_notif_combo.connect("notify::selected-item", self.on_other_combo, "notification")
         self.page6_box.attach_next_to(use_notif_combo,not_lbl_enabled,1,1,1)
         
         # taskbar
@@ -6474,13 +6566,16 @@ class DialogConfiguration(Gtk.Dialog):
         taskbar_lbl.set_tooltip_text(WBTXT88)
         self.page6_box.attach(taskbar_lbl,0,6,1,1)
         taskbar_lbl.set_halign(1)
-        use_taskbar_combo = Gtk.ComboBoxText.new()
-        use_taskbar_combo.append_text(WBTXT89)
-        use_taskbar_combo.append_text(WBLEFT)
-        use_taskbar_combo.append_text(WBRIGHT)
-        use_taskbar_combo.append_text(WBCENTER)
-        use_taskbar_combo.set_active(USE_TASKBAR)
-        use_taskbar_combo.connect('changed', self.on_other_combo, "taskbar")
+        # use_taskbar_combo = Gtk.ComboBoxText.new()
+        # use_taskbar_combo.append_text(WBTXT89)
+        # use_taskbar_combo.append_text(WBLEFT)
+        # use_taskbar_combo.append_text(WBRIGHT)
+        # use_taskbar_combo.append_text(WBCENTER)
+        # use_taskbar_combo.set_active(USE_TASKBAR)
+        # use_taskbar_combo.connect('changed', self.on_other_combo, "taskbar")
+        use_taskbar_combo = Gtk.DropDown.new_from_strings([WBTXT89,WBLEFT,WBRIGHT,WBCENTER])
+        use_taskbar_combo.set_selected(USE_TASKBAR)
+        use_taskbar_combo.connect('notify::selected-item', self.on_other_combo, "taskbar")
         self.page6_box.attach_next_to(use_taskbar_combo,taskbar_lbl,1,1,1)
         
         # launch mode
@@ -6488,24 +6583,30 @@ class DialogConfiguration(Gtk.Dialog):
         launch_lbl.set_tooltip_text(WBTXT91)
         self.page6_box.attach(launch_lbl,0,7,1,1)
         launch_lbl.set_halign(1)
-        launch_combo = Gtk.ComboBoxText.new()
-        launch_combo.append_text(WBTXT92)
-        launch_combo.append_text(WBTXT93)
-        launch_combo.append_text(WBTXT94)
-        launch_combo.set_active(LAUNCH_MODE)
-        launch_combo.connect('changed', self.on_other_combo, "launch")
+        # launch_combo = Gtk.ComboBoxText.new()
+        # launch_combo.append_text(WBTXT92)
+        # launch_combo.append_text(WBTXT93)
+        # launch_combo.append_text(WBTXT94)
+        # launch_combo.set_active(LAUNCH_MODE)
+        # launch_combo.connect('changed', self.on_other_combo, "launch")
+        launch_combo = Gtk.DropDown.new_from_strings([WBTXT92,WBTXT93,WBTXT94])
+        launch_combo.set_selected(LAUNCH_MODE)
+        launch_combo.connect('notify::selected-item', self.on_other_combo, "launch")
         self.page6_box.attach_next_to(launch_combo,launch_lbl,1,1,1)
         
         # menu position
         menu_cat_pos_lbl = Gtk.Label(label=MWMENUPOS)
         self.page6_box.attach(menu_cat_pos_lbl,0,8,1,1)
         menu_cat_pos_lbl.set_halign(1)
-        menu_cat_pos_combo = Gtk.ComboBoxText.new()
-        menu_cat_pos_combo.append_text(MWMENUPOS2)
-        menu_cat_pos_combo.append_text(MWMENUPOS3)
-        menu_cat_pos_combo.append_text(MWMENUPOS4)
-        menu_cat_pos_combo.set_active(MENU_TYPE)
-        menu_cat_pos_combo.connect('changed', self.on_other_combo, "menu-pos")
+        # menu_cat_pos_combo = Gtk.ComboBoxText.new()
+        # menu_cat_pos_combo.append_text(MWMENUPOS2)
+        # menu_cat_pos_combo.append_text(MWMENUPOS3)
+        # menu_cat_pos_combo.append_text(MWMENUPOS4)
+        # menu_cat_pos_combo.set_active(MENU_TYPE)
+        # menu_cat_pos_combo.connect('changed', self.on_other_combo, "menu-pos")
+        menu_cat_pos_combo = Gtk.DropDown.new_from_strings([MWMENUPOS2,MWMENUPOS3,MWMENUPOS4])
+        menu_cat_pos_combo.set_selected(MENU_TYPE)
+        menu_cat_pos_combo.connect('notify::selected-item', self.on_other_combo, "menu-pos")
         self.page6_box.attach_next_to(menu_cat_pos_combo,menu_cat_pos_lbl,1,1,1)
         
         # menu label category position
@@ -6513,30 +6614,39 @@ class DialogConfiguration(Gtk.Dialog):
         menu_cat_pos_lbl2.set_tooltip_text(MWMENULBLPOS1)
         self.page6_box.attach(menu_cat_pos_lbl2,0,9,1,1)
         menu_cat_pos_lbl2.set_halign(1)
-        menu_cat_pos_combo2 = Gtk.ComboBoxText.new()
-        menu_cat_pos_combo2.append_text(MWMENULBLPOS2)
-        menu_cat_pos_combo2.append_text(MWMENULBLPOS3)
-        menu_cat_pos_combo2.set_active(MENU_SHOW_ITEM_LABEL)
-        menu_cat_pos_combo2.connect('changed', self.on_other_combo, "menu-item-lbl-pos")
+        # menu_cat_pos_combo2 = Gtk.ComboBoxText.new()
+        # menu_cat_pos_combo2.append_text(MWMENULBLPOS2)
+        # menu_cat_pos_combo2.append_text(MWMENULBLPOS3)
+        # menu_cat_pos_combo2.set_active(MENU_SHOW_ITEM_LABEL)
+        # menu_cat_pos_combo2.connect('changed', self.on_other_combo, "menu-item-lbl-pos")
+        menu_cat_pos_combo2 = Gtk.DropDown.new_from_strings([MWMENULBLPOS2,MWMENULBLPOS3])
+        menu_cat_pos_combo2.set_selected(MENU_SHOW_ITEM_LABEL)
+        menu_cat_pos_combo2.connect('notify::selected-item', self.on_other_combo, "menu-item-lbl-pos")
         self.page6_box.attach_next_to(menu_cat_pos_combo2,menu_cat_pos_lbl2,1,1,1)
         #
-        menu_cat_pos_combo3 = Gtk.ComboBoxText.new()
-        menu_cat_pos_combo3.append_text(MWMENULBLPOS4)
-        menu_cat_pos_combo3.append_text(MWMENULBLPOS2)
-        menu_cat_pos_combo3.append_text(MWMENULBLPOS3)
-        menu_cat_pos_combo3.set_active(MENU_SHOW_ITEM_LABEL)
-        menu_cat_pos_combo3.connect('changed', self.on_other_combo, "menu-cat-lbl-pos")
+        # menu_cat_pos_combo3 = Gtk.ComboBoxText.new()
+        # menu_cat_pos_combo3.append_text(MWMENULBLPOS4)
+        # menu_cat_pos_combo3.append_text(MWMENULBLPOS2)
+        # menu_cat_pos_combo3.append_text(MWMENULBLPOS3)
+        # menu_cat_pos_combo3.set_active(MENU_SHOW_ITEM_LABEL)
+        # menu_cat_pos_combo3.connect('changed', self.on_other_combo, "menu-cat-lbl-pos")
+        menu_cat_pos_combo3 = Gtk.DropDown.new_from_strings([MWMENULBLPOS4,MWMENULBLPOS2,MWMENULBLPOS3])
+        menu_cat_pos_combo3.set_selected(MENU_SHOW_ITEM_LABEL)
+        menu_cat_pos_combo3.connect('notify::selected-item', self.on_other_combo, "menu-cat-lbl-pos")
         self.page6_box.attach_next_to(menu_cat_pos_combo3,menu_cat_pos_combo2,1,1,1)
         
         # 
         menu_item_pos_lbl = Gtk.Label(label=MWMENUITEMTYPE)
         self.page6_box.attach(menu_item_pos_lbl,0,10,1,1)
         menu_item_pos_lbl.set_halign(1)
-        menu_item_pos_combo = Gtk.ComboBoxText.new()
-        menu_item_pos_combo.append_text(MWMENUITEMTYPE2)
-        menu_item_pos_combo.append_text(MWMENUITEMTYPE3)
-        menu_item_pos_combo.set_active(MENU_ITEM_TYPE)
-        menu_item_pos_combo.connect('changed', self.on_other_combo, "menu-item-type")
+        # menu_item_pos_combo = Gtk.ComboBoxText.new()
+        # menu_item_pos_combo.append_text(MWMENUITEMTYPE2)
+        # menu_item_pos_combo.append_text(MWMENUITEMTYPE3)
+        # menu_item_pos_combo.set_active(MENU_ITEM_TYPE)
+        # menu_item_pos_combo.connect('changed', self.on_other_combo, "menu-item-type")
+        menu_item_pos_combo = Gtk.DropDown.new_from_strings([MWMENUITEMTYPE2,MWMENUITEMTYPE3])
+        menu_item_pos_combo.set_selected(MENU_ITEM_TYPE)
+        menu_item_pos_combo.connect('notify::selected-item', self.on_other_combo, "menu-item-type")
         self.page6_box.attach_next_to(menu_item_pos_combo,menu_item_pos_lbl,1,1,1)
         
         # # double click
@@ -6575,46 +6685,49 @@ class DialogConfiguration(Gtk.Dialog):
         except:
             pass
         
-    def on_label2_combo(self, cb):
-        self._parent.on_label2_combo(cb.get_active())
+    def on_label2_combo(self, cb, _d):
+        # self._parent.on_label2_combo(cb.get_active())
+        self._parent.on_label2_combo(cb.get_selected())
     
-    def on_other_combo(self, cb, _type):
+    def on_other_combo(self, cb, _d, _type):
+        # _active = cb.get_active()
+        _active = cb.get_selected()
         if _type == "volume":
-            _other_settings_conf["use-volume"] = cb.get_active()
+            _other_settings_conf["use-volume"] = _active
             global USE_VOLUME
-            USE_VOLUME = cb.get_active()
+            USE_VOLUME = _active
         elif _type == "tray":
-            _other_settings_conf["use-tray"] = cb.get_active()
+            _other_settings_conf["use-tray"] = _active
             global USE_TRAY
-            USE_TRAY = cb.get_active()
+            USE_TRAY = _active
         elif _type == "notification":
-            self._parent.on_switch_btn("notification", cb.get_active())
+            self._parent.on_switch_btn("notification", _active)
         # elif _type == "click":
-            # _other_settings_conf["double-click"] = cb.get_active()
+            # _other_settings_conf["double-click"] = _active
         elif _type == "taskbar":
-            _other_settings_conf["use-taskbar"] = cb.get_active()
+            _other_settings_conf["use-taskbar"] = _active
             global USE_TASKBAR
-            USE_TASKBAR = cb.get_active()
+            USE_TASKBAR = _active
         elif _type == "launch":
-            _other_settings_conf["launch-mode"] = cb.get_active()
+            _other_settings_conf["launch-mode"] = _active
             global LAUNCH_MODE
-            LAUNCH_MODE = cb.get_active()
+            LAUNCH_MODE = _active
         elif _type == "menu-pos":
-            _other_settings_conf["menu-type"] = cb.get_active()
+            _other_settings_conf["menu-type"] = _active
             global MENU_TYPE
-            MENU_TYPE = cb.get_active()
+            MENU_TYPE = _active
         elif _type == "menu-item-lbl-pos":
-            _other_settings_conf["menu-item-label-pos"] = cb.get_active()
+            _other_settings_conf["menu-item-label-pos"] = _active
             global MENU_SHOW_ITEM_LABEL
-            MENU_SHOW_ITEM_LABEL = cb.get_active()
+            MENU_SHOW_ITEM_LABEL = _active
         elif _type == "menu-cat-lbl-pos":
-            _other_settings_conf["menu-show-labels"] = cb.get_active()
+            _other_settings_conf["menu-show-labels"] = _active
             global MENU_SHOW_LABELS
-            MENU_SHOW_LABELS = cb.get_active()
+            MENU_SHOW_LABELS = _active
         elif _type == "menu-item-type":
-            _other_settings_conf["menu-item-type"] = cb.get_active()
+            _other_settings_conf["menu-item-type"] = _active
             global MENU_ITEM_TYPE
-            MENU_ITEM_TYPE = cb.get_active()
+            MENU_ITEM_TYPE = _active
         try:
             _ff = open(_other_settings_config_file,"w")
             _data_json = _other_settings_conf
@@ -6630,8 +6743,9 @@ class DialogConfiguration(Gtk.Dialog):
     def on_entry_menu(self, _entry, _type):
         self._parent.entry_menu(_type, _entry.get_text())
         
-    def on_menu_combo(self, btn, _type):
-        self._parent.on_menu_win_position(_type, btn.get_active())
+    def on_menu_combo(self, btn, _d, _type):
+        # self._parent.on_menu_win_position(_type, btn.get_active())
+        self._parent.on_menu_win_position(_type, btn.get_selected())
     
     def on_menu_editor(self, _entry):
         self._parent.on_menu_editor(_entry.get_text())
@@ -6649,17 +6763,21 @@ class DialogConfiguration(Gtk.Dialog):
     def on_corner_spinbtn2(self, btn):
         self._parent.set_self_corners(1, btn.get_value_as_int())
     
-    def on_pos_combo(self, cb):
-        self._parent.set_win_position(cb.get_active())
+    def on_pos_combo(self, cb, _d):
+        # self._parent.set_win_position(cb.get_active())
+        self._parent.set_win_position(cb.get_selected())
     
     def on_switch(self, btn, _state, _n):
-        self._parent.on_switch_btn(_n, btn.get_active())
+        # self._parent.on_switch_btn(_n, btn.get_active())
+        self._parent.on_switch_btn(_n, btn.get_selected())
         
-    def on_time_combo_use(self, cb):
-        self._parent.on_time_combo_use(cb.get_active())
+    def on_time_combo_use(self, cb, _d):
+        # self._parent.on_time_combo_use(cb.get_active())
+        self._parent.on_time_combo_use(cb.get_selected())
         
-    def on_time_combo(self, cb):
-        self._parent.on_time_combo(cb.get_active())
+    def on_time_combo(self, cb, _d):
+        # self._parent.on_time_combo(cb.get_active())
+        self._parent.on_time_combo(cb.get_selected())
         
     def on_volume_entry(self, _entry):
         self._parent.set_volume_entry(_entry.get_text())
@@ -6700,8 +6818,9 @@ class DialogConfiguration(Gtk.Dialog):
     # def on_dnd_combo(self, cb):
         # self._parent.set_dnd_combo(cb.get_active())
     
-    def on_round_combo(self, cb):
-        self._parent.set_round_combo(cb.get_active())
+    def on_round_combo(self, cb, _d):
+        # self._parent.set_round_combo(cb.get_active())
+        self._parent.set_round_combo(cb.get_selected())
     
     def on_roundness_spinbtn(self, btn):
         value = btn.get_value()
@@ -6731,15 +6850,17 @@ class DialogConfiguration(Gtk.Dialog):
         _value = btn.get_value_as_int()
         self._parent.not_padbottom(_type, _value)
     
-    def on_snd_combo(self, cb):
-        _active = cb.get_active()
+    def on_snd_combo(self, cb, _d):
+        # _active = cb.get_active()
+        _active = cb.get_selected()
         if _active == 2:
             self.entry_sound.set_state_flags(Gtk.StateFlags.NORMAL, True)
         else:
             self.entry_sound.set_text("")
             self._parent.entry_sound_text = ""
             self.entry_sound.set_state_flags(Gtk.StateFlags.INSENSITIVE, True)
-        self._parent.set_sound_combo(cb.get_active())
+        # self._parent.set_sound_combo(cb.get_active())
+        self._parent.set_sound_combo(_active)
 
 
 class label1Thread(Thread):
@@ -6944,8 +7065,9 @@ class notificationWin(Gtk.Window):
         GtkLayerShell.set_layer(self, GtkLayerShell.Layer.OVERLAY)
         GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.NONE)
         
-        self.self_style_context = self.get_style_context()
-        self.self_style_context.add_class("notificationwin")
+        # self.self_style_context = self.get_style_context()
+        # self.self_style_context.add_class("notificationwin")
+        self.set_name("notificationwin")
         
         # self.connect('show', self.on_show)
         
@@ -7064,7 +7186,12 @@ class notificationWin(Gtk.Window):
         self.old_width = None
         self.old_height = None
         
+        if NOTIFICATION_FADE == 1:
+            self.set_opacity(0)
         self.set_visible(True)
+        if NOTIFICATION_FADE == 1:
+            self.set_opacity(0.20)
+            GLib.timeout_add(50, self.on_fade_in_opacity)
         
         #################
         
@@ -7090,6 +7217,14 @@ class notificationWin(Gtk.Window):
                         elif _urgency == 2:
                             self.play_sound(os.path.join(_curr_dir, "sounds/urgency-critical.wav"))
     
+    def on_fade_in_opacity(self):
+        _opacity = self.get_opacity()
+        if _opacity < 1:
+            self.set_opacity(_opacity+0.20)
+            return True
+        else:
+            return False
+    
     # action button pressed
     def _on_button_callback(self, _btn, _replaceid, _action):
         # self._notifier.ActivationToken(_appid, _action)
@@ -7108,6 +7243,15 @@ class notificationWin(Gtk.Window):
             #
             return True
     
+    def on_fade_out_notification(self):
+        _opacity = self.get_opacity()
+        if _opacity > 0:
+            self.set_opacity(_opacity-0.20)
+            return True
+        else:
+            self.close()
+            return False
+    
     def on_close(self,_replaceid):
         self._notifier.NotificationClosed(_replaceid, 3)
         for el in self._notifier.list_notifications[:]:
@@ -7119,14 +7263,18 @@ class notificationWin(Gtk.Window):
     
     def on_close_win(self,w,_replaceid):
         self.on_close(_replaceid)
-        self.close()
+        # self.close()
     
     def on_da_gesture_l(self, o,n,x,y):
         self._notifier._parent.not_to_read -= 1
         # if self._notifier._parent.not_to_read == 0 and self._notifier._parent.to_show_alert_img == 1:
         if self._notifier._parent.not_to_read == 0:
             self._notifier._parent.not_alert_img.set_visible(False)
-        self.close()
+        #
+        if NOTIFICATION_FADE == 1:
+            GLib.timeout_add(60, self.on_fade_out_notification)
+        else:
+            self.close()
     
     # def on_close_btn(self, btn):
         # self.close()
@@ -7450,9 +7598,21 @@ class Notifier(Service.Object):
         # _urgency - _type
         if _urgency != 2 and _data[0] != -99999:
             self._close_notification(_data[6],NW)
-        
+    
+    def on_fade_out_notification(self, nw):
+        _opacity = nw.get_opacity()
+        if _opacity > 0:
+            nw.set_opacity(_opacity-0.20)
+            return True
+        else:
+            nw.close()
+            return False
+    
     def on_close_notification(self, nw):
-        nw.close()
+        if NOTIFICATION_FADE == 1:
+            GLib.timeout_add(50, self.on_fade_out_notification, nw)
+        else:
+            nw.close()
         
     def _close_notification(self,_t,nw):
         GLib.timeout_add(_t, self.on_close_notification, nw)
@@ -7691,10 +7851,10 @@ class Application(Gtk.Application):
         win.present()
         
 
-# def main():
-    # """ Run the main application"""
-    # app = Application()
-    # return app.run()#sys.argv)
+def main():
+    """ Run the main application"""
+    app = Application()
+    return app.run(sys.argv)
 
 
 def main2():
