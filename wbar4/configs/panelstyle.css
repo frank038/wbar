@@ -1,53 +1,31 @@
 /* the window border colour */
-@define-color border_color #00B300;
+@define-color border_color #0000B3;
 @define-color stickynote_color #F3C000;
 
 * {
-  font-size: 28px;
-}
 
-/*  */
-.mybox {
-  margin: 0px;
-  padding: 0px;
 }
 
 /* the panel */
-.mywindow {
-  border-radius: 30px 30px 30px 30px;
-  border-bottom-width: 2px;
-  border-color: @border_color;
-  border-style: solid;
-  font-size: 24px;
+#mywindow {
+  border-radius: 0px 0px 0px 0px;
 }
 
-.mywindow button {
-  background: #cecece;
-}
-
-/* taskbar buttons - type togglebutton */ 
-/* .mywindow #btn-taskbar:checked {
-  background-color: yellow;
+/*
+* button {
+  border: 0px;
 }*/
-
 
 /* the expander arrow size */
-/*
-expander {
-  min-width: 32px;
-  min-height: 32px;
+/*expander {
+  min-width: 48px;
+  min-height: 48px;
 }*/
 
-/* link colour of the notification in the list*/
-.mynotbodylbl link {
-  color: #000099;
+/**/
+#tasklist {
+
 }
-
-/* tasklist */
-/* #tasklist {
-  background-color: red;
-  border: 1px solid black;
-}*/
 
 #tasklist button:hover,
 #tasklist button:checked {
@@ -56,227 +34,292 @@ expander {
   border-radius: 10px 10px 10px 10px;
 }
 
-#btn-taskbar { 
+/* the taskbar buttons */
+#btn-taskbar {
   padding-top: 0px;
   padding-bottom: 0px;
   margin-top: 0px;
   margin-bottom: 0px;
 }
 
-popover * {
-  background: #cecece;
+/* left - center - right box */
+/*#mybox {
+}*/
+
+/* the clock */
+#clocklabel {
+  padding-top: 0px;
+  padding-bottom: 0px;
+  margin-top: 0px;
+  margin-bottom: 0px;
+  font-family: DIGITALDREAMFAT;
+  /*font-size: 21px;*/
 }
+
+#label1button {
+  background-color: transparent;
+  padding-top: 0px;
+  padding-bottom: 0px;
+  margin-top: 0px;
+  margin-bottom: 0px;
+}
+
+#label2button {
+  background-color: transparent;
+  padding-top: 0px;
+  padding-bottom: 0px;
+  margin-top: 0px;
+  margin-bottom: 0px;
+}
+
+/* .menuwin flowbox flowboxchild:hover box { */
+#menuwin flowbox flowboxchild:hover label {
+  border: 2px solid #484848;
+  border-radius: 8px;
+  margin: -2px;
+}
+
+/* menu flowbox */
+/*#"mymenuflowbox" {
+}*/
+
+/* menu list view */
+/*#mymenulistview {
+}*/
+
+/*popover * {
+  background: #cecece;
+}*/
 
 /* grid widget */
-grid {
+/*grid {
   background:#E0E0E0;
+}*/
+
+#menubutton, #otherbutton {
+  background-color: transparent;
+  padding-top: 0px;
+  padding-bottom: 0px;
+  margin-top: 0px;
+  margin-bottom: 0px;
 }
+
+#clipboardbutton {
+  background-color: transparent;
+  padding-top: 0px;
+  padding-bottom: 0px;
+  margin-top: 0px;
+  margin-bottom: 0px;
+}
+
+/* each tray button */
+#traybutton {
+  background-color: transparent;
+  padding-top: 0px;
+  padding-bottom: 0px;
+  margin-top: 0px;
+  margin-bottom: 0px;
+}
+
+/* the menu of each tray button */
+/*#popovertraymenu {
+
+}*/
+
+/* the volume widget */
+#vollevelbar {
+  padding-top: 0px;
+  padding-bottom: 0px;
+  margin-top: 0px;
+  margin-bottom: 0px;
+}
+
+/* #vollevelbar trough */
+/* #vollevelbar trough highlight */
+/*#vollevelbar slider {
+  background: #00000000;
+  min-height: 20px;
+}*/
+
+/*#vollevelbar trough, progress {
+  background-color: white;
+}*/
 
 /* the menu window */
-.menuwin { 
+#menuwin {
   border-radius: 10px 10px 10px 10px;
-  border-width: 2px;
+  border-width: 1px;
   border-color: @border_color;
   border-style: solid;
-  font-size: 24px;
 }
 
-.menuwin button {
+#menuwin button {
   border-radius: 6px;
   border: solid;
   border-width: 1px;
-  border-color: #7F7F7F;
+  /* border-color: #7F7F7F;*/
   margin: 2px;
-  font-size: 24px;
-}
-
-/* the shutdown/reboot/logout dialog */
-.commandwin { 
-  border-radius: 10px 10px 10px 10px;
-  border-width: 2px;
-  border-color: @border_color;
-  border-style: solid;
-  font-size: 24px;
-}
-
-.commandwin button {
-  border-radius: 6px;
-  border: solid;
-  border-width: 1px;
-  border-color: #7F7F7F;
-  margin: 2px;
-  font-size: 24px;
+  /*font-size: 24px;*/
 }
 
 /* the clipboard window */
-.clipboardwin { 
+#clipboardwin {
+  /*background-color: #cecece;*/
   border-radius: 10px 10px 10px 10px;
-  border-width: 2px;
+  border-width: 1px;
   border-color: @border_color;
   border-style: solid;
-  font-size: 24px;
 }
 
-.clipboardwin button {
+#clipboardwin button {
   border-radius: 6px;
   border: solid;
   border-width: 1px;
   border-color: #7F7F7F;
   margin: 2px;
-  font-size: 24px;
+  /*font-size: 24px;*/
 }
 
-.clipboardwin #cliprow {
+/* each row in the clipboard list */
+#clipboardwin #cliprow {
   border-radius: 6px;
   border: solid;
   border-width: 1px;
   border-color: #7F7F7F;
   margin: 2px;
-  font-size: 24px;
+  /*font-size: 24px;*/
+}
+
+/* each row in the clipboard list */
+/*#cliprow {
+
+}*/
+
+
+/* the shutdown reboot etc. window */
+#commandwin {
+  border-radius: 10px 10px 10px 10px;
+  border-width: 1px;
+  border-color: @border_color;
+  border-style: solid;
+}
+
+#commandwin button {
+  border-radius: 6px;
+  border: solid;
+  border-width: 1px;
+  /*border-color: #7F7F7F;*/
+  margin: 2px;
+  /*font-size: 24px;*/
+}
+
+/* the shutdown reboot etc. buttons */
+#menuservicebutton {
+  
 }
 
 /* the service window */
-.servicewin { 
+#servicewin {
   border-radius: 10px 10px 10px 10px;
-  border-width: 2px;
-  border-color: @border_color;
-  border-style: solid;
-  font-size: 22px;
-  font-size: 24px;
-}
-.servicewin button {
-  border-radius: 6px;
-  border: solid;
   border-width: 1px;
-  border-color: #7F7F7F;
-  margin: 2px;
-  font-size: 24px;
+  /*border-color: @border_color;*/
+  border-style: solid;
 }
 
-.servicewin #notrow {
+#servicewin button {
   border-radius: 6px;
   border: solid;
   border-width: 1px;
-  border-color: #7F7F7F;
+  /*border-color: #7F7F7F;*/
   margin: 2px;
-  font-size: 24px;
+}
+
+/* each row in the notification list */
+#notrow {
+  border-radius: 6px;
+  border: solid;
+  border-width: 1px;
+  /*border-color: #7F7F7F;*/
+  margin: 2px;
 }
 
 /* notifications in the list - mouse over custom colours */
-/*.servicewin #notrow > *:hover {
+#notrow > *:hover {
   background-color: #eeeeee;
   color: #000000;
   border-width: 0px;
+}
+
+/* the notification list */
+#notlist {
+
+}
+
+/* the body label in the notification */
+/*#mynotbodylbl link {
+
 }*/
 
 /* the notification window */
-.notificationwin { 
+#notificationwin {
+  background-color: #cecece;
+  border-radius: 10px 10px 10px 10px;
+  border-width: 1px;
+  /*border-color: @border_color;*/
+  border-style: solid;
+}
+
+#notificationwin button ~#closebtn {
+  border-radius: 6px;
+  border: solid;
+  border-width: 1px;
+  /*border-color: #7F7F7F;*/
+  margin: 2px;
+}
+
+/* the configurator window */
+#configuratorwin {
   border-radius: 10px 10px 10px 10px;
   border-width: 2px;
-  border-color: @border_color;
+  /*border-color: @border_color;*/
   border-style: solid;
-  font-size: 24px;
 }
 
-.notificationwin button ~#closebtn {
-  border-radius: 6px;
-  border: solid;
-  border-width: 1px;
-  border-color: #7F7F7F;
-  margin: 2px;
-  font-size: 24px;
-}
+/* the category buttons in the menu window */
+#mybutton {
 
-/* the volume meter */
-/*
-.vollevelbar trough, progress {
-  background-color: white;
-}*/
-
-.vollerbar, slider {
-  background: #00000000;
-}
-
-/* the output command left label */
-.label1 {
-  font-size: 24px;
-}
-
-/* the output command center label */
-/*
-.label2 {
-  font-size: 24px;
-}*/
-
-/* the clock label */
-.clocklabel {
-  font-family: DIGITALDREAMFAT;
-  font-size: 21px;
-}
-
-/* the timer win */
-.timerwin button {
-  border-radius: 6px;
-  border: solid;
-  border-width: 1px;
-  border-color: #7F7F7F;
-  margin: 2px;
-  font-size: 24px;
 }
 
 /* the note window */
-.notewin * {
+#notewin textview {
   background-color: @stickynote_color;
-  font-size: 24px;
+  /*font-size: 24px;*/
   margin: 0px;
 }
 
-.notewin button label {
+#notewin button {
   border-radius: 6px;
   border: solid;
   border-width: 1px;
   border-color: #7F7F7F;
   margin: 0px;
-  font-size: 24px;
-  background-color: white;
+  /*font-size: 24px;*/
+  background: @stickynote_color;
 }
 
 /*
-.notewin textview text {
+#notewin textview text {
   color: black;
   font-size: 24px;
 }*/
 
-.configuratorwin {
-  border-radius: 10px 10px 10px 10px;
-  border-width: 2px;
-  border-color: @border_color;
-  border-style: solid;
-  font-size: 24px;
-}
-
-#popovertray {
-  border-radius: 10px 10px 10px 10px;
-  border-width: 0px;
-  border-color: @border_color;
-  border-style: solid;
-  font-size: 24px;
-}
-
-#popovertray * {
-  border-width: 0px;
-  font-size: 24px;
-}
-
-/*
 #mysearchentry {
-  background: white;
-}*/
+
+}
 
 #yndialog {
   border-radius: 10px 10px 10px 10px;
   border-width: 0px;
   border-color: @border_color;
   border-style: solid;
-  font-size: 24px;
 }
