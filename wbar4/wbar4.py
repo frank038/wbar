@@ -3,7 +3,7 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar4.py
 
-# V. 1.1
+# V. 1.2
 
 from wbar4lang import *
 import os,sys,shutil,stat
@@ -29,6 +29,9 @@ import time, datetime
 import dbus
 import dbus.service as Service
 import importlib
+
+from xdg import DesktopEntry
+from xdg import IconTheme
 
 NOTIFICATION_FADE = 1
 
@@ -158,7 +161,7 @@ _panelconf = os.path.join(_curr_dir, "configs/panelconfg.json")
 _menu_conf = None
 _menu_config_file = os.path.join(_curr_dir,"configs","menu.json")
 # live_search: num. of chars to perform a seeking; win_position: 0 left - 1 right; num_items: number of items per row in the menu window; the menu editor command
-_starting_menu_conf = {"wwidth":880,"wheight":600,"terminal":"xfce4-terminal",\
+_starting_menu_conf = {"wwidth":880,"wheight":600,"terminal":"",\
 "cat_icon_size":64,"item_icon_size":64,"live_search":3,"win_position":0,"num_items":3,"menu_editor":""}
 
 if not os.path.exists(_menu_config_file):
@@ -175,7 +178,7 @@ else:
     _ff = open(_menu_config_file, "r")
     _menu_conf = json.load(_ff)
     _ff.close()
-
+TTERMINAL = _menu_conf["terminal"]
 
 _service_conf = None
 _service_config_file = os.path.join(_curr_dir,"configs","service.json")
@@ -3296,7 +3299,7 @@ class MyWindow(Gtk.ApplicationWindow):
             self.menu_n_items_tmp = _value
         
     def entry_menu(self, _type, _value):
-        if _value == "t":
+        if _type == "t":
             self.menu_terminal_tmp = _value
     
     def on_menu_editor(self, _text):
@@ -4861,27 +4864,58 @@ class menuWin(Gtk.Window):
             os.chdir(_HOME)
             ret=app_to_exec.launch()
             os.chdir(_curr_dir)
-        # dbus mode
-        elif self._parent.launch_mode == 1:
-            ret = self._parent._appExec.execProg(app_to_exec.get_filename())
-            if ret != "success":
-                self.msg_simple("{}: {}".format(WBERROR, ret))
-        # gtk-launch mode
-        elif self._parent.launch_mode == 2:
-            #
+        # xdg method
+        if self._parent.launch_mode == 1:
             _app_desktop_file = app_to_exec.get_filename()
-            _cmd = _app_desktop_file.split("/")[-1].removesuffix(".desktop")
-            if not shutil.which("gtk-launch"):
-                self.msg_simple(WBTXT100)
-                ret = True
-            else:
-                _cmd2 = "gtk-launch {}".format(_cmd)
-                ret = GLib.spawn_command_line_async(_cmd2)
-            os.chdir(_curr_dir)
-            #
-            if ret == False:
-                _exec_name = _b._exec
-                self.msg_simple("{} {}".format(_exec_name, WBERR4))
+            entry = DesktopEntry.DesktopEntry(_app_desktop_file)
+            fpath = ""
+            tterm = ""
+            execArgs = [" %f", " %F", " %u", " %U", " %d", " %D", " %n", " %N", " %k", " %v"]
+            pexec_temp = entry.getExec()
+            if pexec_temp:
+                for aargs in execArgs:
+                    if aargs in pexec_temp:
+                        pexec_temp = pexec_temp.strip(aargs)
+                pexec = pexec_temp.split()[0]
+                fpath = entry.getPath()
+                tterm = entry.getTerminal()
+                if pexec:
+                    try:
+                        if fpath and tterm:
+                            cmd = "chdir {} & {} {}".format(fpath, self._parent.menu_terminal, pexec)
+                        elif fpath and not tterm:
+                            cmd = "chdir {} & }".format(fpath, pexec)
+                        elif tterm and not fpath:
+                            cmd = "{} {}".format(self._parent.menu_terminal, pexec)
+                        else:
+                            cmd = pexec
+                        #
+                        Popen(cmd, shell=True)
+                    except Exception as E:
+                        self.msg_simple("{}: {}".format(WBERROR, str(E)))
+        ############### olds
+        # # dbus mode
+        # elif self._parent.launch_mode == 1:
+            # ret = self._parent._appExec.execProg(app_to_exec.get_filename())
+            # if ret != "success":
+                # self.msg_simple("{}: {}".format(WBERROR, ret))
+        # # gtk-launch mode
+        # elif self._parent.launch_mode == 2:
+            # #
+            # _app_desktop_file = app_to_exec.get_filename()
+            # _cmd = _app_desktop_file.split("/")[-1].removesuffix(".desktop")
+            # if not shutil.which("gtk-launch"):
+                # self.msg_simple(WBTXT100)
+                # ret = True
+            # else:
+                # _cmd2 = "gtk-launch {}".format(_cmd)
+                # ret = GLib.spawn_command_line_async(_cmd2)
+            # os.chdir(_curr_dir)
+            # #
+            # if ret == False:
+                # _exec_name = _b._exec
+                # self.msg_simple("{} {}".format(_exec_name, WBERR4))
+        ############
         #
         self.on_focus_out(None)
     
@@ -6116,14 +6150,14 @@ class DialogConfiguration(Gtk.Dialog):
         menu_i_spinbtn.connect('value-changed', self.on_menu_wh_spinbtn, "ii")
         menu_i_spinbtn.set_numeric(True)
         
-        # menu_lbl_t = Gtk.Label(label=WBTXT107)
-        # menu_lbl_t.set_tooltip_text("Terminal emulator to use with terminal applications")
-        # self.page2_box.attach(menu_lbl_t,0,4,1,1)
-        # menu_lbl_t.set_halign(1)
-        # self.entry_menu_t = Gtk.Entry.new()
-        # self.entry_menu_t.connect('changed', self.on_entry_menu, "t")
-        # self.page2_box.attach_next_to(self.entry_menu_t,menu_lbl_t,1,1,1)
-        # self.entry_menu_t.set_text(self._parent.menu_terminal)
+        menu_lbl_t = Gtk.Label(label=WBTXT107)
+        menu_lbl_t.set_tooltip_text(WBTXT108)
+        self.page2_box.attach(menu_lbl_t,0,4,1,1)
+        menu_lbl_t.set_halign(1)
+        self.entry_menu_t = Gtk.Entry.new()
+        self.entry_menu_t.connect('changed', self.on_entry_menu, "t")
+        self.page2_box.attach_next_to(self.entry_menu_t,menu_lbl_t,1,1,1)
+        self.entry_menu_t.set_text(self._parent.menu_terminal)
         
         menu_lbl_ls = Gtk.Label(label=WBTXT29)
         menu_lbl_ls.set_tooltip_text(WBTXT30)
@@ -6589,7 +6623,8 @@ class DialogConfiguration(Gtk.Dialog):
         # launch_combo.append_text(WBTXT94)
         # launch_combo.set_active(LAUNCH_MODE)
         # launch_combo.connect('changed', self.on_other_combo, "launch")
-        launch_combo = Gtk.DropDown.new_from_strings([WBTXT92,WBTXT93,WBTXT94])
+        # launch_combo = Gtk.DropDown.new_from_strings([WBTXT92,WBTXT93,WBTXT94])
+        launch_combo = Gtk.DropDown.new_from_strings([WBTXT92,WBTXT922])
         launch_combo.set_selected(LAUNCH_MODE)
         launch_combo.connect('notify::selected-item', self.on_other_combo, "launch")
         self.page6_box.attach_next_to(launch_combo,launch_lbl,1,1,1)
