@@ -3,7 +3,7 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar4.py
 
-# V. 1.2
+# V. 1.2.1
 
 from wbar4lang import *
 import os,sys,shutil,stat
@@ -4881,14 +4881,16 @@ class menuWin(Gtk.Window):
                 tterm = entry.getTerminal()
                 if pexec:
                     try:
-                        if fpath and tterm:
-                            cmd = "chdir {} & {} {}".format(fpath, self._parent.menu_terminal, pexec)
-                        elif fpath and not tterm:
-                            cmd = "chdir {} & }".format(fpath, pexec)
-                        elif tterm and not fpath:
-                            cmd = "{} {}".format(self._parent.menu_terminal, pexec)
+                        # if fpath and tterm:
+                        #     cmd = "chdir {} && {} {}".format(fpath, self._parent.menu_terminal, pexec)
+                        # elif fpath and not tterm:
+                        #     cmd = "chdir {} && }".format(fpath, pexec)
+                        # elif tterm and not fpath:
+                        #     cmd = "{} {}".format(self._parent.menu_terminal, pexec)
+                        if tterm:
+                            cmd = "chdir {} && {} {}".format(_HOME, self._parent.menu_terminal, pexec)
                         else:
-                            cmd = pexec
+                            cmd = "chdir {} && {}".format(_HOME, pexec)
                         #
                         Popen(cmd, shell=True)
                     except Exception as E:
