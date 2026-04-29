@@ -3,7 +3,7 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar4.py
 
-# V. 1.2.1
+# V. 1.2.2
 
 from wbar4lang import *
 import os,sys,shutil,stat
@@ -4875,8 +4875,9 @@ class menuWin(Gtk.Window):
             if pexec_temp:
                 for aargs in execArgs:
                     if aargs in pexec_temp:
-                        pexec_temp = pexec_temp.strip(aargs)
-                pexec = pexec_temp.split()[0]
+                        pexec_temp = pexec_temp.rstrip(aargs)
+                # pexec = pexec_temp.split()[0]
+                pexec = pexec_temp
                 fpath = entry.getPath()
                 tterm = entry.getTerminal()
                 if pexec:
