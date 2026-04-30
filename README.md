@@ -33,6 +33,7 @@ Requirements:
 - a wayland display server with layer-shell support
 - python3
 - gtk3 or gtk4 python bindings
+- python3-xdg for the alternative way for launching apps (gtk4 version)
 - gtk-launch command line (gtk4 version)
 - wl-clipboard for the clipboard (wl-paste and wl-copy are needed)
 - pactl for volume applet (gtk4 version; amixer is supported; read below for more)
