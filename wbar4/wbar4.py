@@ -3,7 +3,7 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar4.py
 
-# V. 1.2.2
+# V. 1.2.3
 
 from wbar4lang import *
 import os,sys,shutil,stat
@@ -1621,12 +1621,29 @@ class MyWindow(Gtk.ApplicationWindow):
         
         if _icon:
             try:
-                pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(_icon, ICON_SIZE, ICON_SIZE, 1)
+                _ret = icon_theme.has_icon(_icon)
+                if _ret:
+                    _iicon = icon_theme.lookup_icon(_icon, None, ICON_SIZE, 1, Gtk.TextDirection.NONE, Gtk.IconLookupFlags.FORCE_REGULAR)
+                    # _iicon = icon_theme.lookup_icon(_icon, None, ICON_SIZE, 1, Gtk.TextDirection.NONE, Gtk.IconLookupFlags.FORCE_SYMBOLIC)
+                    file_path = _iicon.get_file().get_path()
+                    if os.path.exists(file_path):
+                        pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(file_path, ICON_SIZE, ICON_SIZE, 1)
+                else:
+                    _ret = icon_theme.has_icon(_icon+"-symbolic")
+                    if _ret:
+                        _iicon = icon_theme.lookup_icon(_icon+"-symbolic", None, ICON_SIZE, 1, Gtk.TextDirection.NONE, Gtk.IconLookupFlags.FORCE_REGULAR)
+                        # _iicon = icon_theme.lookup_icon(_icon+"-symbolic", None, ICON_SIZE, 1, Gtk.TextDirection.NONE, Gtk.IconLookupFlags.FORCE_SYMBOLIC)
+                        file_path = _iicon.get_file().get_path()
+                        if os.path.exists(file_path):
+                            pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(file_path, ICON_SIZE, ICON_SIZE, 1)
             except:
                 try:
-                    pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(os.path.join(_curr_dir,"icons","wicon.png"), ICON_SIZE, ICON_SIZE, 1)
+                    pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(_icon, ICON_SIZE, ICON_SIZE, 1)
                 except:
-                    pass
+                    try:
+                        pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(os.path.join(_curr_dir,"icons","wicon.png"), ICON_SIZE, ICON_SIZE, 1)
+                    except:
+                        pass
             if pixbuf:
                 _pb = Gdk.Texture.new_for_pixbuf(pixbuf)
                 _img = Gtk.Image.new_from_paintable(_pb)
@@ -2395,7 +2412,7 @@ class MyWindow(Gtk.ApplicationWindow):
         #
         for item1 in self.tray_buttons:
             if isinstance(item1, Gtk.Button):
-                if item1.get_property('property_one') == sender:
+                if item1.get_property('property_one') == path:
                     btn = item1
                     break
         #
@@ -2409,11 +2426,16 @@ class MyWindow(Gtk.ApplicationWindow):
                     b.append(a[i+2])
                     b.append(a[i+3])
                     b.append(a[i])
-
+                
                 _pb = GdkPixbuf.Pixbuf.new_from_data(b, GdkPixbuf.Colorspace.RGB, True, 8, _icon_w,_icon_h,_icon_w*4)
                 if _icon_w != self._app_icon_size or _icon_h != self._app_icon_size:
                     _pb = _pb.scale_simple(self._app_icon_size, self._app_icon_size, GdkPixbuf.InterpType.BILINEAR)
-                btn.set_from_pixbuf(_pb)
+                # _img = Gtk.Image.new_from_pixbuf(_pb)
+                # btn.set_child(_img)
+                #
+                _pb2 = Gdk.Texture.new_for_pixbuf(_pb)
+                _img = Gtk.Image.new_from_paintable(_pb2)
+                btn.set_child(_img)
             except Exception as E:
                 print(WBERR2, str(E))
     
@@ -7206,6 +7228,8 @@ class notificationWin(Gtk.Window):
             _actions_box.set_halign(3)
             for _ee in _actions[::2]:
                 btn_name = _actions[_actions.index(_ee)+1]
+                if btn_name == "":
+                    btn_name = MWDEFAULT
                 _btn = Gtk.Button(label=btn_name)
                 _w = _btn.get_child()
                 if isinstance(_w, Gtk.Label):
@@ -7372,6 +7396,7 @@ class notificationWin(Gtk.Window):
     
     # desktop_icon _icon _hints user_icon_size
     # priority: image-data image-path/application_icon
+    # return: 0 for images - 1 from iconTheme
     def _find_icon(self, ret_icon, _icon, _hints, ICON_SIZE):
         _image_data = _on_hints(_hints, "image-data")
         _icon_data = _on_hints(_hints, "icon_data")
@@ -7411,8 +7436,13 @@ class notificationWin(Gtk.Window):
                     return [pixbuf,0]
             else:
                 try:
-                    pixbuf = Gtk.IconTheme().load_icon(_image_path, ICON_SIZE, Gtk.IconLookupFlags.FORCE_SVG)
-                    pixbuf = pixbuf.scale_simple(ICON_SIZE, ICON_SIZE, GdkPixbuf.InterpType.BILINEAR)
+                    _ret = icon_theme.has_icon(_image_path)
+                    if _ret:
+                        _icon = icon_theme.lookup_icon(_image_path, None, ICON_SIZE, 1, Gtk.TextDirection.NONE, Gtk.IconLookupFlags.FORCE_REGULAR)
+                        # _icon = icon_theme.lookup_icon(_image_path, None, ICON_SIZE, 1, Gtk.TextDirection.NONE, Gtk.IconLookupFlags.FORCE_SYMBOLIC)
+                        file_path = _icon.get_file().get_path()
+                        if os.path.exists(file_path):
+                            pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(file_path, ICON_SIZE, ICON_SIZE, 1)
                 except:
                     pass
                 if pixbuf:
@@ -7420,28 +7450,55 @@ class notificationWin(Gtk.Window):
         
         if _icon:
             try:
-                pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(_icon, ICON_SIZE, ICON_SIZE, 1)
+                _ret = icon_theme.has_icon(_icon)
+                if _ret:
+                    _iicon = icon_theme.lookup_icon(_icon, None, ICON_SIZE, 1, Gtk.TextDirection.NONE, Gtk.IconLookupFlags.FORCE_REGULAR)
+                    # _iicon = icon_theme.lookup_icon(_icon, None, ICON_SIZE, 1, Gtk.TextDirection.NONE, Gtk.IconLookupFlags.FORCE_SYMBOLIC)
+                    file_path = _iicon.get_file().get_path()
+                    if os.path.exists(file_path):
+                        pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(file_path, ICON_SIZE, ICON_SIZE, 1)
+                else:
+                    _ret = icon_theme.has_icon(_icon+"-symbolic")
+                    if _ret:
+                        _iicon = icon_theme.lookup_icon(_icon+"-symbolic", None, ICON_SIZE, 1, Gtk.TextDirection.NONE, Gtk.IconLookupFlags.FORCE_REGULAR)
+                        # _iicon = icon_theme.lookup_icon(_icon+"-symbolic", None, ICON_SIZE, 1, Gtk.TextDirection.NONE, Gtk.IconLookupFlags.FORCE_SYMBOLIC)
+                        file_path = _iicon.get_file().get_path()
+                        if os.path.exists(file_path):
+                            pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(file_path, ICON_SIZE, ICON_SIZE, 1)
             except:
                 try:
-                    pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(os.path.join(_curr_dir,"icons","wicon.png"), ICON_SIZE, ICON_SIZE, 1)
+                    pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(_icon, ICON_SIZE, ICON_SIZE, 1)
                 except:
-                    pass
+                    try:
+                        pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(os.path.join(_curr_dir,"icons","wicon.png"), ICON_SIZE, ICON_SIZE, 1)
+                    except:
+                        pass
             if pixbuf:
                 return [pixbuf,0]
         
         if ret_icon:
             _pix_data = None
             try:
-                pixbuf = Gtk.IconTheme().load_icon(ret_icon, ICON_SIZE, Gtk.IconLookupFlags.FORCE_SVG)
-                _pix_data = [pixbuf, 1]
+                _ret = icon_theme.has_icon(ret_icon)
+                if _ret:
+                    _icon = icon_theme.lookup_icon(ret_icon, None, ICON_SIZE, 1, Gtk.TextDirection.NONE, Gtk.IconLookupFlags.FORCE_REGULAR)
+                    # _icon = icon_theme.lookup_icon(ret_icon, None, ICON_SIZE, 1, Gtk.TextDirection.NONE, Gtk.IconLookupFlags.FORCE_SYMBOLIC)
+                    file_path = _icon.get_file().get_path()
+                    if os.path.exists(file_path):
+                        pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(file_path, ICON_SIZE, ICON_SIZE, 1)
+                        if pixbuf:
+                            _pix_data = [pixbuf, 1]
+                else:
+                    pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(ret_icon, ICON_SIZE, ICON_SIZE, 1)
+                    if pixbuf:
+                        _pix_data = [pixbuf, 0]
             except:
                 try:
                     pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(os.path.join(_curr_dir,"icons","wicon.png"), ICON_SIZE, ICON_SIZE, 1)
                     _pix_data = [pixbuf, 0]
                 except:
                     pass
-            # if pixbuf:
-                # return pixbuf
+            #
             if _pix_data:
                 return _pix_data
         
