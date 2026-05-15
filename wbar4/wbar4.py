@@ -3,7 +3,7 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar4.py
 
-# V. 1.2.4
+# V. 1.3
 
 from wbar4lang import *
 import os,sys,shutil,stat
@@ -33,7 +33,10 @@ import importlib
 from xdg import DesktopEntry
 from xdg import IconTheme
 
+# 1 yes - 0 no
 NOTIFICATION_FADE = 1
+# 1 use the gdk clibboard - 0 use wl-copy
+USE_INTERNAL_CLIPBOARD = 1
 
 lock = Lock()
 
@@ -5276,17 +5279,21 @@ class clipboardWin(Gtk.Window):
                 _clip_file = os.path.join(_curr_dir, "clips", _clip)
                 if os.path.exists(_clip_file):
                     os.remove(_clip_file)
-                # clipboard.set_text(_text, -1)
-                #
-                # subprocess.Popen("wl-copy --clear",shell=True)
-                # # subprocess.Popen(f"wl-copy {_text}",shell=True)
-                # removes " and ' from the text to copy
-                cmd = 'wl-copy -- "{}"'.format(_text)
-                subprocess.Popen(cmd,shell=True)
-                # args = shlex.split(cmd)
-                # subprocess.Popen(args)
-                # subprocess.Popen('wl-copy -- "{}"'.format(_text),shell=True)
-                # subprocess.Popen("echo '{}' | wl-copy -t text".format(_text),shell=True)
+                if USE_INTERNAL_CLIPBOARD == 0:
+                    # clipboard.set_text(_text, -1)
+                    #
+                    # subprocess.Popen("wl-copy --clear",shell=True)
+                    # # subprocess.Popen(f"wl-copy {_text}",shell=True)
+                    # removes " and ' from the text to copy
+                    cmd = 'wl-copy -- "{}"'.format(_text)
+                    subprocess.Popen(cmd,shell=True)
+                    # args = shlex.split(cmd)
+                    # subprocess.Popen(args)
+                    # subprocess.Popen('wl-copy -- "{}"'.format(_text),shell=True)
+                    # subprocess.Popen("echo '{}' | wl-copy -t text".format(_text),shell=True)
+                elif USE_INTERNAL_CLIPBOARD == 1:
+                    self._clipboard = Gdk.Display.get_default().get_clipboard()
+                    self._clipboard.set(_text)
             except:
                 pass
             if self._parent.CW:
