@@ -3,7 +3,7 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar4.py
 
-# V. 1.2.3
+# V. 1.2.4
 
 from wbar4lang import *
 import os,sys,shutil,stat
@@ -1837,7 +1837,8 @@ class MyWindow(Gtk.ApplicationWindow):
                         pass
             #
             if _img:
-                _img.set_pixel_size(self.win_height)
+                # _img.set_pixel_size(self.win_height)
+                _img.set_pixel_size(ICON_SIZE)
                 toplevel.button.set_child(_img)
                 toplevel.button._icon = 1
                 _img.set_halign(3)
@@ -7346,20 +7347,23 @@ class notificationWin(Gtk.Window):
         self.surface_id_connect = self._surface.connect("layout",self.on_surface)
     
     def on_surface(self, _srf,ww,hh):
-        self.old_width = self.get_width()
-        self.old_height = self.get_height()
+        # self.old_width = self.get_width()
+        # self.old_height = self.get_height()
         # self._value = [self.old_width,self.old_height]
         #
         _srf.disconnect(self.surface_id_connect)
         self.surface_id_connect = None
         #
         # _NW_height = self._value[1]
-        _NW_height = self.old_height
+        # _NW_height = self.old_height
+        _NW_height = self.get_height()
         self._notifier._y += (_NW_height+self._notifier._parent.not_pad_pixels)
         #
         self._notifier.list_notifications.append([self, self.__replaceid, self._notifier._y])
         #
-        GLib.timeout_add(1000, self._lock.release)
+        if self._lock.locked() == True:
+            # self._lock.release()
+            GLib.timeout_add(1000, self._lock.release)
     
     def on_win_realize(self, w):
         self._surface = self.get_surface()
@@ -7631,6 +7635,7 @@ class Notifier(Service.Object):
         ###
         _pix = None
         ####
+        global lock
         #
         _found_same_id = 0
         if _replaceid != 0:
@@ -7640,11 +7645,11 @@ class Notifier(Service.Object):
                     _el[0].close()
                     break
         # 
-        if _found_same_id == 0:
-            if self.list_notifications:
-                self._y = self.list_notifications[-1][2]+self.not_pad
-            else:
-                self._y = self.__y
+        # if _found_same_id == 0:
+        if self.list_notifications:
+            self._y = self.list_notifications[-1][2]+self.not_pad
+        else:
+            self._y = self.__y
         
         if self._y > self._parent.screen_height - self._parent.not_bottom_limit:
             self._y = self.__y
@@ -7669,7 +7674,7 @@ class Notifier(Service.Object):
             # GLib.idle_add(self.on_notification, (0, self._y, _appname, _icon, _summ, _body, _timeout, _hints, _actions, _replaceid))
             ######
             _d = (0, self._y, _appname, _icon, _summ, _body, _timeout, _hints, _actions, _replaceid)
-            global lock
+            # global lock
             _thread = Thread(target=self.on_notification_t, args=(_d, _urgency, lock, ))#, daemon=True)
             _thread.start()
             ######
@@ -7686,6 +7691,7 @@ class Notifier(Service.Object):
         
     def on_notification_t(self, _data, _urgency, l):
         l.acquire()
+        # time.sleep(0.5)
         GLib.idle_add(self.on_notification, _data, _urgency, l)
     
     def on_notification(self, _data, _urgency=None, l=None):
