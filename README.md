@@ -41,6 +41,7 @@ Requirements:
 
 How to use:
 - just unzip the archive and launch waybar_launch.sh/waybar.sh
+- it's needed that the file libgtk4-layer-shell.so must be present in the main folder; just copy that file from your libs directory and rename it properly.
 
 Options and configurations:
 - Wbar has a graphical configurator for almost all options.
@@ -89,7 +90,6 @@ Known issue:
 
 - the gtk3 version: the volume widget, that uses the asyncio module, may break things; in fact, the notification sounds must be played by an external player such as aplay
 
-- the gtk4 version: it seems that in some cases the lib libgtk4-layer-shell.so.1.0.4 must be preoladed before launching wbar.py (or just launch wbar.sh of the gtk4 version)
 
 ![My image](https://github.com/frank038/wbar/blob/main/wbar_01.jpg)
 
