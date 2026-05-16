@@ -3,7 +3,11 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar4.py
 
-# V. 1.3
+# V. 1.3.1
+
+from ctypes import CDLL
+CDLL('./libgtk4-layer-shell.so')
+# CDLL('libgtk4-layer-shell.so.1.0.4')
 
 from wbar4lang import *
 import os,sys,shutil,stat
