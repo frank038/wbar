@@ -3,7 +3,7 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar4.py
 
-# V. 1.3.1
+# V. 1.3.2
 
 from ctypes import CDLL
 CDLL('./libgtk4-layer-shell.so')
@@ -7372,9 +7372,9 @@ class notificationWin(Gtk.Window):
         #
         self._notifier.list_notifications.append([self, self.__replaceid, self._notifier._y])
         #
-        if self._lock.locked() == True:
-            # self._lock.release()
-            GLib.timeout_add(1000, self._lock.release)
+        # if self._lock.locked() == True:
+            # # self._lock.release()
+            # GLib.timeout_add(1000, self._lock.release)
     
     def on_win_realize(self, w):
         self._surface = self.get_surface()
@@ -7633,6 +7633,7 @@ class Notifier(Service.Object):
         pass
     
     def _qw(self, _appname, _summ, _body, _replaceid, _actions, _hints, _timeout, _icon):
+        # global lock
         
         # skip these applications
         if _appname in self._parent.not_skip_apps:
@@ -7646,8 +7647,6 @@ class Notifier(Service.Object):
         ###
         _pix = None
         ####
-        global lock
-        #
         _found_same_id = 0
         if _replaceid != 0:
             for _el in self.list_notifications:
@@ -7676,34 +7675,17 @@ class Notifier(Service.Object):
             GLib.idle_add(self.on_notification, (-99999, self._y, _appname, _icon, _summ, _body, _timeout, _hints, _actions, _replaceid))
             return
         else:
-            #if ( os.path.exists(_dnd_file) == False ) or ( (os.path.exists(_dnd_file) == True) and (self.not_dnd == 1 and _urgency == 2)):
-            # # NW = notificationWin(self, (0, self._y, _appname, _pix, _summ, _body, _timeout, _hints, _actions, _replaceid))
-            # NW = notificationWin(self, (0, self._y, _appname, _icon, _summ, _body, _timeout, _hints, _actions, _replaceid))
-            # if _urgency != 2:
-                # self._close_notification(_timeout,NW)
-            #######
-            # GLib.idle_add(self.on_notification, (0, self._y, _appname, _icon, _summ, _body, _timeout, _hints, _actions, _replaceid))
-            ######
             _d = (0, self._y, _appname, _icon, _summ, _body, _timeout, _hints, _actions, _replaceid)
-            # global lock
-            _thread = Thread(target=self.on_notification_t, args=(_d, _urgency, lock, ))#, daemon=True)
-            _thread.start()
+            GLib.idle_add(self.on_notification, _d, _urgency, lock)
             ######
-            #
-            # # # _NW_height = NW.get_size_request().height
-            # # # _NW_height = NW._value.height
-            # # # _NW_height = NW._value[1]
-            # # self._y += _NW_height
-            # # #
-            # # self.list_notifications.append([NW,_replaceid, self._y])
-            # # do not close urgent notifications
-            # if _urgency != 2:
-                # self._close_notification(_timeout,NW)
+            # _d = (0, self._y, _appname, _icon, _summ, _body, _timeout, _hints, _actions, _replaceid)
+            # _thread = Thread(target=self.on_notification_t, args=(_d, _urgency, lock, ))#, daemon=True)
+            # _thread.start()
+            ######
         
-    def on_notification_t(self, _data, _urgency, l):
-        l.acquire()
-        # time.sleep(0.5)
-        GLib.idle_add(self.on_notification, _data, _urgency, l)
+    # def on_notification_t(self, _data, _urgency, l):
+        # l.acquire()
+        # GLib.idle_add(self.on_notification, _data, _urgency, l)
     
     def on_notification(self, _data, _urgency=None, l=None):
         NW = notificationWin(self, _data, l)
