@@ -3,7 +3,7 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar4.py
 
-# V. 1.3.2
+# V. 1.4
 
 from ctypes import CDLL
 CDLL('./libgtk4-layer-shell.so')
@@ -21,7 +21,7 @@ from gi.repository import GdkPixbuf
 from gi.repository import Gtk4LayerShell as GtkLayerShell
 from pathlib import Path
 import json
-from threading import Thread, Lock
+from threading import Thread
 from threading import Event
 import queue
 from subprocess import Popen, PIPE, CalledProcessError
@@ -41,8 +41,6 @@ from xdg import IconTheme
 NOTIFICATION_FADE = 1
 # 1 use the gdk clibboard - 0 use wl-copy
 USE_INTERNAL_CLIPBOARD = 1
-
-lock = Lock()
 
 # enable the application server
 APP_SERVER = 1
@@ -7052,32 +7050,152 @@ def _on_hints(_hints, _value):
         return _hints[_value]
     return None
 
-class notificationWin(Gtk.Window):
 
-    def __init__(self, _parent, args, l):
-        super().__init__()
-        self._notifier = _parent
-        # self.set_transient_for(self._parent)
-        # self.set_modal(True)
-        _x = args[0]
-        _y = args[1]
-        _appname = dbus_to_python(args[2])
-        _icon = args[3] # image or None
-        _summary = dbus_to_python(args[4])
-        _body = dbus_to_python(args[5])
-        _timeout = dbus_to_python(args[6])
-        _hints = args[7]
-        _actions = args[8]
-        _replaceid = args[9]
+
+class Notifier(Service.Object):
+    
+    def __init__(self, conn, bus, _parent):
+        Service.Object.__init__(self, object_path = "/org/freedesktop/Notifications", bus_name = Service.BusName(bus, conn))
+        self._parent = _parent
+        self.list_notifications = []
+        # self._not_path = os.path.join(_curr_dir,"mynots")
+        # # 0 no - 1 yes - 2 yes/with external player
+        # # self.no_sound = self._parent.not_sounds
+        # self.not_dnd = self._parent.not_dnd
+        # top margin and _pad
+        self.starting_y = 0
+        self.not_pad = 2
+        # top margin + _pad
+        self.__y = self.starting_y+self.not_pad # static value
+        self._y = self.__y # variable value
+        #
+        self._not_counter = 1
+    
+    @Service.method("org.freedesktop.Notifications", out_signature="as")
+    def GetCapabilities(self):
+        return ["actions", "action-icons", "body", "body-markup", "body-hyperlinks", "body-images", "icon-static", "sound"]
+        
+    @Service.method("org.freedesktop.Notifications", in_signature="susssasa{sv}i", out_signature="u")
+    def Notify(self, appName, replacesId, appIcon, summary, body, actions, hints, expireTimeout):
+        replacesId = dbus_to_python(replacesId)
+        
+        # # skip these applications
+        # if appName in self._parent.not_skip_apps:
+            # return replacesId
+        
+        if "x-canonical-private-synchronous" in hints:
+            replacesId = 3000
+        
+        # if not replacesId:
+        #     replacesId = 0
+        if self._not_counter == 4000:
+            self._not_counter = 1
+        if replacesId == 0 or not replacesId:
+            replacesId = self._not_counter
+            self._not_counter +=1
+        elif replacesId == self._not_counter:
+            self._not_counter += 1
+        
+        action_1 = dbus_to_python(actions)
+        
+        if not dbus_to_python(appIcon):
+            appIcon = ""
+        if action_1:
+            # if expireTimeout == -1:
+            expireTimeout = 10000
+            self._qw(appName, summary, body, replacesId, action_1, hints, expireTimeout, appIcon)
+        else:
+            action_1 = []
+            # if expireTimeout == -1:
+            expireTimeout = 6000
+            self._qw(appName, summary, body, replacesId, action_1, hints, expireTimeout, appIcon)
+        
+        return replacesId
+
+    @Service.method("org.freedesktop.Notifications", in_signature="u")
+    def CloseNotification(self, id):
+        # reasons: 1 expired - 2 dismissed by the user - 3 from here - 4 other
+        self.NotificationClosed(id, 3)
+
+    @Service.method("org.freedesktop.Notifications", out_signature="ssss")
+    def GetServerInformation(self):
+        return ("mypanelnotification-server", "Homebrew", "1.0", "0.1")
+
+    @Service.signal("org.freedesktop.Notifications", signature="uu")
+    def NotificationClosed(self, id, reason):
+        pass
+
+    @Service.signal("org.freedesktop.Notifications", signature="us")
+    def ActionInvoked(self, id, actionKey):
+        pass
+    
+    @Service.signal("org.freedesktop.Notifications", signature="us")
+    def ActivationToken(self, id, actionKey):
+        pass
+    
+    def _qw(self, _appname, _summ, _body, _replaceid, _actions, _hints, _timeout, _icon):
+        
+        # skip these applications
+        if _appname in self._parent.not_skip_apps:
+            return
+        
+        # # hints: "desktop-entry" "image-path" "transient" "urgency" "value"
+        # #  "suppress-sound" "sound-file" "sound-name"
+        # _ICON_SIZE = self._parent.not_icon_size
+        # self.not_width = self._parent.not_width
+        # self.not_height = self._parent.not_height
+        ###
+        _pix = None
+        ####
+        _found_same_id = 0
+        if _replaceid != 0:
+            for _el in self.list_notifications:
+                if _el[1] == _replaceid:
+                    _found_same_id = 1
+                    _el[0].close()
+                    break
+        # 
+        # if _found_same_id == 0:
+        if self.list_notifications:
+            self._y = self.list_notifications[-1][2]+self.not_pad
+        else:
+            self._y = self.__y
+        
+        if self._y > self._parent.screen_height - self._parent.not_bottom_limit:
+            self._y = self.__y
+        
+        # 0 low - 1 normal - 2 critical
+        _urgency = _on_hints(_hints, "urgency")
+        
+        NW = None
+        _dnd_file = os.path.join(_curr_dir,"do_not_disturb_mode")
+        # do not show the notification if the file is setted, unless the notification is urgent
+        if os.path.exists(_dnd_file) and _urgency != 2:
+            _d = (-99999, self._y, _appname, _icon, _summ, _body, _timeout, _hints, _actions, _replaceid)
+            self.create_not_win(_d, _urgency)
+            return
+        else:
+            _d = (0, self._y, _appname, _icon, _summ, _body, _timeout, _hints, _actions, _replaceid)
+            self.create_not_win(_d, _urgency)
+    
+    # _data = (0, self._y, _appname, _icon, _summ, _body, _timeout, _hints, _actions, _replaceid)
+    def create_not_win(self, _data, _urgency):
+        _x = _data[0]
+        _y = _data[1]
+        _appname = dbus_to_python(_data[2])
+        _icon = _data[3] # image or None
+        _summary = dbus_to_python(_data[4])
+        _body = dbus_to_python(_data[5])
+        _timeout = dbus_to_python(_data[6])
+        _hints = _data[7]
+        _actions = _data[8]
+        _replaceid = _data[9]
         self.__replaceid = _replaceid
-        if l != None:
-            self._lock = l
-        
+        #
         _is_transient = _on_hints(_hints, "transient")
-        
         self._not_path = os.path.join(_curr_dir,"mynots")
-        _ICON_SIZE = self._notifier._parent.not_icon_size
-        
+        _ICON_SIZE = self._parent.not_icon_size
+        #
         _pixbuf = None
         _desktop_entry = _on_hints(_hints, "desktop-entry")
         ret_icon = None
@@ -7091,9 +7209,10 @@ class notificationWin(Gtk.Window):
         # 0 for images - 1 from iconTheme
         _pixbuf_rounded = _pixbuf_data[1]
         #
+        #############
         global LIST_NOTIFICATIONS
         # write the notification content
-        if not _appname in self._notifier._parent.not_skip_apps2:
+        if not _appname in self._parent.not_skip_apps2:
             if not _is_transient and STORE_NOTIFICATIONS:
                 try:
                     _not_item = {"_app":_appname, "_summ": _summary,"_body": _body}
@@ -7106,68 +7225,58 @@ class notificationWin(Gtk.Window):
                         ff.close()
                         if _pixbuf:
                             _pixbuf.savev(os.path.join(_notification_path,"image.png"),"png",None,None)
-                        # if not self._notifier._parent.not_alert_img.get_visible():
+                        # if not self._parent.not_alert_img.get_visible():
                         # do not show whether do not disturb is setted - just to not make too much confusion in the bar
-                        if self._notifier._parent.not_do_not_disturb == 0:
-                            self._notifier._parent.not_alert_img.set_visible(True)
+                        if self._parent.not_do_not_disturb == 0:
+                            self._parent.not_alert_img.set_visible(True)
                         else:
-                            self._notifier._parent.to_show_alert_img = 1
+                            self._parent.to_show_alert_img = 1
                         # counter 
-                        self._notifier._parent.not_to_read += 1
+                        self._parent.not_to_read += 1
                 except:
                     pass
         # only register - do not show
         if _x == -99999:
-            self.destroy()
+            # self._win.destroy()
             return
         ###########
-        self.not_width = self._notifier._parent.not_width
-        self.not_height = self._notifier._parent.not_height
-        
-        # hints: "desktop-entry" "image-path" "transient" "urgency" "value"
-        #  "suppress-sound" "sound-file" "sound-name"
-        
-        GtkLayerShell.init_for_window(self)
-        GtkLayerShell.set_namespace(self, "notificationwin")
-        GtkLayerShell.set_margin(self, GtkLayerShell.Edge.RIGHT, 6 + _x)
-        GtkLayerShell.set_margin(self, GtkLayerShell.Edge.TOP, 6 + _y)
-        GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.TOP, 1)
-        GtkLayerShell.set_anchor(self, GtkLayerShell.Edge.RIGHT, 1)
-        
-        GtkLayerShell.set_layer(self, GtkLayerShell.Layer.OVERLAY)
-        GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.NONE)
-        
-        # self.self_style_context = self.get_style_context()
-        # self.self_style_context.add_class("notificationwin")
-        self.set_name("notificationwin")
-        
-        # self.connect('show', self.on_show)
-        
-        self.set_size_request(self.not_width, self.not_height)
-        self.main_box = Gtk.Box.new(1,0)
-        self.set_child(self.main_box)
-        
-        self.btn_icon_box = Gtk.Box.new(0,0)
-        self.btn_icon_box.set_vexpand(True)
-        self.main_box.append(self.btn_icon_box)
-        
+        self._win = Gtk.Window()
+        self._win.set_size_request(self._parent.not_width, self._parent.not_height)
         #
-        self.da_gesture_l = Gtk.GestureClick.new()
-        self.da_gesture_l.set_button(1)
-        self.add_controller(self.da_gesture_l)
-        self.da_gesture_l.connect('released', self.on_da_gesture_l)
-        ##
+        GtkLayerShell.init_for_window(self._win)
+        GtkLayerShell.set_namespace(self._win, "notificationwin")
+        GtkLayerShell.set_margin(self._win, GtkLayerShell.Edge.RIGHT, 6 + _x)
+        GtkLayerShell.set_margin(self._win, GtkLayerShell.Edge.TOP, 6 + _y)
+        GtkLayerShell.set_anchor(self._win, GtkLayerShell.Edge.TOP, 1)
+        GtkLayerShell.set_anchor(self._win, GtkLayerShell.Edge.RIGHT, 1)
+        GtkLayerShell.set_layer(self._win, GtkLayerShell.Layer.OVERLAY)
+        GtkLayerShell.set_keyboard_mode(self._win, GtkLayerShell.KeyboardMode.NONE)
+        #
+        self._win.set_name("notificationwin")
+        #
+        self.wmain_box = Gtk.Box.new(1,0)
+        self._win.set_child(self.wmain_box)
+        #
+        self.wbtn_icon_box = Gtk.Box.new(0,0)
+        self.wbtn_icon_box.set_vexpand(True)
+        self.wmain_box.append(self.wbtn_icon_box)
+        #
+        self._win.da_gesture_l = Gtk.GestureClick.new()
+        self._win.da_gesture_l.set_button(1)
+        self._win.add_controller(self._win.da_gesture_l)
+        self._win.da_gesture_l.connect('released', self.on_da_gesture_l, self._win)
+        #
         if _pixbuf:
             texture = Gdk.Texture.new_for_pixbuf(_pixbuf)
             ##
-            if (self._notifier._parent.not_rounded_img == 1 and _pixbuf_rounded == 0) or self._notifier._parent.not_rounded_img == 2:
+            if (self._parent.not_rounded_img == 1 and _pixbuf_rounded == 0) or self._parent.not_rounded_img == 2:
                 _snapshot = Gtk.Snapshot.new()
                 #
                 _r = Graphene.Rect.alloc()
-                _r.init(0,0,self._notifier._parent.not_icon_size,self._notifier._parent.not_icon_size)
+                _r.init(0,0,self._parent.not_icon_size,self._parent.not_icon_size)
                 #
                 _rr = Gsk.RoundedRect()
-                _rr.init_from_rect(_r, ((self._notifier._parent.not_icon_size2*self._notifier._parent.not_icon_roundeness)/2))
+                _rr.init_from_rect(_r, ((self._parent.not_icon_size2*self._parent.not_icon_roundeness)/2))
                 _rr.normalize()
                 #
                 _snapshot.push_rounded_clip(_rr)
@@ -7175,19 +7284,18 @@ class notificationWin(Gtk.Window):
                 _snapshot.pop()
                 #
                 _rs = Graphene.Size()
-                _rs.init(self._notifier._parent.not_icon_size,self._notifier._parent.not_icon_size)
+                _rs.init(self._parent.not_icon_size,self._parent.not_icon_size)
                 texture = _snapshot.to_paintable(_rs)
             ##
             _img = Gtk.Image.new_from_paintable(texture)
-            _img.set_pixel_size(self._notifier._parent.not_icon_size)
+            _img.set_pixel_size(self._parent.not_icon_size)
             _img.set_halign(3)
             _img.set_valign(3)
-            self.btn_icon_box.append(_img)
-        
-        self.second_box = Gtk.Box.new(1,0)
-        self.btn_icon_box.append(self.second_box)
-        self.second_box.set_hexpand(True)
-        
+            self.wbtn_icon_box.append(_img)
+        #
+        self.wsecond_box = Gtk.Box.new(1,0)
+        self.wbtn_icon_box.append(self.wsecond_box)
+        self.wsecond_box.set_hexpand(True)
         # app - summary - body : in second_box vertical
         if _summary:
             _lbl_summary = Gtk.Label(label="<b>"+_summary+"</b>")
@@ -7202,8 +7310,8 @@ class notificationWin(Gtk.Window):
             _lbl_summary.set_wrap(True)
             _lbl_summary.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
             # _lbl_summary.set_width_chars(self._notifier._parent.not_max_chars)
-            _lbl_summary.set_max_width_chars(self._notifier._parent.not_max_chars)
-            self.second_box.append(_lbl_summary)
+            _lbl_summary.set_max_width_chars(self._parent.not_max_chars)
+            self.wsecond_box.append(_lbl_summary)
         #
         if _body:
             # _lbl_body = Gtk.Label(label=_body)
@@ -7219,24 +7327,16 @@ class notificationWin(Gtk.Window):
                 _lbl_body.set_vexpand(True)
             _lbl_body.set_label(_body)
             # _lbl_body.set_width_chars(self._notifier._parent.not_max_chars)
-            _lbl_body.set_max_width_chars(self._notifier._parent.not_max_chars)
+            _lbl_body.set_max_width_chars(self._parent.not_max_chars)
             _lbl_body.connect('activate-link', self.on_lbl_body_clicked)
-            self.second_box.append(_lbl_body)
-        
-        # self.close_btn = Gtk.Button.new()
-        # self.close_btn.set_name("closebtn")
-        # conf_img = Gtk.Image.new_from_icon_name("stock_close")
-        # self.close_btn.set_child(conf_img)
-        # self.close_btn.set_valign(1)
-        # self.close_btn.connect('clicked', self.on_close_btn)
-        # self.btn_icon_box.append(self.close_btn)
-        
-        self.main_box.set_margin_start(_pad)
-        
+            self.wsecond_box.append(_lbl_body)
+        #
+        self.wmain_box.set_margin_start(_pad)
+        #
         # action buttons in main_box
         if _actions:
             _actions_box = Gtk.Box.new(0,0)
-            self.main_box.append(_actions_box)
+            self.wmain_box.append(_actions_box)
             _actions_box.set_halign(3)
             for _ee in _actions[::2]:
                 btn_name = _actions[_actions.index(_ee)+1]
@@ -7248,34 +7348,32 @@ class notificationWin(Gtk.Window):
                     _w.set_ellipsize(Pango.EllipsizeMode.END)
                 _btn.connect('clicked',self._on_button_callback, _replaceid, _ee)
                 _actions_box.append(_btn)
-        
-        self.connect('close-request', self.on_close_win,_replaceid)
-        self.connect('destroy', self.on_close_win,_replaceid)
-        self.connect('realize', self.on_win_realize)
-        
-        # the geometry of this window
-        self._value = None
+        #
+        self._win.connect('close-request', self.on_close_win,_replaceid)
+        self._win.connect('destroy', self.on_close_win,_replaceid)
+        self._win.connect('realize', self.on_win_realize)
         #
         self.surface_id_connect = None
         self.old_width = None
         self.old_height = None
-        
+        #
         if NOTIFICATION_FADE == 1:
-            self.set_opacity(0)
-        self.set_visible(True)
+            self._win.set_opacity(0)
+        self._win.set_visible(True)
         if NOTIFICATION_FADE == 1:
-            self.set_opacity(0.20)
-            GLib.timeout_add(50, self.on_fade_in_opacity)
-        
-        #################
-        
+            self._win.set_opacity(0.20)
+            GLib.timeout_add(50, self.on_fade_in_opacity, self._win)
+        #
+        self._win.present()
+        #
+        if _urgency != 2 and _data[0] != -99999:
+            self._close_notification(_timeout,self._win)
+        #
         # 0 low - 1 normal - 2 critical
         _urgency = _on_hints(_hints, "urgency")
-        
         # sounds
         _dnd_file = os.path.join(_curr_dir,"do_not_disturb_mode")
-        
-        if self._notifier._parent.not_sounds != 0:
+        if self._parent.not_sounds != 0:
             if not os.path.exists(_dnd_file) or _urgency == 2:
                 _no_sound = _on_hints(_hints, "suppress-sound")
                 _soundfile = _on_hints(_hints, "sound-file")
@@ -7291,18 +7389,17 @@ class notificationWin(Gtk.Window):
                         elif _urgency == 2:
                             self.play_sound(os.path.join(_curr_dir, "sounds/urgency-critical.wav"))
     
-    def on_fade_in_opacity(self):
-        _opacity = self.get_opacity()
+    def on_fade_in_opacity(self, win):
+        _opacity = win.get_opacity()
         if _opacity < 1:
-            self.set_opacity(_opacity+0.20)
+            win.set_opacity(_opacity+0.20)
             return True
         else:
             return False
     
     # action button pressed
     def _on_button_callback(self, _btn, _replaceid, _action):
-        # self._notifier.ActivationToken(_appid, _action)
-        self._notifier.ActionInvoked(_replaceid, _action)
+        self.ActionInvoked(_replaceid, _action)
         self.close()
     
     def on_lbl_body_clicked(self, lbl, _url):
@@ -7310,51 +7407,41 @@ class notificationWin(Gtk.Window):
             _ul = Gtk.UriLauncher.new(_url)
             _ul.launch(None,None,None,None)
             #
-            self._notifier._parent.not_to_read -= 1
-            if self._notifier._parent.not_to_read == 0:
-                self._notifier._parent.not_alert_img.set_visible(False)
+            self._parent.not_to_read -= 1
+            if self._parent.not_to_read == 0:
+                self._parent.not_alert_img.set_visible(False)
             self.close()
             #
             return True
     
-    def on_fade_out_notification(self):
-        _opacity = self.get_opacity()
-        if _opacity > 0:
-            self.set_opacity(_opacity-0.20)
-            return True
+    def on_da_gesture_l(self, o,n,x,y, win):
+        self._parent.not_to_read -= 1
+        # if self._parent.not_to_read == 0 and self._parent.to_show_alert_img == 1:
+        if self._parent.not_to_read == 0:
+            self._parent.not_alert_img.set_visible(False)
+        #
+        if NOTIFICATION_FADE == 1:
+            GLib.timeout_add(60, self.on_fade_out_notification, win)
         else:
-            self.close()
-            return False
+            win.close()
     
-    def on_close(self,_replaceid):
-        self._notifier.NotificationClosed(_replaceid, 3)
-        for el in self._notifier.list_notifications[:]:
-            if el[0] == self:
-                self._notifier.list_notifications.remove(el)
-                if len(self._notifier.list_notifications) == 0:
-                    self._notifier._y = 0
+    def on_close(self,win,_replaceid):
+        self.NotificationClosed(_replaceid, 3)
+        for el in self.list_notifications[:]:
+            if el[0] == win:
+                self.list_notifications.remove(el)
+                if len(self.list_notifications) == 0:
+                    self._y = 0
                 break
     
     def on_close_win(self,w,_replaceid):
-        self.on_close(_replaceid)
-        # self.close()
+        self.on_close(w,_replaceid)
+        # # self._win.close()
+        # w.close()
     
-    def on_da_gesture_l(self, o,n,x,y):
-        self._notifier._parent.not_to_read -= 1
-        # if self._notifier._parent.not_to_read == 0 and self._notifier._parent.to_show_alert_img == 1:
-        if self._notifier._parent.not_to_read == 0:
-            self._notifier._parent.not_alert_img.set_visible(False)
-        #
-        if NOTIFICATION_FADE == 1:
-            GLib.timeout_add(60, self.on_fade_out_notification)
-        else:
-            self.close()
-    
-    # def on_close_btn(self, btn):
-        # self.close()
-        
     def on_show(self, widget):
-        self._surface = self.get_surface()
+        # self._surface = self.get_surface()
+        self._surface = widget.get_surface()
         self.surface_id_connect = self._surface.connect("layout",self.on_surface)
     
     def on_surface(self, _srf,ww,hh):
@@ -7367,22 +7454,15 @@ class notificationWin(Gtk.Window):
         #
         # _NW_height = self._value[1]
         # _NW_height = self.old_height
-        _NW_height = self.get_height()
-        self._notifier._y += (_NW_height+self._notifier._parent.not_pad_pixels)
+        _NW_height = self._win.get_height()
+        self._y += (_NW_height+self._parent.not_pad_pixels)
         #
-        self._notifier.list_notifications.append([self, self.__replaceid, self._notifier._y])
-        #
-        # if self._lock.locked() == True:
-            # # self._lock.release()
-            # GLib.timeout_add(1000, self._lock.release)
+        self.list_notifications.append([self._win, self.__replaceid, self._y])
     
     def on_win_realize(self, w):
-        self._surface = self.get_surface()
+        # self._surface = self.get_surface()
+        self._surface = w.get_surface()
         self.surface_id_connect = self._surface.connect("layout",self.on_surface)
-    
-    
-    # def on_get_height(self):
-        # return self._value
     
     # find the icon from the desktop file
     def _on_desktop_entry(self, _desktop):
@@ -7527,7 +7607,7 @@ class notificationWin(Gtk.Window):
         return None
     
     def play_sound(self, _sound):
-        if self._notifier._parent.not_sounds == 1 and SOUND_PLAYER == 1:
+        if self._parent.not_sounds == 1 and SOUND_PLAYER == 1:
             try:
                 ctx = GSound.Context()
                 ctx.init()
@@ -7536,162 +7616,12 @@ class notificationWin(Gtk.Window):
                     ret = ctx.play_full({GSound.ATTR_MEDIA_FILENAME: _sound})
             except:
                 pass
-        elif self._notifier._parent.not_sounds not in [1,2] and SOUND_PLAYER == 1:
-            _player = self._notifier._parent.not_sounds
+        elif self._parent.not_sounds not in [1,2] and SOUND_PLAYER == 1:
+            _player = self._parent.not_sounds
             try:
                 os.system("{0} {1} &".format(_player, _sound))
             except:
                 pass
-    
-class NotSave():
-    nname = None
-    appname = None
-    summary = None
-    body = None
-    icon = None
-
-
-class Notifier(Service.Object):
-    
-    def __init__(self, conn, bus, _parent):
-        Service.Object.__init__(self, object_path = "/org/freedesktop/Notifications", bus_name = Service.BusName(bus, conn))
-        self._parent = _parent
-        self.list_notifications = []
-        # self._not_path = os.path.join(_curr_dir,"mynots")
-        # # 0 no - 1 yes - 2 yes/with external player
-        # # self.no_sound = self._parent.not_sounds
-        # self.not_dnd = self._parent.not_dnd
-        # top margin and _pad
-        self.starting_y = 0
-        self.not_pad = 2
-        # top margin + _pad
-        self.__y = self.starting_y+self.not_pad # static value
-        self._y = self.__y # variable value
-        #
-        self._not_counter = 1
-    
-    @Service.method("org.freedesktop.Notifications", out_signature="as")
-    def GetCapabilities(self):
-        return ["actions", "action-icons", "body", "body-markup", "body-hyperlinks", "body-images", "icon-static", "sound"]
-        
-    @Service.method("org.freedesktop.Notifications", in_signature="susssasa{sv}i", out_signature="u")
-    def Notify(self, appName, replacesId, appIcon, summary, body, actions, hints, expireTimeout):
-        replacesId = dbus_to_python(replacesId)
-        
-        # # skip these applications
-        # if appName in self._parent.not_skip_apps:
-            # return replacesId
-        
-        if "x-canonical-private-synchronous" in hints:
-            replacesId = 3000
-        
-        # if not replacesId:
-        #     replacesId = 0
-        if self._not_counter == 4000:
-            self._not_counter = 1
-        if replacesId == 0 or not replacesId:
-            replacesId = self._not_counter
-            self._not_counter +=1
-        elif replacesId == self._not_counter:
-            self._not_counter += 1
-        
-        action_1 = dbus_to_python(actions)
-        
-        if not dbus_to_python(appIcon):
-            appIcon = ""
-        if action_1:
-            # if expireTimeout == -1:
-            expireTimeout = 10000
-            self._qw(appName, summary, body, replacesId, action_1, hints, expireTimeout, appIcon)
-        else:
-            action_1 = []
-            # if expireTimeout == -1:
-            expireTimeout = 6000
-            self._qw(appName, summary, body, replacesId, action_1, hints, expireTimeout, appIcon)
-        
-        return replacesId
-
-    @Service.method("org.freedesktop.Notifications", in_signature="u")
-    def CloseNotification(self, id):
-        # reasons: 1 expired - 2 dismissed by the user - 3 from here - 4 other
-        self.NotificationClosed(id, 3)
-
-    @Service.method("org.freedesktop.Notifications", out_signature="ssss")
-    def GetServerInformation(self):
-        return ("mypanelnotification-server", "Homebrew", "1.0", "0.1")
-
-    @Service.signal("org.freedesktop.Notifications", signature="uu")
-    def NotificationClosed(self, id, reason):
-        pass
-
-    @Service.signal("org.freedesktop.Notifications", signature="us")
-    def ActionInvoked(self, id, actionKey):
-        pass
-    
-    @Service.signal("org.freedesktop.Notifications", signature="us")
-    def ActivationToken(self, id, actionKey):
-        pass
-    
-    def _qw(self, _appname, _summ, _body, _replaceid, _actions, _hints, _timeout, _icon):
-        # global lock
-        
-        # skip these applications
-        if _appname in self._parent.not_skip_apps:
-            return
-        
-        # # hints: "desktop-entry" "image-path" "transient" "urgency" "value"
-        # #  "suppress-sound" "sound-file" "sound-name"
-        # _ICON_SIZE = self._parent.not_icon_size
-        # self.not_width = self._parent.not_width
-        # self.not_height = self._parent.not_height
-        ###
-        _pix = None
-        ####
-        _found_same_id = 0
-        if _replaceid != 0:
-            for _el in self.list_notifications:
-                if _el[1] == _replaceid:
-                    _found_same_id = 1
-                    _el[0].close()
-                    break
-        # 
-        # if _found_same_id == 0:
-        if self.list_notifications:
-            self._y = self.list_notifications[-1][2]+self.not_pad
-        else:
-            self._y = self.__y
-        
-        if self._y > self._parent.screen_height - self._parent.not_bottom_limit:
-            self._y = self.__y
-        
-        # 0 low - 1 normal - 2 critical
-        _urgency = _on_hints(_hints, "urgency")
-        
-        NW = None
-        _dnd_file = os.path.join(_curr_dir,"do_not_disturb_mode")
-        # do not show the notification if the file is setted, unless the notification is urgent
-        if os.path.exists(_dnd_file) and _urgency != 2:
-            # notificationWin(self, (-99999, self._y, _appname, _icon, _summ, _body, _timeout, _hints, _actions, _replaceid))
-            GLib.idle_add(self.on_notification, (-99999, self._y, _appname, _icon, _summ, _body, _timeout, _hints, _actions, _replaceid))
-            return
-        else:
-            _d = (0, self._y, _appname, _icon, _summ, _body, _timeout, _hints, _actions, _replaceid)
-            GLib.idle_add(self.on_notification, _d, _urgency, lock)
-            ######
-            # _d = (0, self._y, _appname, _icon, _summ, _body, _timeout, _hints, _actions, _replaceid)
-            # _thread = Thread(target=self.on_notification_t, args=(_d, _urgency, lock, ))#, daemon=True)
-            # _thread.start()
-            ######
-        
-    # def on_notification_t(self, _data, _urgency, l):
-        # l.acquire()
-        # GLib.idle_add(self.on_notification, _data, _urgency, l)
-    
-    def on_notification(self, _data, _urgency=None, l=None):
-        NW = notificationWin(self, _data, l)
-        # _urgency - _type
-        if _urgency != 2 and _data[0] != -99999:
-            self._close_notification(_data[6],NW)
     
     def on_fade_out_notification(self, nw):
         _opacity = nw.get_opacity()
