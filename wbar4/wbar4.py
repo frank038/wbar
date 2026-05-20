@@ -3,7 +3,7 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar4.py
 
-# V. 1.4
+# V. 1.4.1
 
 from ctypes import CDLL
 CDLL('./libgtk4-layer-shell.so')
@@ -7346,7 +7346,7 @@ class Notifier(Service.Object):
                 _w = _btn.get_child()
                 if isinstance(_w, Gtk.Label):
                     _w.set_ellipsize(Pango.EllipsizeMode.END)
-                _btn.connect('clicked',self._on_button_callback, _replaceid, _ee)
+                _btn.connect('clicked',self._on_button_callback, _replaceid, _ee, self._win)
                 _actions_box.append(_btn)
         #
         self._win.connect('close-request', self.on_close_win,_replaceid)
@@ -7398,9 +7398,9 @@ class Notifier(Service.Object):
             return False
     
     # action button pressed
-    def _on_button_callback(self, _btn, _replaceid, _action):
+    def _on_button_callback(self, _btn, _replaceid, _action, win):
         self.ActionInvoked(_replaceid, _action)
-        self.close()
+        win.close()
     
     def on_lbl_body_clicked(self, lbl, _url):
         if _url:
