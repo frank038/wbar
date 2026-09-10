@@ -3,7 +3,7 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar4.py
 
-# V. 1.4.1
+# V. 1.4.2
 
 from ctypes import CDLL
 CDLL('./libgtk4-layer-shell.so')
@@ -719,6 +719,7 @@ def dbus_to_python(data):
         data = new_data
     return data
     
+WINDOWS_LIST = []
 
 QUIT = 1
 class MyWindow(Gtk.ApplicationWindow):
@@ -1777,6 +1778,7 @@ class MyWindow(Gtk.ApplicationWindow):
         self.tbutton.add_controller(gesture)
         #
         self.tbox.append(self.tbutton)
+        WINDOWS_LIST.append(toplevel)
         
     def on_btn_taskbar_pressed_right(self,obj,n,x,y,toplevel,btn):
         _pop = Gtk.Popover.new()
@@ -1877,18 +1879,27 @@ class MyWindow(Gtk.ApplicationWindow):
             # toplevel.button.set_active(False)
         # # 
         #
-        if 'activated' in toplevel.states:
-            if toplevel.button != self.active_button:
+        if toplevel.button != self.active_button:
+            if 'activated' in toplevel.states:
                 if isinstance(self.active_button, Gtk.ToggleButton):
                     # self.active_button.set_active(False)
                     self.active_button.set_state_flags(Gtk.StateFlags.NORMAL,True)
                 self.active_button = toplevel.button
                 toplevel.button.set_state_flags(Gtk.StateFlags.CHECKED,True)
+        else:
+            # toplevel.button.set_state_flags(Gtk.StateFlags.NORMAL,True)
+            # self.active_button = None
+            if len(WINDOWS_LIST) == 1:
+                if 'minimized' in WINDOWS_LIST[0].states:
+                    WINDOWS_LIST[0].button.set_state_flags(Gtk.StateFlags.NORMAL,True)
+                    self.active_button = None
         # # old way
         # self.set_default_size(-1, self.win_height)
 
     def on_toplevel_closed(self, context, toplevel):
         self.tbox.remove(toplevel.button)
+        if toplevel in WINDOWS_LIST:
+            WINDOWS_LIST.remove(toplevel)
         # 
         self.set_default_size(-1,self.win_height)
     
