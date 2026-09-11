@@ -3,11 +3,19 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar4.py
 
-# V. 1.4.2
+# V. 1.4.3
+
+# NOTIFICATIONS: the replace-id code is disabled; all notifications will be shown
+DISABLE_REPLACEID = 0
 
 from ctypes import CDLL
-CDLL('./libgtk4-layer-shell.so')
-# CDLL('libgtk4-layer-shell.so.1.0.4')
+try:
+    CDLL('libgtk4-layer-shell.so.0')
+except:
+    try:
+        CDLL('libgtk4-layer-shell.so.1.0.4')
+    except:
+        CDLL('./libgtk4-layer-shell.so')
 
 from wbar4lang import *
 import os,sys,shutil,stat
@@ -38,7 +46,7 @@ from xdg import DesktopEntry
 from xdg import IconTheme
 
 # 1 yes - 0 no
-NOTIFICATION_FADE = 1
+NOTIFICATION_FADE = 0
 # 1 use the gdk clibboard - 0 use wl-copy
 USE_INTERNAL_CLIPBOARD = 1
 
@@ -7101,12 +7109,17 @@ class Notifier(Service.Object):
         #     replacesId = 0
         if self._not_counter == 4000:
             self._not_counter = 1
-        if replacesId == 0 or not replacesId:
+        #########
+        if DISABLE_REPLACEID:
             replacesId = self._not_counter
             self._not_counter +=1
-        elif replacesId == self._not_counter:
-            self._not_counter += 1
-        
+        else:
+            if replacesId == 0 or not replacesId:
+                replacesId = self._not_counter
+                self._not_counter +=1
+            elif replacesId == self._not_counter:
+                self._not_counter += 1
+        #########
         action_1 = dbus_to_python(actions)
         
         if not dbus_to_python(appIcon):
@@ -7159,13 +7172,14 @@ class Notifier(Service.Object):
         _pix = None
         ####
         _found_same_id = 0
-        if _replaceid != 0:
-            for _el in self.list_notifications:
-                if _el[1] == _replaceid:
-                    _found_same_id = 1
-                    _el[0].close()
-                    break
-        # 
+        if DISABLE_REPLACEID == 0:
+            if _replaceid != 0:
+                for _el in self.list_notifications:
+                    if _el[1] == _replaceid:
+                        _found_same_id = 1
+                        _el[0].close()
+                        break
+
         # if _found_same_id == 0:
         if self.list_notifications:
             self._y = self.list_notifications[-1][2]+self.not_pad
@@ -7186,6 +7200,7 @@ class Notifier(Service.Object):
             self.create_not_win(_d, _urgency)
             return
         else:
+            time.sleep(1)
             _d = (0, self._y, _appname, _icon, _summ, _body, _timeout, _hints, _actions, _replaceid)
             self.create_not_win(_d, _urgency)
     
