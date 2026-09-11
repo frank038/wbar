@@ -72,6 +72,12 @@
   margin-bottom: 0px;
 }
 
+/* the background colour of each cell in the menu */
+/*
+#menuwin flowbox flowboxchild:hover {
+  background-color: #e0e0e0;
+}*/
+
 /* .menuwin flowbox flowboxchild:hover box { */
 #menuwin flowbox flowboxchild:hover label {
   border: 2px solid #484848;
