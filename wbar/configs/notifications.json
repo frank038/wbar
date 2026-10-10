@@ -7,5 +7,6 @@
     "sound_play": 1,
     "bottom_limit": 200,
     "skip_apps": "",
-    "skip_apps2": ""
+    "skip_apps2": "Applet NetworkManager,Shortwave,UsbNotifications",
+    "datetime-format": "%Y-%b-%d %H:%M:%S"
 }
