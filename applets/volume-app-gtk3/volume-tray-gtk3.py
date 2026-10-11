@@ -87,11 +87,13 @@ class Indicator:
             elif 65<=_level<=100:
                 self.indicator.set_icon_full("audio-volume-high",None)
             elif _level > 100:
-                self.indicator.set_icon_full("audio-volume-overamplified",None)
+                # self.indicator.set_icon_full("audio-volume-overamplified",None)
+                self.indicator.set_icon_full("audio-volume-high",None)
             self.vol_label.set_label("Volume: "+str(_level)+"%")
         elif _mute == 1:
-            self.indicator.set_icon_full("audio-volume-muted",None)
+            self.indicator.set_icon_full("audio-volume-muted","")
             self.vol_label.set_label("Volume: "+str(_level)+"% - Muted")
+            
     
     def _reload_pulse(self):
         try:
