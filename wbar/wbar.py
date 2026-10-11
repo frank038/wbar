@@ -121,7 +121,34 @@ if USE_CSS:
     provider.load_from_path(os.path.join(_curr_dir,"configs/panelstyle.css"))
     Gtk.StyleContext.add_provider_for_screen(screen, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
+vol_def_theme = None
+vol_pix_l = None
+vol_pix_m = None
+vol_pix_h = None
+vol_pix_o = None
+vol_pix_mute = None
+vol_icon_size = 256
+#def on_change_icon_theme_vol(icon_theme):
+#    vol_def_theme = icon_theme.get_default()
+#    vol_pix_l = vol_def_theme.load_icon("audio-volume-low", vol_icon_size, Gtk.IconLookupFlags.FORCE_SIZE)
+#    vol_pix_m = vol_def_theme.load_icon("audio-volume-medium", vol_icon_size, Gtk.IconLookupFlags.FORCE_SIZE)
+#    vol_pix_h = vol_def_theme.load_icon("audio-volume-high", vol_icon_size, Gtk.IconLookupFlags.FORCE_SIZE)
+#    vol_pix_o = vol_def_theme.load_icon("audio-volume-overamplified", vol_icon_size, Gtk.IconLookupFlags.FORCE_SIZE)
+#    vol_pix_mute = vol_def_theme.load_icon("audio-volume-muted", vol_icon_size, Gtk.IconLookupFlags.FORCE_SIZE)
+
 if USE_VOL_WIDGET == 1:
+    vol_def_theme = Gtk.IconTheme().get_default()
+    if vol_def_theme.has_icon("audio-volume-low"):
+        vol_pix_l = vol_def_theme.load_icon("audio-volume-low", vol_icon_size, Gtk.IconLookupFlags.FORCE_SIZE)
+    if vol_def_theme.has_icon("audio-volume-medium"):
+        vol_pix_m = vol_def_theme.load_icon("audio-volume-medium", vol_icon_size, Gtk.IconLookupFlags.FORCE_SIZE)
+    if vol_def_theme.has_icon("audio-volume-high"):
+        vol_pix_h = vol_def_theme.load_icon("audio-volume-high", vol_icon_size, Gtk.IconLookupFlags.FORCE_SIZE)
+    if vol_def_theme.has_icon("audio-volume-overamplified"):
+        vol_pix_o = vol_def_theme.load_icon("audio-volume-overamplified", vol_icon_size, Gtk.IconLookupFlags.FORCE_SIZE)
+    if vol_def_theme.has_icon("audio-volume-muted"):
+        vol_pix_mute = vol_def_theme.load_icon("audio-volume-muted", vol_icon_size, Gtk.IconLookupFlags.FORCE_SIZE)
+    # vol_def_theme.connect("changed", on_change_icon_theme_vol)
     import asyncio
     import pulsectl_asyncio
     from gi.events import GLibEventLoopPolicy
@@ -1145,26 +1172,33 @@ class MyWindow(Gtk.Window):
         if _mute == 0:
             #if USE_VOL_IMAGE == 1:
             if 0<=_level<30:
-                vol_icon = "audio-volume-low"
+                # vol_icon = "audio-volume-low"
+                vol_icon = vol_pix_l
             elif 30<=_level<65:
-                vol_icon = "audio-volume-medium"
+                # vol_icon = "audio-volume-medium"
+                vol_icon = vol_pix_m
             elif 65<=_level<=100:
-                vol_icon = "audio-volume-high"
+                # vol_icon = "audio-volume-high"
+                vol_icon = vol_pix_h
             elif _level > 100:
-                vol_icon = "audio-volume-overamplified"
+                # vol_icon = "audio-volume-overamplified"
+                vol_icon = vol_pix_o
             self.vol_img.set_tooltip_text("Volume: "+str(_level)+"%"+"\n"+_descr)
             #else:
             #    self.vol_wdg.set_tooltip_text("Volume: "+str(_level)+"%"+"\n"+_descr)
         elif _mute == 1:
             #if USE_VOL_IMAGE == 1:
-            vol_icon = "audio-volume-muted"
+            # vol_icon = "audio-volume-muted"
+            vol_icon = vol_pix_mute
             self.vol_img.set_tooltip_text("Volume: "+str(_level)+"% - Muted"+"\n"+_descr)
             #else:
             #    self.vol_wdg.set_tooltip_text("Volume: "+str(_level)+"% - Muted"+"\n"+_descr)
         #if USE_VOL_IMAGE == 1:
-        _pix = Gtk.IconTheme().get_default().load_icon(vol_icon, _icon_size, Gtk.IconLookupFlags.FORCE_SIZE)
-        _pix = _pix.scale_simple(self.win_height, self.win_height, GdkPixbuf.InterpType.BILINEAR)
-        self.vol_img.set_from_pixbuf(_pix)
+        # _pix = Gtk.IconTheme().get_default().load_icon(vol_icon, _icon_size, Gtk.IconLookupFlags.FORCE_SIZE)
+        if vol_icon != None:
+            _pix = vol_icon
+            _pix = _pix.scale_simple(self.win_height, self.win_height, GdkPixbuf.InterpType.BILINEAR)
+            self.vol_img.set_from_pixbuf(_pix)
         ##
         # self.vol_img.set_from_icon_name(vol_icon, _icon_size)
         # self.vol_img.set_pixel_size(self.win_height)
