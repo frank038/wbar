@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 1.2.1
+# V. 1.2.2
 
 USE_CAT_SYMBOLIC = 0
 USE_VOL_IMAGE = 0
@@ -987,7 +987,9 @@ class MyWindow(Gtk.Window):
                 self.vol_event_box.set_above_child(True)
                 self.vol_event_box.connect("button-press-event", self.on_event_box_vol)
                 self.vol_event_box.connect("scroll-event", self.on_event_box_vol)
-                self.vol_event_box.set_events (Gdk.EventMask.SCROLL_MASK)#ALL_EVENTS_MASK)
+                self.vol_event_box.set_events (Gdk.EventMask.SCROLL_MASK|Gdk.EventMask.POINTER_MOTION_MASK)#ALL_EVENTS_MASK)
+                self.vol_event_box.connect("enter-notify-event", self.on_event_box_vol_over)
+                self.vol_tooltip = ""
                 self.right_box.pack_end(self.vol_event_box, False,False,10)
                 #
                 #self.vol_popover = Gtk.Popover.new(self.vol_img)
@@ -1106,6 +1108,12 @@ class MyWindow(Gtk.Window):
             self.not_alert_img.set_pixel_size(self.win_height)
             self.not_alert_img.hide()
     
+    def on_event_box_vol_over(self, wdg, event):
+        if self.vol_img.props.has_tooltip == True:
+            self.vol_img.props.has_tooltip = False
+        if event.type == Gdk.EventType.ENTER_NOTIFY:
+            self.vol_img.set_tooltip_text(self.vol_tooltip)
+    
     def on_event_box_vol(self, wdg, event):
         if hasattr(event, "direction"):
             if event.direction == Gdk.ScrollDirection.UP:
@@ -1186,14 +1194,16 @@ class MyWindow(Gtk.Window):
                     vol_icon = vol_pix_h
                 else:
                     vol_icon = vol_pix_o
-            self.vol_img.set_tooltip_text("Volume: "+str(_level)+"%"+"\n"+_descr)
+            #self.vol_img.set_tooltip_text("Volume: "+str(_level)+"%"+"\n"+_descr)
+            self.vol_tooltip = "Volume: "+str(_level)+"%"+"\n"+_descr
             #else:
             #    self.vol_wdg.set_tooltip_text("Volume: "+str(_level)+"%"+"\n"+_descr)
         elif _mute == 1:
             #if USE_VOL_IMAGE == 1:
             # vol_icon = "audio-volume-muted"
             vol_icon = vol_pix_mute
-            self.vol_img.set_tooltip_text("Volume: "+str(_level)+"% - Muted"+"\n"+_descr)
+            #self.vol_img.set_tooltip_text("Volume: "+str(_level)+"% - Muted"+"\n"+_descr)
+            self.vol_tooltip = "Volume: "+str(_level)+"% - Muted"+"\n"+_descr
             #else:
             #    self.vol_wdg.set_tooltip_text("Volume: "+str(_level)+"% - Muted"+"\n"+_descr)
         #if USE_VOL_IMAGE == 1:
@@ -1201,7 +1211,8 @@ class MyWindow(Gtk.Window):
         if vol_icon != None:
             _pix = vol_icon
             _pix = _pix.scale_simple(self.win_height, self.win_height, GdkPixbuf.InterpType.BILINEAR)
-            self.vol_img.set_from_pixbuf(_pix)
+            #self.vol_img.set_from_pixbuf(_pix)
+            GLib.idle_add(lambda: self.vol_img.set_from_pixbuf(_pix))
         ##
         # self.vol_img.set_from_icon_name(vol_icon, _icon_size)
         # self.vol_img.set_pixel_size(self.win_height)
