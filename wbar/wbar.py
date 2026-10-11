@@ -1182,7 +1182,10 @@ class MyWindow(Gtk.Window):
                 vol_icon = vol_pix_h
             elif _level > 100:
                 # vol_icon = "audio-volume-overamplified"
-                vol_icon = vol_pix_o
+                if vol_pix_o == None:
+                    vol_icon = vol_pix_h
+                else:
+                    vol_icon = vol_pix_o
             self.vol_img.set_tooltip_text("Volume: "+str(_level)+"%"+"\n"+_descr)
             #else:
             #    self.vol_wdg.set_tooltip_text("Volume: "+str(_level)+"%"+"\n"+_descr)
@@ -1916,11 +1919,11 @@ class MyWindow(Gtk.Window):
                                                     _pb = None
                                             #
                                             if _icon == None or _icon == "" or _pb == None:
-                                                if 'IconPixmap' in _item:
-                                                    if _item['IconPixmap'] != '' or _item['IconPixmap'] != []:
-                                                        _icon_pix = _item['IconPixmap'][0][2]
-                                                        _icon_w = _item['IconPixmap'][0][0]
-                                                        _icon_h = _item['IconPixmap'][0][1]
+                                                if 'IconPixmap' in item:
+                                                    if item['IconPixmap'] != '' or item['IconPixmap'] != []:
+                                                        _icon_pix = item['IconPixmap'][0][2]
+                                                        _icon_w = item['IconPixmap'][0][0]
+                                                        _icon_h = item['IconPixmap'][0][1]
                                                         self._set_icon_pix(_icon_pix, sender, _icon_w,_icon_h)
                                             else:
                                                 self._set_icon(_pb, sender)
@@ -5306,7 +5309,7 @@ class DialogConfiguration(Gtk.Dialog):
         menu_iw_spinbtn.set_input_purpose(Gtk.InputPurpose.DIGITS)
         
         
-        # # NOT NECESSARY
+        # NOT NECESSARY
         # menu_lbl_t = Gtk.Label(label=TERMINAL)
         # self.page2_box.attach(menu_lbl_t,0,5,1,1)
         # menu_lbl_t.set_halign(1)
