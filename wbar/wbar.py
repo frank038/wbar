@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 1.2
+# V. 1.2.1
 
 USE_CAT_SYMBOLIC = 0
 USE_VOL_IMAGE = 0
@@ -1139,7 +1139,7 @@ class MyWindow(Gtk.Window):
         _volume = _sink.volume.values
         _level = int(round(max(_volume), 2)*100)
         _mute = _sink.mute
-        _icon_size = 64
+        _icon_size = 256
         if _level < 0 or not isinstance(_level, int):
             return
         if _mute == 0:
@@ -1162,8 +1162,13 @@ class MyWindow(Gtk.Window):
             #else:
             #    self.vol_wdg.set_tooltip_text("Volume: "+str(_level)+"% - Muted"+"\n"+_descr)
         #if USE_VOL_IMAGE == 1:
-        self.vol_img.set_from_icon_name(vol_icon, _icon_size)
-        self.vol_img.set_pixel_size(self.win_height)
+        _pix = Gtk.IconTheme().get_default().load_icon(vol_icon, _icon_size, Gtk.IconLookupFlags.FORCE_SIZE)
+        _pix = _pix.scale_simple(self.win_height, self.win_height, GdkPixbuf.InterpType.BILINEAR)
+        self.vol_img.set_from_pixbuf(_pix)
+        ##
+        # self.vol_img.set_from_icon_name(vol_icon, _icon_size)
+        # self.vol_img.set_pixel_size(self.win_height)
+        ##
         #else:
         #    self.vol_wdg.set_value(_level)
     
