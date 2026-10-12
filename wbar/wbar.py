@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 1.2.2
+# V. 1.2.3
 
 USE_CAT_SYMBOLIC = 0
 USE_VOL_IMAGE = 0
@@ -1408,14 +1408,17 @@ class MyWindow(Gtk.Window):
                     self.active_button.set_state_flags(Gtk.StateFlags.NORMAL,True)
                 self.active_button = toplevel.button
                 toplevel.button.set_state_flags(Gtk.StateFlags.CHECKED,True)
-        # USELESS or find a better solution
-        # elif toplevel.button == self.active_button:
-            # toplevel.button.set_state_flags(Gtk.StateFlags.NORMAL,True)
-        # 
+        elif 'minimized' in toplevel.states:
+            if self.active_button == toplevel.button:
+                toplevel.button.set_state_flags(Gtk.StateFlags.NORMAL,True)
+                self.active_button = None
         # self.set_default_size(-1, self.win_height)
     
     def on_toplevel_closed(self, context, toplevel):
+        if self.active_button == toplevel.button:
+            self.active_button = None
         self.tbox.remove(toplevel.button)
+        
         # 
         # self.set_default_size(-1,self.win_height)
         
@@ -4009,7 +4012,7 @@ class clipboardWin(Gtk.Window):
                 __row.iid = _clip
                 _tmp_box = Gtk.Box.new(0,0)
                 __row.add(_tmp_box)
-                _tmp_lbl = Gtk.Label(label=_ctext.decode().replace("\n"," "))
+                _tmp_lbl = Gtk.Label(label=_ctext.decode().replace("\n"," ").lstrip(" "))
                 # _tmp_box.set_halign(0)
                 # _tmp_lbl.set_halign(1)
                 _tmp_lbl.set_xalign(0)
@@ -4746,6 +4749,8 @@ class otherWin(Gtk.Window):
             list_events_all.remove(_ev)
         # rebuil the calendar file
         _rebuild_cal_file()
+        # remove the event mark from the calendar
+        self.on_month_changed(self._calendar)
         
     def on_add_note(self, btn):
         if self._parent.OW:
