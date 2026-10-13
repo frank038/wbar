@@ -1,6 +1,8 @@
 /* the window border colour */
 @define-color border_color #0000B3;
 @define-color stickynote_color #F3C000;
+@define-color mybackground_color #cecece;
+@define-color background_window #E0E0E0;
 
 * {
 
@@ -9,6 +11,7 @@
 /* the panel */
 #mywindow {
   border-radius: 0px 0px 0px 0px;
+  background-color: @mybackground_color;
 }
 
 /*
@@ -17,14 +20,18 @@
 }*/
 
 /* the expander arrow size */
-/*expander {
-  min-width: 48px;
-  min-height: 48px;
-}*/
+expander {
+  min-width: 36px;
+  min-height: 36px;
+}
 
 /**/
 #tasklist {
 
+}
+
+#tasklist button {
+  border: 1px solid transparent;
 }
 
 #tasklist button:hover,
@@ -73,15 +80,15 @@
 }
 
 /* the background colour of each cell in the menu */
-/*
 #menuwin flowbox flowboxchild:hover {
   background-color: #e0e0e0;
-}*/
+}
 
 /* .menuwin flowbox flowboxchild:hover box { */
 #menuwin flowbox flowboxchild:hover label {
-  border: 2px solid #484848;
-  border-radius: 8px;
+  /*border: 2px solid #484848;*/
+  border: 2px solid #a0a0a0;
+  border-radius: 6px;
   margin: -2px;
 }
 
@@ -94,13 +101,13 @@
 }*/
 
 /*popover * {
-  background: #cecece;
+  background: @mybackground_color;
 }*/
 
 /* grid widget */
-/*grid {
-  background:#E0E0E0;
-}*/
+grid {
+  background: @background_window;
+}
 
 #menubutton, #otherbutton {
   background-color: transparent;
@@ -142,10 +149,14 @@
 
 /* #vollevelbar trough */
 /* #vollevelbar trough highlight */
-/*#vollevelbar slider {
+#vollevelbar trough {
+  background: white;
+}
+
+#vollevelbar slider {
   background: #00000000;
   min-height: 20px;
-}*/
+}
 
 /*#vollevelbar trough, progress {
   background-color: white;
@@ -157,6 +168,7 @@
   border-width: 1px;
   border-color: @border_color;
   border-style: solid;
+  background-color: @background_window;
 }
 
 #menuwin button {
@@ -166,6 +178,11 @@
   /* border-color: #7F7F7F;*/
   margin: 2px;
   /*font-size: 24px;*/
+}
+
+/* the category buttons in the menu window */
+#mybutton {
+
 }
 
 /* the clipboard window */
@@ -240,6 +257,10 @@
   margin: 2px;
 }
 
+/* the notification list */
+#notlist {
+}
+
 /* each row in the notification list */
 #notrow {
   border-radius: 6px;
@@ -247,6 +268,7 @@
   border-width: 1px;
   /*border-color: #7F7F7F;*/
   margin: 2px;
+  background-color: transparent;
 }
 
 /* notifications in the list - mouse over custom colours */
@@ -256,15 +278,10 @@
   border-width: 0px;
 }
 
-/* the notification list */
-#notlist {
-
-}
-
 /* the body label in the notification */
-/*#mynotbodylbl link {
-
-}*/
+#mynotbodylbl link {
+  color: #000099;
+}
 
 /* the notification window */
 #notificationwin {
@@ -289,11 +306,6 @@
   border-width: 2px;
   /*border-color: @border_color;*/
   border-style: solid;
-}
-
-/* the category buttons in the menu window */
-#mybutton {
-
 }
 
 /* the note window */
