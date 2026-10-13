@@ -2042,9 +2042,9 @@ class MyWindow(Gtk.ApplicationWindow):
         try:
             _value = self.volume_bar.get_value()
             # dy positive = scroll down
-            if dy > 0:
+            if dy < 0:
                 _value += 0.02
-            elif dy < 0:
+            elif dy > 0:
                 _value -= 0.02
             volume_command = [os.path.join(_curr_dir,"volume_set.sh"), str(int(_value*100))]
             subprocess.Popen(volume_command, shell=False)
