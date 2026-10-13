@@ -88,7 +88,7 @@ The continuous shot scripts have to be in the form output1.sh and/or output2.sh:
 
 Known issue:
 
-- the gtk3 version: the volume widget, that uses the asyncio module, may break things; in fact, the notification sounds must be played by an external player such as aplay
+- (before the latest releases) the gtk3 version: the volume widget, that uses the asyncio module, may break things; in fact, the notification sounds must be played by an external player such as aplay
 
 
 ![My image](https://github.com/frank038/wbar/blob/main/wbar_01.jpg)
