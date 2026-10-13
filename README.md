@@ -29,6 +29,8 @@ Features:
 - the gtk4 version can drop each menu item on to my wdesktop4 application.
 - gtk4 version: addons: right mouse button on the bar to add custom modules in the bar; two useless examples are provided.
 
+None of both can be used for notifying the level change of: volume, brightness, etc.
+
 Requirements:
 - a wayland display server with layer-shell support
 - python3
@@ -56,9 +58,6 @@ just copy and translate in your language the content of the file EN.py, and rena
 
 The calendar appointments:
 just double click a day to launch a dialog; the new events will be markded in the calendar and list in the appointment section.
-
-The volume widget (gtk3 version)
-May break thing in the panel; in fact, the notification sound must be played by an external player, such as aplay.
 
 The command/env "dbus-update-activation-environment --systemd WAYLAND_DISPLAY DISPLAY XAUTHORITY" may improve the use of the gtk3/4 applications.
 
