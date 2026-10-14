@@ -3,10 +3,11 @@
 # COMMAND:
 # LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar4.py
 
-# V. 1.4.3
+# V. 1.4.4
 
 VOLBAR_WIDTH = 100
 VOLBAR_HEIGHT = -1
+SPACER_PAD = 14
 
 from ctypes import CDLL
 try:
@@ -1243,6 +1244,11 @@ class MyWindow(Gtk.ApplicationWindow):
             
             self.right_click_setted = 0
             
+            _spacer = Gtk.Box()
+            _spacer.set_margin_start(SPACER_PAD)
+            # _spacer.set_size_request(SPACER_PAD, -1)
+            self.right_box.append(_spacer)
+            
             #########
         
         # notifications
@@ -1677,6 +1683,12 @@ class MyWindow(Gtk.ApplicationWindow):
                         file_path = _iicon.get_file().get_path()
                         if os.path.exists(file_path):
                             pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(file_path, ICON_SIZE, ICON_SIZE, 1)
+                    else:
+                        if os.path.exists(_icon):
+                            try:
+                                pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(_icon, ICON_SIZE, ICON_SIZE, 1)
+                            except:
+                                pass
             except:
                 try:
                     pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(_icon, ICON_SIZE, ICON_SIZE, 1)
@@ -7272,20 +7284,27 @@ class Notifier(Service.Object):
         _dnd_file = os.path.join(_curr_dir,"do_not_disturb_mode")
         # do not show the notification if the file is setted, unless the notification is urgent
         if os.path.exists(_dnd_file) and _urgency != 2:
-            _d = (-99999, self._y, _appname, _icon, _summ, _body, _timeout, _hints, _actions, _replaceid)
-            self.create_not_win(_d, _urgency)
+            # # skip applications not to show
+            # if _appname not in self._parent.not_skip_apps:
+                # _d = (-99999, self._y, _appname, _icon, _summ, _body, _timeout, _hints, _actions, _replaceid)
+                # self.create_not_win(_d, _urgency)
             #
-            NOTIFICATION_DATA = [_appname,_summ, _body, self.this_pix]
-            self._not_data.put(NOTIFICATION_DATA)
+            # do not write on disc - do not list
+            if _appname not in self._parent.not_skip_apps2:
+                NOTIFICATION_DATA = [_appname,_summ, _body, self.this_pix]
+                self._not_data.put(NOTIFICATION_DATA)
             return
         else:
-            _d = (0, self._y, _appname, _icon, _summ, _body, _timeout, _hints, _actions, _replaceid)
-            self.create_not_win(_d, _urgency)
+            # skip applications not to show
+            if _appname not in self._parent.not_skip_apps:
+                _d = (0, self._y, _appname, _icon, _summ, _body, _timeout, _hints, _actions, _replaceid)
+                self.create_not_win(_d, _urgency)
             if _found_same_id == 1:
                 _found_same_el.close()
-            #
-            NOTIFICATION_DATA = [_appname,_summ, _body, self.this_pix]
-            self._not_data.put(NOTIFICATION_DATA)
+            # do not write on disc - do not list
+            if _appname not in self._parent.not_skip_apps2:
+                NOTIFICATION_DATA = [_appname,_summ, _body, self.this_pix]
+                self._not_data.put(NOTIFICATION_DATA)
         #
         return 1
         
@@ -7612,6 +7631,7 @@ class Notifier(Service.Object):
         _image_data = _on_hints(_hints, "image-data")
         _icon_data = _on_hints(_hints, "icon_data")
         pixbuf = None
+        
         if _image_data or _icon_data:
             if _image_data:
                 _image_data = _image_data
@@ -7676,6 +7696,12 @@ class Notifier(Service.Object):
                         file_path = _iicon.get_file().get_path()
                         if os.path.exists(file_path):
                             pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(file_path, ICON_SIZE, ICON_SIZE, 1)
+                    else:
+                        if os.path.exists(_icon):
+                            try:
+                                pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(_icon, ICON_SIZE, ICON_SIZE, 1)
+                            except:
+                                pass
             except:
                 try:
                     pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(_icon, ICON_SIZE, ICON_SIZE, 1)
@@ -7685,6 +7711,7 @@ class Notifier(Service.Object):
                         # pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(os.path.join(_curr_dir,"icons","wicon.png"), ICON_SIZE, ICON_SIZE, 1)
                     # except:
                         # pass
+            
             if pixbuf:
                 return [pixbuf,0]
         
