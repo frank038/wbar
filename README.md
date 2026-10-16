@@ -18,9 +18,10 @@ Features:
 - taskbar with scrolling support
 - tray
 - notifications (with history)
+- polkit agent (gtk4 version)
 - calendar appointments (gtk3 version)
 - two command outputs
-- sticky notes
+- sticky notes (gtk3 version)
 - a timer (gtk3 version)
 - a menu editor
 - languages
