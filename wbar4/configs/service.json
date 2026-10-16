@@ -6,5 +6,6 @@
     "tray-menu-width": 450,
     "tray-menu-height": 400,
     "note-show-start": 0,
-    "note-size": 200
+    "note-size": 200,
+    "polkit-win-width": 340
 }

@@ -9,5 +9,6 @@
     "menu-type": 0,
     "menu-show-labels": 1,
     "menu-item-type": 0,
-    "menu-item-label-pos": 0
+    "menu-item-label-pos": 0,
+    "use-polkit": 1
 }
