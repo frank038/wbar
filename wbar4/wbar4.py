@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 
-# COMMAND:
-# LD_PRELOAD=./libgtk4-layer-shell.so.1.0.4 python3 wbar4.py
-
-# V. 1.4.4
+# V. 1.5
 
 VOLBAR_WIDTH = 100
 VOLBAR_HEIGHT = -1
@@ -45,6 +42,7 @@ import importlib
 
 from xdg import DesktopEntry
 from xdg import IconTheme
+
 
 # 1 yes - 0 no
 NOTIFICATION_FADE = 1
@@ -107,7 +105,7 @@ if not os.path.exists(os.path.join(_curr_dir,"notes")):
 # other options
 _other_settings_conf = None
 _other_settings_config_file = os.path.join(_curr_dir,"configs","other_settings.json")
-_starting_other_settings_conf = {"pad-value":4,"audio-start-value":0,"use-volume":0,"use-tray":0,"double-click":0,"use-taskbar":0,"launch-mode":0,"menu-type":0,"menu-item-type":0,"menu-item-label-pos":0,"menu-show-labels":0}
+_starting_other_settings_conf = {"pad-value":4,"audio-start-value":0,"use-volume":0,"use-tray":0,"double-click":0,"use-taskbar":0,"launch-mode":0,"menu-type":0,"menu-item-type":0,"menu-item-label-pos":0,"menu-show-labels":0,"use-polkit":1}
 if not os.path.exists(_other_settings_config_file):
     try:
         _ff = open(_other_settings_config_file,"w")
@@ -140,6 +138,32 @@ MENU_ITEM_TYPE = _other_settings_conf["menu-item-type"]
 MENU_SHOW_ITEM_LABEL = _other_settings_conf["menu-item-label-pos"]
 # whether to show the labels in the categories: 0 no - 1 left - 2 right
 MENU_SHOW_LABELS = _other_settings_conf["menu-show-labels"]
+USE_POLKIT = _other_settings_conf["use-polkit"]
+
+USE_ADWAITA_POLKIT = 0
+if USE_POLKIT:
+    gi.require_version("Polkit", "1.0")
+    gi.require_version("PolkitAgent", "1.0")
+    from gi.repository import Polkit, PolkitAgent
+    try:
+        gi.require_version("Adw", "1")
+        from gi.repository import Adw
+        USE_ADWAITA_POLKIT = 1
+    except:
+        USE_ADWAITA_POLKIT = 0
+    import pwd
+    OBJECT_PATH = "/io/github/calculon/polkitwindow4/PolkitAgent"
+    AGENT_XML = """<node><interface name="org.freedesktop.PolicyKit1.AuthenticationAgent">
+      <method name="BeginAuthentication">
+        <arg type="s" name="action_id" direction="in"/><arg type="s" name="message" direction="in"/>
+        <arg type="s" name="icon_name" direction="in"/><arg type="a{ss}" name="details" direction="in"/>
+        <arg type="s" name="cookie" direction="in"/><arg type="a(sa{sv})" name="identities" direction="in"/>
+      </method>
+      <method name="CancelAuthentication"><arg type="s" name="cookie" direction="in"/></method>
+    </interface></node>"""
+    AUTHORITY = ("org.freedesktop.PolicyKit1", "/org/freedesktop/PolicyKit1/Authority",
+                 "org.freedesktop.PolicyKit1.Authority")
+    
 
 _context = None
 if USE_TASKBAR:
@@ -196,7 +220,7 @@ TTERMINAL = _menu_conf["terminal"]
 
 _service_conf = None
 _service_config_file = os.path.join(_curr_dir,"configs","service.json")
-_starting_service_conf = {"wwidth":800,"wheight":600,"sound-player":0,"player":"","tray-menu-width":200,"tray-menu-height":200,"note-show-start":0,"note-size":200}
+_starting_service_conf = {"wwidth":800,"wheight":600,"sound-player":0,"player":"","tray-menu-width":200,"tray-menu-height":200,"note-show-start":0,"note-size":200,"polkit-win-width":340}
 if not os.path.exists(_service_config_file):
     try:
         _ff = open(_service_config_file,"w")
@@ -214,6 +238,7 @@ else:
     if int(_service_conf["note-size"]) < 50:
         _service_conf["note-size"] = 50
 
+BWIDTH = _service_conf["polkit-win-width"]
 
 _menu_favorites = os.path.join(_curr_dir,"favorites")
 if not os.path.exists(_menu_favorites):
@@ -831,6 +856,7 @@ class MyWindow(Gtk.ApplicationWindow):
         self.note_show_at_start_tmp = None
         self.note_size = self.service_conf["note-size"]
         self.note_size_tmp = None
+        self.service_polkit_win_w_tmp = None
         
         # json configuration
         self._configuration = None
@@ -3538,6 +3564,10 @@ class MyWindow(Gtk.ApplicationWindow):
             self.service_tray_menu_width_tmp = _value
         elif _type == "h":
             self.service_tray_menu_height_tmp = _value
+        elif _type == "p":
+            self.service_polkit_win_w_tmp = _value
+            global BWIDTH
+            BWIDTH = _value
     
     def set_clip_window_size(self, _type, _value):
         if _type == "w":
@@ -3813,6 +3843,9 @@ class MyWindow(Gtk.ApplicationWindow):
                 self.note_size = self.note_size_tmp
                 self.service_conf["note-size"] = self.note_size_tmp
                 self.note_size_tmp = None
+            if self.service_polkit_win_w_tmp != None:
+                self.service_conf["polkit-win-width"] = self.service_polkit_win_w_tmp
+                self.service_polkit_win_w_tmp = None
             # time format
             if self.clock_use_tmp != None:
                 if self.clock_use_tmp != self.clock_use:
@@ -3999,6 +4032,7 @@ class MyWindow(Gtk.ApplicationWindow):
         self.service_tray_menu_height_tmp = None
         self.note_show_at_start_tmp = None
         self.note_size_tmp = None
+        self.service_polkit_win_w_tmp = None
         
         if self.clock_use:
             self.timer_format_tmp = None
@@ -5476,8 +5510,8 @@ class otherWin(Gtk.Window):
         # _stack_vbox2.set_homogeneous(True)
         self._stack.add_titled(_stack_vbox2,"Notifications",WBNOTIFICATIONS)
         
-        _stack_vbox3 = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=0)
-        self._stack.add_titled(_stack_vbox3,"Notes",WBNOTES)
+        # _stack_vbox3 = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=0)
+        # self._stack.add_titled(_stack_vbox3,"Notes",WBNOTES)
         
         self._stacksw = Gtk.StackSwitcher()
         self._stacksw.set_stack(self._stack)
@@ -5667,15 +5701,15 @@ class otherWin(Gtk.Window):
             ###########
             self.list_box.append(row)
         
-        ## STICKY NOTES
-        self.path_notes = os.path.join(_curr_dir,"notes")
-        self.add_note = Gtk.Button(label=WBNOTENEW)
-        self.add_note.connect('clicked', self.on_add_note)
-        _stack_vbox3.append(self.add_note)
-        
-        self.show_hide_notes = Gtk.Button(label=WBNOTESHOWHIDE)
-        self.show_hide_notes.connect('clicked', self.on_show_hide_notes)
-        _stack_vbox3.append(self.show_hide_notes)
+        # ## STICKY NOTES
+        # self.path_notes = os.path.join(_curr_dir,"notes")
+        # self.add_note = Gtk.Button(label=WBNOTENEW)
+        # self.add_note.connect('clicked', self.on_add_note)
+        # _stack_vbox3.append(self.add_note)
+        # 
+        # self.show_hide_notes = Gtk.Button(label=WBNOTESHOWHIDE)
+        # self.show_hide_notes.connect('clicked', self.on_show_hide_notes)
+        # _stack_vbox3.append(self.show_hide_notes)
         
         ##############
         
@@ -6313,11 +6347,6 @@ class DialogConfiguration(Gtk.Dialog):
         menu_lbl_wp.set_tooltip_text(WBTXT32)
         self.page2_box.attach(menu_lbl_wp,0,6,1,1)
         menu_lbl_wp.set_halign(1)
-        # menu_combo_p = Gtk.ComboBoxText.new()
-        # menu_combo_p.append_text(WBLEFT)
-        # menu_combo_p.append_text(WBRIGHT)
-        # menu_combo_p.set_active(self._parent.menu_win_position)
-        # menu_combo_p.connect('changed', self.on_menu_combo, "pos")
         menu_combo_p = Gtk.DropDown.new_from_strings([WBLEFT,WBRIGHT])
         menu_combo_p.set_selected(self._parent.menu_win_position)
         menu_combo_p.connect("notify::selected-item", self.on_menu_combo, "pos")
@@ -6391,32 +6420,29 @@ class DialogConfiguration(Gtk.Dialog):
             # timer_combo.set_active(1)
             # self.entry_timer.set_text(self._parent.service_player)
         
-        lbl_note_show = Gtk.Label(label=WBTXT40)
-        lbl_note_show.set_tooltip_text(WBTXT41)
-        lbl_note_show.set_halign(1)
-        self.page3_box.attach(lbl_note_show,0,6,1,1)
-        # # note_sw = Gtk.Switch.new()
-        # note_sw = Gtk.ComboBoxText.new()
-        # note_sw.append_text(WBNO)
-        # note_sw.append_text(WBYES)
-        # note_sw.set_active(self._parent.note_show_at_start)
-        note_sw = Gtk.DropDown.new_from_strings([WBNO,WBYES])
-        note_sw.set_selected(self._parent.note_show_at_start)
-        # note_sw.set_halign(1)
-        # note_sw.connect('notify::active', self.on_switch, "note")
-        # note_sw.connect('changed', self.on_switch, None, "note")
-        note_sw.connect("notify::selected-item", self.on_switch, "note")
-        self.page3_box.attach_next_to(note_sw,lbl_note_show,1,1,1)
-        
-        lbl_note_size = Gtk.Label(label=WBTXT42)
-        lbl_note_size.set_tooltip_text(WBTXT43)
-        lbl_note_size.set_halign(1)
-        self.page3_box.attach(lbl_note_size,0,7,1,1)
-        note_size_spinbtn = Gtk.SpinButton.new_with_range(50,1000,1)
-        note_size_spinbtn.set_value(self._parent.note_size)
-        self.page3_box.attach_next_to(note_size_spinbtn,lbl_note_size,1,1,1)
-        note_size_spinbtn.connect('value-changed', self.on_note_size)
-        note_size_spinbtn.set_numeric(True)
+        # # notes
+        # lbl_note_show = Gtk.Label(label=WBTXT40)
+        # lbl_note_show.set_tooltip_text(WBTXT41)
+        # lbl_note_show.set_halign(1)
+        # self.page3_box.attach(lbl_note_show,0,6,1,1)
+        # # # note_sw = Gtk.Switch.new()
+        # note_sw = Gtk.DropDown.new_from_strings([WBNO,WBYES])
+        # note_sw.set_selected(self._parent.note_show_at_start)
+        # # note_sw.set_halign(1)
+        # # note_sw.connect('notify::active', self.on_switch, "note")
+        # # note_sw.connect('changed', self.on_switch, None, "note")
+        # note_sw.connect("notify::selected-item", self.on_switch, "note")
+        # self.page3_box.attach_next_to(note_sw,lbl_note_show,1,1,1)
+        # 
+        # lbl_note_size = Gtk.Label(label=WBTXT42)
+        # lbl_note_size.set_tooltip_text(WBTXT43)
+        # lbl_note_size.set_halign(1)
+        # self.page3_box.attach(lbl_note_size,0,7,1,1)
+        # note_size_spinbtn = Gtk.SpinButton.new_with_range(50,1000,1)
+        # note_size_spinbtn.set_value(self._parent.note_size)
+        # self.page3_box.attach_next_to(note_size_spinbtn,lbl_note_size,1,1,1)
+        # note_size_spinbtn.connect('value-changed', self.on_note_size)
+        # note_size_spinbtn.set_numeric(True)
         
         # tray menu size
         _tray_menu_width = Gtk.Label(label=WBTXT44)
@@ -6438,6 +6464,18 @@ class DialogConfiguration(Gtk.Dialog):
         self.page3_box.attach_next_to(tray_h_spinbtn,_tray_menu_height,1,1,1)
         tray_h_spinbtn.connect('value-changed', self.on_tray_wh_spinbtn, "h")
         tray_h_spinbtn.set_numeric(True)
+        
+        # polkit window size
+        polkit_lbl_w = Gtk.Label(label=WPTXT1)
+        polkit_lbl_w.set_tooltip_text(WPTXT2)
+        polkit_lbl_w.set_halign(1)
+        self.page3_box.attach(polkit_lbl_w,0,8,1,1)
+        polkit_spinbtn = Gtk.SpinButton.new_with_range(0,2000,1)
+        polkit_spinbtn.set_value(BWIDTH)
+        polkit_spinbtn.connect('value-changed', self.on_tray_wh_spinbtn, "p")
+        self.page3_box.attach_next_to(polkit_spinbtn,polkit_lbl_w,1,1,1)
+        
+        
         
         ## CLIPBOARD
         if USE_CLIPBOARD and self._parent.clipboard_use:
@@ -6560,12 +6598,6 @@ class DialogConfiguration(Gtk.Dialog):
         not_lbl_rounded.set_tooltip_text(WBROUNDEDIMG2)
         self.page5_box.attach(not_lbl_rounded,0,4,1,1)
         not_lbl_rounded.set_halign(1)
-        # round_combo = Gtk.ComboBoxText.new()
-        # round_combo.append_text(WBNO)
-        # round_combo.append_text(WBROUNDEDONLYIMG)
-        # round_combo.append_text(WBROUNDEDALLIMG)
-        # round_combo.set_active(self._parent.not_rounded_img)
-        # round_combo.connect('changed', self.on_round_combo)
         round_combo = Gtk.DropDown.new_from_strings([WBNO,WBROUNDEDONLYIMG,WBROUNDEDALLIMG])
         round_combo.set_selected(self._parent.not_rounded_img)
         round_combo.connect("notify::selected-item", self.on_round_combo)
@@ -6591,11 +6623,6 @@ class DialogConfiguration(Gtk.Dialog):
         not_lbl_sound.set_tooltip_text(WBTXT63)
         self.page5_box.attach(not_lbl_sound,0,6,1,1)
         not_lbl_sound.set_halign(1)
-        # snd_combo = Gtk.ComboBoxText.new()
-        # snd_combo.append_text(WBTXT64)
-        # snd_combo.append_text(WBTXT65)
-        # snd_combo.append_text(WBTXT66)
-        # snd_combo.connect('changed', self.on_snd_combo)
         snd_combo = Gtk.DropDown.new_from_strings([WBTXT64,WBTXT65,WBTXT66])
         snd_combo.connect("notify::selected-item", self.on_snd_combo)
         self.page5_box.attach_next_to(snd_combo,not_lbl_sound,1,1,1)
@@ -6604,11 +6631,9 @@ class DialogConfiguration(Gtk.Dialog):
         self.entry_sound.connect('changed', self.on_entry_sound)
         self.page5_box.attach(self.entry_sound,1,7,1,1)
         if self._parent.not_sounds in [0,1]:
-            # snd_combo.set_active(self._parent.not_sounds)
             snd_combo.set_selected(self._parent.not_sounds)
             self.entry_sound.set_state_flags(Gtk.StateFlags.INSENSITIVE, True)
         elif isinstance(self._parent.not_sounds, str):
-            # snd_combo.set_active(2)
             snd_combo.set_selected(2)
             self.entry_sound.set_text(self._parent.not_sounds)
         # pad
@@ -6691,11 +6716,6 @@ class DialogConfiguration(Gtk.Dialog):
         _lbl_use_volume = Gtk.Label(label=WBTXT82)
         self.page6_box.attach(_lbl_use_volume,0,3,1,1)
         _lbl_use_volume.set_halign(1)
-        # use_volume_combo = Gtk.ComboBoxText.new()
-        # use_volume_combo.append_text(WBNO)
-        # use_volume_combo.append_text(WBYES)
-        # use_volume_combo.set_active(USE_VOLUME)
-        # use_volume_combo.connect('changed', self.on_other_combo, "volume")
         use_volume_combo = Gtk.DropDown.new_from_strings([WBNO,WBYES])
         use_volume_combo.set_selected(USE_VOLUME)
         use_volume_combo.connect("notify::selected-item", self.on_other_combo, "volume")
@@ -6704,11 +6724,6 @@ class DialogConfiguration(Gtk.Dialog):
         _lbl_use_tray = Gtk.Label(label=WBTXT83)
         self.page6_box.attach(_lbl_use_tray,0,4,1,1)
         _lbl_use_tray.set_halign(1)
-        # use_tray_combo = Gtk.ComboBoxText.new()
-        # use_tray_combo.append_text(WBNO)
-        # use_tray_combo.append_text(WBYES)
-        # use_tray_combo.set_active(USE_TRAY)
-        # use_tray_combo.connect('changed', self.on_other_combo, "tray")
         use_tray_combo = Gtk.DropDown.new_from_strings([WBNO,WBYES])
         use_tray_combo.set_selected(USE_TRAY)
         use_tray_combo.connect("notify::selected-item", self.on_other_combo, "tray")
@@ -6719,17 +6734,6 @@ class DialogConfiguration(Gtk.Dialog):
         not_lbl_enabled.set_tooltip_text(WBTXT85)
         self.page6_box.attach(not_lbl_enabled,0,5,1,1)
         not_lbl_enabled.set_halign(1)
-        # not_lbl_enabled_sw = Gtk.Switch.new()
-        # not_lbl_enabled_sw.set_halign(1)
-        # not_lbl_enabled_sw.set_active(self._parent.not_use)
-        # not_lbl_enabled_sw.connect('notify::active', self.on_switch, "notification")
-        # self.page6_box.attach_next_to(not_lbl_enabled_sw,not_lbl_enabled,1,1,1)
-        # use_notif_combo = Gtk.ComboBoxText.new()
-        # use_notif_combo.append_text(WBNO)
-        # use_notif_combo.append_text(WBYES)
-        # use_notif_combo.append_text(WBTXT86)
-        # use_notif_combo.set_active(self._parent.not_use)
-        # use_notif_combo.connect('changed', self.on_other_combo, "notification")
         use_notif_combo = Gtk.DropDown.new_from_strings([WBNO,WBYES,WBTXT86])
         use_notif_combo.set_selected(self._parent.not_use)
         use_notif_combo.connect("notify::selected-item", self.on_other_combo, "notification")
@@ -6740,13 +6744,6 @@ class DialogConfiguration(Gtk.Dialog):
         taskbar_lbl.set_tooltip_text(WBTXT88)
         self.page6_box.attach(taskbar_lbl,0,6,1,1)
         taskbar_lbl.set_halign(1)
-        # use_taskbar_combo = Gtk.ComboBoxText.new()
-        # use_taskbar_combo.append_text(WBTXT89)
-        # use_taskbar_combo.append_text(WBLEFT)
-        # use_taskbar_combo.append_text(WBRIGHT)
-        # use_taskbar_combo.append_text(WBCENTER)
-        # use_taskbar_combo.set_active(USE_TASKBAR)
-        # use_taskbar_combo.connect('changed', self.on_other_combo, "taskbar")
         use_taskbar_combo = Gtk.DropDown.new_from_strings([WBTXT89,WBLEFT,WBRIGHT,WBCENTER])
         use_taskbar_combo.set_selected(USE_TASKBAR)
         use_taskbar_combo.connect('notify::selected-item', self.on_other_combo, "taskbar")
@@ -6757,13 +6754,6 @@ class DialogConfiguration(Gtk.Dialog):
         launch_lbl.set_tooltip_text(WBTXT91)
         self.page6_box.attach(launch_lbl,0,7,1,1)
         launch_lbl.set_halign(1)
-        # launch_combo = Gtk.ComboBoxText.new()
-        # launch_combo.append_text(WBTXT92)
-        # launch_combo.append_text(WBTXT93)
-        # launch_combo.append_text(WBTXT94)
-        # launch_combo.set_active(LAUNCH_MODE)
-        # launch_combo.connect('changed', self.on_other_combo, "launch")
-        # launch_combo = Gtk.DropDown.new_from_strings([WBTXT92,WBTXT93,WBTXT94])
         launch_combo = Gtk.DropDown.new_from_strings([WBTXT92,WBTXT922])
         launch_combo.set_selected(LAUNCH_MODE)
         launch_combo.connect('notify::selected-item', self.on_other_combo, "launch")
@@ -6773,12 +6763,6 @@ class DialogConfiguration(Gtk.Dialog):
         menu_cat_pos_lbl = Gtk.Label(label=MWMENUPOS)
         self.page6_box.attach(menu_cat_pos_lbl,0,8,1,1)
         menu_cat_pos_lbl.set_halign(1)
-        # menu_cat_pos_combo = Gtk.ComboBoxText.new()
-        # menu_cat_pos_combo.append_text(MWMENUPOS2)
-        # menu_cat_pos_combo.append_text(MWMENUPOS3)
-        # menu_cat_pos_combo.append_text(MWMENUPOS4)
-        # menu_cat_pos_combo.set_active(MENU_TYPE)
-        # menu_cat_pos_combo.connect('changed', self.on_other_combo, "menu-pos")
         menu_cat_pos_combo = Gtk.DropDown.new_from_strings([MWMENUPOS2,MWMENUPOS3,MWMENUPOS4])
         menu_cat_pos_combo.set_selected(MENU_TYPE)
         menu_cat_pos_combo.connect('notify::selected-item', self.on_other_combo, "menu-pos")
@@ -6789,22 +6773,11 @@ class DialogConfiguration(Gtk.Dialog):
         menu_cat_pos_lbl2.set_tooltip_text(MWMENULBLPOS1)
         self.page6_box.attach(menu_cat_pos_lbl2,0,9,1,1)
         menu_cat_pos_lbl2.set_halign(1)
-        # menu_cat_pos_combo2 = Gtk.ComboBoxText.new()
-        # menu_cat_pos_combo2.append_text(MWMENULBLPOS2)
-        # menu_cat_pos_combo2.append_text(MWMENULBLPOS3)
-        # menu_cat_pos_combo2.set_active(MENU_SHOW_ITEM_LABEL)
-        # menu_cat_pos_combo2.connect('changed', self.on_other_combo, "menu-item-lbl-pos")
         menu_cat_pos_combo2 = Gtk.DropDown.new_from_strings([MWMENULBLPOS2,MWMENULBLPOS3])
         menu_cat_pos_combo2.set_selected(MENU_SHOW_ITEM_LABEL)
         menu_cat_pos_combo2.connect('notify::selected-item', self.on_other_combo, "menu-item-lbl-pos")
         self.page6_box.attach_next_to(menu_cat_pos_combo2,menu_cat_pos_lbl2,1,1,1)
         #
-        # menu_cat_pos_combo3 = Gtk.ComboBoxText.new()
-        # menu_cat_pos_combo3.append_text(MWMENULBLPOS4)
-        # menu_cat_pos_combo3.append_text(MWMENULBLPOS2)
-        # menu_cat_pos_combo3.append_text(MWMENULBLPOS3)
-        # menu_cat_pos_combo3.set_active(MENU_SHOW_ITEM_LABEL)
-        # menu_cat_pos_combo3.connect('changed', self.on_other_combo, "menu-cat-lbl-pos")
         menu_cat_pos_combo3 = Gtk.DropDown.new_from_strings([MWMENULBLPOS4,MWMENULBLPOS2,MWMENULBLPOS3])
         menu_cat_pos_combo3.set_selected(MENU_SHOW_ITEM_LABEL)
         menu_cat_pos_combo3.connect('notify::selected-item', self.on_other_combo, "menu-cat-lbl-pos")
@@ -6814,26 +6787,20 @@ class DialogConfiguration(Gtk.Dialog):
         menu_item_pos_lbl = Gtk.Label(label=MWMENUITEMTYPE)
         self.page6_box.attach(menu_item_pos_lbl,0,10,1,1)
         menu_item_pos_lbl.set_halign(1)
-        # menu_item_pos_combo = Gtk.ComboBoxText.new()
-        # menu_item_pos_combo.append_text(MWMENUITEMTYPE2)
-        # menu_item_pos_combo.append_text(MWMENUITEMTYPE3)
-        # menu_item_pos_combo.set_active(MENU_ITEM_TYPE)
-        # menu_item_pos_combo.connect('changed', self.on_other_combo, "menu-item-type")
         menu_item_pos_combo = Gtk.DropDown.new_from_strings([MWMENUITEMTYPE2,MWMENUITEMTYPE3])
         menu_item_pos_combo.set_selected(MENU_ITEM_TYPE)
         menu_item_pos_combo.connect('notify::selected-item', self.on_other_combo, "menu-item-type")
         self.page6_box.attach_next_to(menu_item_pos_combo,menu_item_pos_lbl,1,1,1)
         
-        # # double click
-        # _lbl_double_click = Gtk.Label(label="Double click to launch apps")
-        # self.page6_box.attach(_lbl_double_click,0,6,1,1)
-        # _lbl_double_click.set_halign(1)
-        # double_click_combo = Gtk.ComboBoxText.new()
-        # double_click_combo.append_text("no")
-        # double_click_combo.append_text("yes")
-        # double_click_combo.set_active(DOUBLE_CLICK)
-        # double_click_combo.connect('changed', self.on_other_combo, "click")
-        # self.page6_box.attach_next_to(double_click_combo,_lbl_double_click,1,1,1)
+        ## polkit server
+        _lbl_polkit = Gtk.Label(label=MWPOLKIT1)
+        _lbl_polkit.set_tooltip_text(MWPOLKIT2)
+        self.page6_box.attach(_lbl_polkit,0,11,1,1)
+        _lbl_polkit.set_halign(1)
+        polkit_combo = Gtk.DropDown.new_from_strings([MWPOLKITNO,MWPOLKITYES])
+        polkit_combo.set_selected(USE_POLKIT)
+        polkit_combo.connect('notify::selected-item', self.on_other_combo, "polkit")
+        self.page6_box.attach_next_to(polkit_combo,_lbl_polkit,1,1,1)
         
         ###########
         self.set_visible(True)
@@ -6903,6 +6870,10 @@ class DialogConfiguration(Gtk.Dialog):
             _other_settings_conf["menu-item-type"] = _active
             global MENU_ITEM_TYPE
             MENU_ITEM_TYPE = _active
+        elif _type == "polkit":
+            _other_settings_conf["use-polkit"] = _active
+            global USE_POLKIT
+            USE_POLKIT = _active
         try:
             _ff = open(_other_settings_config_file,"w")
             _data_json = _other_settings_conf
@@ -8031,6 +8002,294 @@ class NotThread(Thread):
 
 #####################
 
+def _identity(kind: str, details: dict):
+    try:
+        if kind == "unix-user" and "uid" in details:
+            return Polkit.UnixUser.new(int(details["uid"]))
+        if kind == "unix-group" and "gid" in details:
+            return Polkit.UnixGroup.new(int(details["gid"]))
+    except (TypeError, ValueError):
+        pass
+    return None
+
+def _user(identity) -> str:
+    if isinstance(identity, Polkit.UnixUser):
+        try:
+            return pwd.getpwuid(identity.get_uid()).pw_name
+        except KeyError:
+            return str(identity.get_uid())
+    return identity.to_string()
+
+
+def _real_name(name: str) -> str:
+    try:
+        gecos = pwd.getpwnam(name).pw_gecos.split(",")[0]
+    except KeyError:
+        gecos = ""
+    return gecos or name
+
+class Agent:
+    
+    def __init__(self, app):
+        self.app = app
+        self.dialogs = {}
+        self.bus = Gio.bus_get_sync(Gio.BusType.SYSTEM, None)
+        try:
+            self.polkitd = self.bus.call_sync("org.freedesktop.DBus", "/org/freedesktop/DBus",
+                                              "org.freedesktop.DBus", "GetNameOwner",
+                                              GLib.Variant("(s)", (AUTHORITY[0],)), None,
+                                              Gio.DBusCallFlags.NONE, 2000, None).unpack()[0]
+        except GLib.Error:
+            self.polkitd = None
+        
+        self.watch = Gio.bus_watch_name_on_connection(
+            self.bus, AUTHORITY[0], Gio.BusNameWatcherFlags.NONE,
+            lambda _c, _n, owner: setattr(self, "polkitd", owner),
+            lambda *_a: setattr(self, "polkitd", None))
+        node = Gio.DBusNodeInfo.new_for_xml(AGENT_XML)
+        self.reg = self.bus.register_object(OBJECT_PATH, node.interfaces[0], self._call, None, None)
+        
+    def _call(self, _conn, sender, _path, _iface, method, params, invocation):
+        if sender is None or sender != self.polkitd:
+            invocation.return_dbus_error("org.freedesktop.PolicyKit1.Error.NotAuthorized",
+                                         "Only polkitd may call the authentication agent")
+            return
+        if method == "CancelAuthentication":
+            (cookie,) = params.unpack()
+            dlg = self.dialogs.get(cookie)
+            invocation.return_value(None)
+            if dlg:
+                dlg.finish(False)
+            return
+        action_id, message, _icon, _details, cookie, identities = params.unpack()
+        ids = [i for i in (_identity(kind, det) for kind, det in identities) if i is not None]
+        if not ids:
+            invocation.return_dbus_error("org.freedesktop.PolicyKit1.Error.Failed", "No identity to authenticate")
+            return
+
+        def done(ok):
+            self.dialogs.pop(cookie, None)
+            if ok:
+                invocation.return_value(None)
+            else:
+                invocation.return_dbus_error("org.freedesktop.PolicyKit1.Error.Cancelled",
+                                             "Authentication was cancelled")
+        self.dialogs[cookie] = PolkitWindow(self.app, message, ids, cookie, done)
+        
+def _session_id():
+    try:
+        subj = Polkit.UnixSession.new_for_process_sync(os.getpid(), None)
+        if subj is not None:
+            return subj.get_session_id()
+    except GLib.Error:
+        pass
+    return os.environ.get("XDG_SESSION_ID")
+
+
+def register(app):
+    sid = _session_id()
+    if not sid:
+        print("polkitgtk4: no login session found")
+        return None
+    try:
+        agent = Agent(app)
+    except GLib.Error as e:
+        print("polkitgtk4: no system bus: {}".format(e.message))
+        return None
+    subject = ("unix-session", {"session-id": GLib.Variant("s", sid)})
+    locale = os.environ.get("LC_ALL") or os.environ.get("LC_MESSAGES") or os.environ.get("LANG") or "C"
+    try:
+        agent.bus.call_sync(*AUTHORITY, "RegisterAuthenticationAgent",
+                            GLib.Variant("((sa{sv})ss)", (subject, locale, OBJECT_PATH)),
+                            None, Gio.DBusCallFlags.NONE, 5000, None)
+    except GLib.Error as e:
+        print("polkitgtk4: couldn't register: {}".format(e.message))
+        return None
+    
+    return agent
+
+def avatar(size=108, user=None, real_name=None, icon=None):
+    own = user is None
+    user = user or GLib.get_user_name()
+    real_name = real_name or (GLib.get_real_name() if own else "") or user
+    paths = [icon] if icon else []
+    if own:
+        paths.append(os.path.expanduser("~/.face"))
+    
+    paths.append("/var/lib/AccountsService/icons/{}".format(user))
+    for p in paths:
+        if os.path.isfile(p):
+            av = Adw.Avatar(size=size, show_initials=False)
+            try:
+                av.set_custom_image(Gdk.Texture.new_from_filename(p))
+                return av
+            except GLib.Error:
+                pass
+    return Adw.Avatar(size=size, text=real_name, show_initials=True)
+
+def password_field(placeholder="Enter Password") -> Gtk.PasswordEntry:
+    return Gtk.PasswordEntry(placeholder_text=placeholder,
+                             halign=Gtk.Align.CENTER, show_peek_icon=False)
+
+def push_button(label: str, on_click=None, style: str = "", **props) -> Gtk.Button:
+    b = Gtk.Button(label=label, **props)
+    if on_click:
+        b.connect("clicked", lambda _b: on_click())
+    return b
+
+def popup_button(options, selected: int = 0, on_change=None) -> Gtk.DropDown:
+    dd = Gtk.DropDown.new_from_strings(list(options))
+    dd.set_selected(selected)
+    if on_change:
+        dd.connect("notify::selected", lambda d, _p: on_change(d.get_selected()))
+    return dd
+
+class PolkitWindow(Gtk.Window):
+    def __init__(self, app, message, identities, cookie, done):
+        super().__init__()
+        self.app, self.cookie, self.done_cb = app, cookie, done
+        self.connect("destroy", self.on_close)
+        self.set_decorated(False)
+        self.set_title("Authenticate")
+        self.set_name("polkitgtk4")
+        #
+        self.identities = list(identities)
+        me = GLib.get_user_name()
+        names = [_user(i) for i in self.identities]
+        self.index = names.index(me) if me in names else 0
+        self.session = None
+        self.finished = False
+        ##
+        GtkLayerShell.init_for_window(self)
+        GtkLayerShell.set_namespace(self, "polkitgtk4")
+        GtkLayerShell.set_layer(self, GtkLayerShell.Layer.OVERLAY)
+        GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.ON_DEMAND)
+        #
+        self.mainbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10,
+                        halign=Gtk.Align.CENTER, valign=Gtk.Align.CENTER, width_request=BWIDTH)
+        self.set_default_size(BWIDTH, 100)
+        ##  lock image and text and main message
+        box_auth = Gtk.Box(spacing=14)
+        box_auth.append(Gtk.Image(icon_name="system-lock-screen-symbolic", pixel_size=40, valign=Gtk.Align.START))
+        #
+        box_text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        box_text.append(Gtk.Label(label="Authentication Required", xalign=0))
+        box_text.append(Gtk.Label(label=message or "An application wants to make changes.", xalign=0, wrap=True,
+                               max_width_chars=40))
+        box_text.append(Gtk.Label(label="Enter the password to allow this.", xalign=0))
+        box_auth.append(box_text)
+        self.mainbox.append(box_auth)
+        ## user: icon and name
+        box_user = Gtk.Box(spacing=10, margin_top=6)
+        self.box_user, self.names = box_user, names
+        self.face = avatar(28, names[self.index], _real_name(names[self.index]))
+        self.box_user.append(self.face)
+        if len(names) > 1:
+            self.account = popup_button([_real_name(n) for n in names], self.index, self._pick)
+            self.account.set_hexpand(True)
+            self.box_user.append(self.account)
+        else:
+            self.box_user.append(Gtk.Label(label=_real_name(names[self.index]), xalign=0, hexpand=True))
+        self.mainbox.append(self.box_user)
+        ##
+        self.entry = password_field("Password")
+        self.entry.remove_css_class("lk-field")
+        self.entry.set_halign(Gtk.Align.FILL)
+        self.entry.connect("activate", lambda *_: self._ok())
+        self.mainbox.append(self.entry)
+        self.error = Gtk.Label(xalign=0, visible=False, wrap=True)
+        self.mainbox.append(self.error)
+        ##
+        buttons = Gtk.Box(spacing=8, halign=Gtk.Align.END, margin_top=4)
+        cancel = push_button("Cancel", lambda: self.finish(False))
+        self.ok = push_button("OK", self._ok, "default")
+        buttons.append(cancel)
+        buttons.append(self.ok)
+        self.mainbox.append(buttons)
+        ##
+        self.set_child(self.mainbox)
+        keys = Gtk.EventControllerKey()
+        keys.connect("key-pressed", lambda _c, kv, *_: kv == 0xff1b and (self.finish(False), True)[1])
+        self.add_controller(keys)
+        #
+        # signal.signal(signal.SIGINT, self.sigtype_handler)
+        # signal.signal(signal.SIGTERM, self.sigtype_handler)
+        #
+        self.connect("realize", self.on_realize)
+        #
+        self.present()
+        self.entry.grab_focus()
+    
+    # def sigtype_handler(self, sig, frame):
+        # if sig == signal.SIGINT or sig == signal.SIGTERM:
+            # self.on_close()
+    
+    def on_realize(self, w):
+        self.set_default_size(BWIDTH, 100)
+    
+    def on_close(self, w=None):
+        quit_()
+        self.close()
+    
+    def _pick(self, i):
+        self.index = i
+        self._cancel_session()
+        face = avatar(28, self.names[i], _real_name(self.names[i]))
+        self.box_user.insert_child_after(face, self.face)
+        self.box_user.remove(self.face)
+        self.face = face
+
+    def _ok(self):
+        if not self.entry.get_text():
+            return
+        self.ok.set_sensitive(False)
+        self.entry.set_sensitive(False)
+        self.error.set_visible(False)
+        self._cancel_session()
+        s = self.session = PolkitAgent.Session.new(self.identities[self.index], self.cookie)
+        s.connect("request", lambda sess, _prompt, _echo: sess.response(self.entry.get_text()))
+        s.connect("show-error", lambda _s, text: self._say(text))
+        s.connect("completed", self._completed)
+        s.initiate()
+
+    def _completed(self, _s, gained):
+        done_session, self.session = self.session, None
+        GLib.idle_add(lambda: (done_session and None, False)[1])
+        if gained:
+            self.finish(True)
+            return
+        self.ok.set_sensitive(True)
+        self.entry.set_sensitive(True)
+        self.entry.set_text("")
+        self.entry.grab_focus()
+        if not self.error.get_visible():
+            self._say("Sorry, try again.")
+        # shake(self.entry)
+
+    def _say(self, text):
+        self.error.set_label(text)
+        self.error.set_visible(True)
+
+    def _cancel_session(self):
+        if self.session is not None:
+            s, self.session = self.session, None
+            try:
+                s.cancel()
+            except GLib.Error:
+                pass
+
+    def finish(self, ok: bool) -> None:
+        if self.finished:
+            return
+        self.finished = True
+        self._cancel_session()
+        self.destroy()
+        self.done_cb(ok)
+
+if USE_POLKIT:
+    register(None)
+
+#####################
 owner_id = None
 
 class Application(Gtk.Application):
