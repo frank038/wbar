@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 1.5
+# V. 1.6
 
 VOLBAR_WIDTH = 100
 VOLBAR_HEIGHT = -1
@@ -770,7 +770,6 @@ class MyWindow(Gtk.ApplicationWindow):
         self.connect("destroy", self._to_close)
         self.connect("close-request", self._to_close)
         
-        
         # for menu rebuild
         self.q = queue.Queue(maxsize=1)
         
@@ -874,8 +873,8 @@ class MyWindow(Gtk.ApplicationWindow):
         self._corner_bottom = _panel_conf["corner-bottom"]
         self.win_position = _panel_conf["position"]
         self.clipboard_use = _panel_conf["clipboard"]
-        self.label1_use = _panel_conf["label1"]
-        self.label2_use = _panel_conf["label2"]
+        # self.label1_use = _panel_conf["label1"]
+        # self.label2_use = _panel_conf["label2"]
         self.task_use = _panel_conf["tasklist"]
         self.clock_use = _panel_conf["clock"]
         global USE_TASKBAR
@@ -1044,7 +1043,8 @@ class MyWindow(Gtk.ApplicationWindow):
         GtkLayerShell.set_keyboard_mode(self, GtkLayerShell.KeyboardMode.NONE)
         self.on_set_win_position(self.win_position)
         
-        if USE_TASKBAR == 3 or self.clock_use == 1 or self.label2_use == 1:
+        # if USE_TASKBAR == 3 or self.clock_use == 1 or self.label2_use == 1:
+        if USE_TASKBAR == 3 or self.clock_use == 1:
             self.main_box = Gtk.CenterBox.new()
         else:
             # 0 horizontal 1 vertical - spacing
@@ -1060,7 +1060,8 @@ class MyWindow(Gtk.ApplicationWindow):
         # self.left_box.style_context = self.get_style_context()
         # self.left_box.style_context.add_class("mybox")
         self.left_box.set_name("mybox")
-        if USE_TASKBAR == 3 or self.clock_use == 1 or self.label2_use == 1:
+        # if USE_TASKBAR == 3 or self.clock_use == 1 or self.label2_use == 1:
+        if USE_TASKBAR == 3 or self.clock_use == 1:
             self.main_box.set_start_widget(self.left_box)
         else:
             self.main_box.append(self.left_box)
@@ -1079,30 +1080,31 @@ class MyWindow(Gtk.ApplicationWindow):
         # self.menubutton.connect('button-press-event', self.on_button1_clicked)
         self.menubutton.connect('clicked', self.on_button1_clicked)
         self.left_box.append(self.menubutton)
-        # output1
-        self.temp_out1 = None
-        self.label1button = Gtk.Button()
-        self.label1button.add_css_class("flat")
-        self.label1button.set_name("label1button")
-        self.label1button.connect('clicked', self.on_label1)
-        self.label1 = Gtk.Label(label="")
-        self.label1.set_use_markup(True)
-        self.label1button.set_child(self.label1)
-        # self.lbl1_style_context = self.label1.get_style_context()
-        # self.lbl1_style_context.add_class("label1")
-        self.label1.set_halign(1)
-        self.left_box.append(self.label1button)
-        self.label1button.set_visible(False)
+        # # output1
+        # self.temp_out1 = None
+        # self.label1button = Gtk.Button()
+        # self.label1button.add_css_class("flat")
+        # self.label1button.set_name("label1button")
+        # self.label1button.connect('clicked', self.on_label1)
+        # self.label1 = Gtk.Label(label="")
+        # self.label1.set_use_markup(True)
+        # self.label1button.set_child(self.label1)
+        # # self.lbl1_style_context = self.label1.get_style_context()
+        # # self.lbl1_style_context.add_class("label1")
+        # self.label1.set_halign(1)
+        # self.left_box.append(self.label1button)
+        # self.label1button.set_visible(False)
         
-        self.q1 = None
-        self.set_timer_label1()
+        # self.q1 = None
+        # self.set_timer_label1()
         
         self.center_box = Gtk.Box.new(0,0)
         self.center_box.set_vexpand(False)
         # self.center_box.style_context = self.get_style_context()
         # self.center_box.style_context.add_class("mybox")
         self.center_box.set_name("mybox")
-        if USE_TASKBAR == 3 or self.clock_use == 1 or self.label2_use == 1:
+        # if USE_TASKBAR == 3 or self.clock_use == 1 or self.label2_use == 1:
+        if USE_TASKBAR == 3 or self.clock_use == 1:
             self.main_box.set_center_widget(self.center_box)
         else:
             self.main_box.append(self.center_box)
@@ -1115,7 +1117,8 @@ class MyWindow(Gtk.ApplicationWindow):
         # self.right_box.style_context = self.get_style_context()
         # self.right_box.style_context.add_class("mybox")
         self.right_box.set_name("mybox")
-        if USE_TASKBAR == 3 or self.clock_use == 1 or self.label2_use == 1:
+        # if USE_TASKBAR == 3 or self.clock_use == 1 or self.label2_use == 1:
+        if USE_TASKBAR == 3 or self.clock_use == 1:
             self.main_box.set_end_widget(self.right_box)
         else:
             self.main_box.append(self.right_box)
@@ -1138,22 +1141,22 @@ class MyWindow(Gtk.ApplicationWindow):
         if self.clipboard_use and USE_CLIPBOARD:
             self.on_set_clipboard(None)
         
-        # output2
-        self.temp_out2 = None
-        self.label2button = Gtk.Button()
-        self.label2button.add_css_class("flat")
-        self.label2button.set_name("label2button")
-        self.label2button.connect('clicked', self.on_label2)
-        self.label2 = Gtk.Label(label="")
-        self.label2.set_use_markup(True)
-        self.label2button.set_child(self.label2)
+        # # output2
+        # self.temp_out2 = None
+        # self.label2button = Gtk.Button()
+        # self.label2button.add_css_class("flat")
+        # self.label2button.set_name("label2button")
+        # self.label2button.connect('clicked', self.on_label2)
+        # self.label2 = Gtk.Label(label="")
+        # self.label2.set_use_markup(True)
+        # self.label2button.set_child(self.label2)
         # self.lbl2_style_context = self.label2.get_style_context()
         # self.lbl2_style_context.add_class("label2")
-        if self.label2_use == 1:
-            self.center_box.append(self.label2button)
-        elif self.label2_use == 2 or self.label2_use == 0:
-            self.right_box.prepend(self.label2button)
-        self.label2button.set_visible(False)
+        # if self.label2_use == 1:
+            # self.center_box.append(self.label2button)
+        # elif self.label2_use == 2 or self.label2_use == 0:
+            # self.right_box.prepend(self.label2button)
+        # self.label2button.set_visible(False)
         
         self.otherbutton = Gtk.Button()
         self.otherbutton.add_css_class("flat")
@@ -1256,7 +1259,7 @@ class MyWindow(Gtk.ApplicationWindow):
             self.volume_bar.set_valign(3)
             self.vol_box.append(self.volume_bar)
             
-            self.volume_bar.set_name("vollevelbar")
+            self.volume_bar.set_name("volumelevelbar")
             self.volume_bar.set_tooltip_text(WBNODEVICES)
             
             self.vol_gesture = Gtk.GestureClick.new()
@@ -1314,8 +1317,8 @@ class MyWindow(Gtk.ApplicationWindow):
             _threadv = Thread(target=self.volume_async_func)
             _threadv.start()
         
-        self.q2 = None
-        self.set_timer_label2()
+        # self.q2 = None
+        # self.set_timer_label2()
         
         #### application launcher
         global APP_SERVER
@@ -1350,20 +1353,21 @@ class MyWindow(Gtk.ApplicationWindow):
         
         popover_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         btn_widgets = Gtk.Button(label=MWADDONS)
-        btn_widgets.connect("clicked", self.on_addons, popover, _x)
+        btn_widgets.connect("clicked", self.on_addons, popover, _x, _y)
         popover_box.append(btn_widgets)
         
         popover.set_child(popover_box)
         #
-        _rect = Gdk.Rectangle()
-        _rect.x = _x
-        _rect.y = self._configuration["panel"]["height"] + 1
-        _rect.width = 1
-        _rect.height = 1
-        popover.set_pointing_to(_rect)
+        # _rect = Gdk.Rectangle()
+        # _rect.x = int(_x)
+        # _rect.y = int(self._configuration["panel"]["height"]) + 1
+        # _rect.width = 0
+        # _rect.height = 0
+        # popover.set_pointing_to(_rect)
+        popover.set_offset(_x, _y)
         popover.popup()
     
-    def on_addons(self, btn, popover, _x):
+    def on_addons(self, btn, popover, _x, _y):
         popover.popdown()
         # rebuild the addon list
         load_addons()
@@ -1418,12 +1422,13 @@ class MyWindow(Gtk.ApplicationWindow):
         #
         _popover.set_child(_stack)
         #
-        _rect = Gdk.Rectangle()
-        _rect.x = _x
-        _rect.y = self._configuration["panel"]["height"] + 1
-        _rect.width = 1
-        _rect.height = 1
-        _popover.set_pointing_to(_rect)
+        # _rect = Gdk.Rectangle()
+        # _rect.x = _x
+        # _rect.y = self._configuration["panel"]["height"] + 1
+        # _rect.width = 1
+        # _rect.height = 1
+        # _popover.set_pointing_to(_rect)
+        _popover.set_offset(_x, _y)
         #
         _popover.popup()
         
@@ -3009,126 +3014,126 @@ class MyWindow(Gtk.ApplicationWindow):
         elif response_id == Gtk.ResponseType.DELETE_EVENT:
             messagedialog.destroy()
     
-    def set_timer_label1(self):
-        self.event1 = None
-        self.thread_label1 = None
-        if self.label1_use == 1:
-            self.label1button.set_visible(True)
-            _script1 = None
-            self._script1_return = True
-            _files = os.listdir(_curr_dir+"/scripts")
-            tmp_file = None
-            _time = None
-            for _f in _files:
-                _ff,_ext = os.path.splitext(_f)
-                if _ff == "output1":
-                    if _ext == '':
-                        continue
-                    elif _ext == ".sh":
-                        tmp_file = _f
-                        break
-                    else:
-                        if _ext[-1] == 's':
-                            tmp_file = _f
-                            _time = int(_ext[1:-1])*1000
-                            break
-                        elif _ext[-1] == 'm':
-                            tmp_file = _f
-                            _time = int(_ext[1:-1])*60000
-                            break
-            
-            if _time != None:
-                _script1 = os.path.join(_curr_dir,"scripts",tmp_file)
-                _type = 0
-                if _script1 and os.access(_script1,os.X_OK):
-                    ret = subprocess.check_output(_script1, shell=False, universal_newlines=True)
-                    self.label1.set_text(ret.strip("\n"))
-                    self.script1_id = GLib.timeout_add(_time, self.on_script1, _script1)
-            elif _time == None:
-                _script1 = os.path.join(_curr_dir,"scripts","output1.sh")
-                _type = 2
-                if _script1 and os.access(_script1,os.X_OK):
-                    self.event1 = Event()
-                    self.q1 = queue.Queue(maxsize=1)
-                    # self.thread_label1 = Thread(target=labelThread, args=(self.label1,_script1,self.q1,self.event1,_type))
-                    self._signal_label1 = SignalObject()
-                    self._signal_label1.connect("notify::propList", self.label1_threadslot)
-                    self.thread_label1 = Thread(target=label1Thread, args=(self._signal_label1,_script1, self.q1,self.event1,_type))
-                    self.thread_label1.start()
-        else:
-            self.label1button.set_visible(False)
+    # def set_timer_label1(self):
+        # self.event1 = None
+        # self.thread_label1 = None
+        # if self.label1_use == 1:
+            # self.label1button.set_visible(True)
+            # _script1 = None
+            # self._script1_return = True
+            # _files = os.listdir(_curr_dir+"/scripts")
+            # tmp_file = None
+            # _time = None
+            # for _f in _files:
+                # _ff,_ext = os.path.splitext(_f)
+                # if _ff == "output1":
+                    # if _ext == '':
+                        # continue
+                    # elif _ext == ".sh":
+                        # tmp_file = _f
+                        # break
+                    # else:
+                        # if _ext[-1] == 's':
+                            # tmp_file = _f
+                            # _time = int(_ext[1:-1])*1000
+                            # break
+                        # elif _ext[-1] == 'm':
+                            # tmp_file = _f
+                            # _time = int(_ext[1:-1])*60000
+                            # break
+            # 
+            # if _time != None:
+                # _script1 = os.path.join(_curr_dir,"scripts",tmp_file)
+                # _type = 0
+                # if _script1 and os.access(_script1,os.X_OK):
+                    # ret = subprocess.check_output(_script1, shell=False, universal_newlines=True)
+                    # self.label1.set_text(ret.strip("\n"))
+                    # self.script1_id = GLib.timeout_add(_time, self.on_script1, _script1)
+            # elif _time == None:
+                # _script1 = os.path.join(_curr_dir,"scripts","output1.sh")
+                # _type = 2
+                # if _script1 and os.access(_script1,os.X_OK):
+                    # self.event1 = Event()
+                    # self.q1 = queue.Queue(maxsize=1)
+                    # # self.thread_label1 = Thread(target=labelThread, args=(self.label1,_script1,self.q1,self.event1,_type))
+                    # self._signal_label1 = SignalObject()
+                    # self._signal_label1.connect("notify::propList", self.label1_threadslot)
+                    # self.thread_label1 = Thread(target=label1Thread, args=(self._signal_label1,_script1, self.q1,self.event1,_type))
+                    # self.thread_label1.start()
+        # else:
+            # self.label1button.set_visible(False)
     
-    def label1_threadslot(self,_signal,_param):
-        _list = _signal.propList[0]
-        _label = _list[0]
-        GLib.idle_add(lambda: self.label1.set_label(_label))
+    # def label1_threadslot(self,_signal,_param):
+        # _list = _signal.propList[0]
+        # _label = _list[0]
+        # GLib.idle_add(lambda: self.label1.set_label(_label))
+    # 
+    # def on_script1(self, _script1):
+        # ret = subprocess.check_output(_script1, shell=False, universal_newlines=True)
+        # self.label1.set_text(ret.strip("\n"))
+        # if self._script1_return == False:
+            # self.label1.set_text('')
+        # return self._script1_return
     
-    def on_script1(self, _script1):
-        ret = subprocess.check_output(_script1, shell=False, universal_newlines=True)
-        self.label1.set_text(ret.strip("\n"))
-        if self._script1_return == False:
-            self.label1.set_text('')
-        return self._script1_return
-    
-    def set_timer_label2(self):
-        self.event2 = None
-        self.thread_label2 = None
-        if self.label2_use == 1 or self.label2_use == 2:
-            self.label2button.set_visible(True)
-            _script2 = None
-            self._script2_return = True
-            _files = os.listdir(_curr_dir+"/scripts")
-            tmp_file = None
-            _time = None
-            for _f in _files:
-                _ff,_ext = os.path.splitext(_f)
-                if _ff == "output2":
-                    if _ext == '':
-                        continue
-                    elif _ext == ".sh":
-                        tmp_file = _f
-                        break
-                    else:
-                        if _ext[-1] == 's':
-                            tmp_file = _f
-                            _time = int(_ext[1:-1])*1000
-                            break
-                        elif _ext[-1] == 'm':
-                            tmp_file = _f
-                            _time = int(_ext[1:-1])*60000
-                            break
-            if _time != None:
-                _script2 = os.path.join(_curr_dir,"scripts",tmp_file)
-                _type = 0
-                if _script2 and os.access(_script2,os.X_OK):
-                    ret = subprocess.check_output(_script2, shell=False, universal_newlines=True)
-                    self.label2.set_text(ret.strip("\n"))
-                    self.script2_id = GLib.timeout_add(_time, self.on_script2, _script2)
-            elif _time == None:
-                _script2 = os.path.join(_curr_dir,"scripts","output2.sh")
-                _type = 2
-                if _script2 and os.access(_script2,os.X_OK):
-                    self.event2 = Event()
-                    self.q2 = queue.Queue(maxsize=1)
-                    # self.thread_label2 = Thread(target=labelThread, args=(self.label2,_script2,self.q2,self.event2,_type))
-                    self._signal_label2 = SignalObject()
-                    self._signal_label2.connect("notify::propList", self.label2_threadslot)
-                    self.thread_label2 = Thread(target=label2Thread, args=(self._signal_label2,_script2, self.q2,self.event2,_type))
-                    self.thread_label2.start()
-        else:
-            self.label2button.set_visible(False)
-    
-    def label2_threadslot(self,_signal,_param):
-        _list = _signal.propList[0]
-        _label = _list[0]
-        GLib.idle_add(lambda: self.label2.set_label(_label))
-    
-    def on_script2(self, _script2):
-        ret = subprocess.check_output(_script2, shell=False, universal_newlines=True)
-        self.label2.set_text(ret.strip("\n"))
-        if self._script2_return == False:
-            self.label2.set_text('')
-        return self._script2_return
+    # def set_timer_label2(self):
+        # self.event2 = None
+        # self.thread_label2 = None
+        # if self.label2_use == 1 or self.label2_use == 2:
+            # self.label2button.set_visible(True)
+            # _script2 = None
+            # self._script2_return = True
+            # _files = os.listdir(_curr_dir+"/scripts")
+            # tmp_file = None
+            # _time = None
+            # for _f in _files:
+                # _ff,_ext = os.path.splitext(_f)
+                # if _ff == "output2":
+                    # if _ext == '':
+                        # continue
+                    # elif _ext == ".sh":
+                        # tmp_file = _f
+                        # break
+                    # else:
+                        # if _ext[-1] == 's':
+                            # tmp_file = _f
+                            # _time = int(_ext[1:-1])*1000
+                            # break
+                        # elif _ext[-1] == 'm':
+                            # tmp_file = _f
+                            # _time = int(_ext[1:-1])*60000
+                            # break
+            # if _time != None:
+                # _script2 = os.path.join(_curr_dir,"scripts",tmp_file)
+                # _type = 0
+                # if _script2 and os.access(_script2,os.X_OK):
+                    # ret = subprocess.check_output(_script2, shell=False, universal_newlines=True)
+                    # self.label2.set_text(ret.strip("\n"))
+                    # self.script2_id = GLib.timeout_add(_time, self.on_script2, _script2)
+            # elif _time == None:
+                # _script2 = os.path.join(_curr_dir,"scripts","output2.sh")
+                # _type = 2
+                # if _script2 and os.access(_script2,os.X_OK):
+                    # self.event2 = Event()
+                    # self.q2 = queue.Queue(maxsize=1)
+                    # # self.thread_label2 = Thread(target=labelThread, args=(self.label2,_script2,self.q2,self.event2,_type))
+                    # self._signal_label2 = SignalObject()
+                    # self._signal_label2.connect("notify::propList", self.label2_threadslot)
+                    # self.thread_label2 = Thread(target=label2Thread, args=(self._signal_label2,_script2, self.q2,self.event2,_type))
+                    # self.thread_label2.start()
+        # else:
+            # self.label2button.set_visible(False)
+    # 
+    # def label2_threadslot(self,_signal,_param):
+        # _list = _signal.propList[0]
+        # _label = _list[0]
+        # GLib.idle_add(lambda: self.label2.set_label(_label))
+    # 
+    # def on_script2(self, _script2):
+        # ret = subprocess.check_output(_script2, shell=False, universal_newlines=True)
+        # self.label2.set_text(ret.strip("\n"))
+        # if self._script2_return == False:
+            # self.label2.set_text('')
+        # return self._script2_return
     
     def _close_prog_by_pid(self, _pid):
         try:
@@ -3152,46 +3157,46 @@ class MyWindow(Gtk.ApplicationWindow):
             # except:
                 # continue
     
-    def terminate_thread(self,_t):
-        if _t == 1 or _t == None:
-            if self.script1_id:
-                self.label1.set_text('')
-                GLib.source_remove(self.script1_id)
-            self._script1_return = False
-            if self.q1 != None:
-                if not self.q1.empty():
-                    _p1 = self.q1.get()
-                    self._close_prog_by_pid(_p1.pid)
-                    # fork()
-                    if self.thread_label1 != None:
-                        del self.thread_label1
-                        self.thread_label1 = None
-                    if self.event1 != None and not self.event1.is_set():
-                        self.event1.set()
-        if _t == 2 or _t == None:
-            if self.script2_id:
-                self.label2.set_text('')
-                GLib.source_remove(self.script2_id)
-            self._script2_return = False
-            if self.q2 != None:
-                if not self.q2.empty():
-                    _p2 = self.q2.get()
-                    self._close_prog_by_pid(_p2.pid)
-                    if self.thread_label2 != None:
-                        del self.thread_label2
-                        self.thread_label2 = None
-                    if self.event2 != None and not self.event2.is_set():
-                        self.event2.set()
+    # def terminate_thread(self,_t):
+        # if _t == 1 or _t == None:
+            # if self.script1_id:
+                # self.label1.set_text('')
+                # GLib.source_remove(self.script1_id)
+            # self._script1_return = False
+            # if self.q1 != None:
+                # if not self.q1.empty():
+                    # _p1 = self.q1.get()
+                    # self._close_prog_by_pid(_p1.pid)
+                    # # fork()
+                    # if self.thread_label1 != None:
+                        # del self.thread_label1
+                        # self.thread_label1 = None
+                    # if self.event1 != None and not self.event1.is_set():
+                        # self.event1.set()
+        # if _t == 2 or _t == None:
+            # if self.script2_id:
+                # self.label2.set_text('')
+                # GLib.source_remove(self.script2_id)
+            # self._script2_return = False
+            # if self.q2 != None:
+                # if not self.q2.empty():
+                    # _p2 = self.q2.get()
+                    # self._close_prog_by_pid(_p2.pid)
+                    # if self.thread_label2 != None:
+                        # del self.thread_label2
+                        # self.thread_label2 = None
+                    # if self.event2 != None and not self.event2.is_set():
+                        # self.event2.set()
     
     def _to_close(self, w=None, e=None):
         # terminate the application server
         if APP_SERVER:
             ret = self._appExec.setStatus()
         #
-        # try:
-        self.terminate_thread(None)
-        # except:
-            # pass
+        # # try:
+        # self.terminate_thread(None)
+        # # except:
+            # # pass
         # try:
         if self.ClipDaemon:
             self.ClipDaemon._stop()
@@ -3801,32 +3806,32 @@ class MyWindow(Gtk.ApplicationWindow):
                         self.on_save_optional_widget_state()
                     else:
                         _error_log(WBWLCLIPERR)
-            if self.temp_out1 != None and self.temp_out1 != self.label1_use:
-                self.label1_use = int(self.temp_out1)
-                self.temp_out1 = None
-                self._configuration["panel"]["label1"] = self.label1_use
-                self.terminate_thread(1)
-                self.set_timer_label1()
-            if self.temp_out2 != None and self.temp_out2 != self.label2_use:
-                label2_use_old = self.label2_use
-                self.label2_use = int(self.temp_out2)
-                if label2_use_old == 0 and self.temp_out2 == 1:
-                    self.center_box.append(self.label2)
-                    self.set_timer_label2()
-                elif label2_use_old == 0 and self.temp_out2 == 2:
-                    self.right_box.insert_child_after(self.label2, None)
-                    self.set_timer_label2()
-                elif label2_use_old == 1 and self.temp_out2 == 2:
-                    self.center_box.remove(self.label2)
-                    self.right_box.insert_child_after(self.label2, None)
-                elif label2_use_old == 2 and self.temp_out2 == 1:
-                    self.right_box.remove(self.label2)
-                    self.center_box.append(self.label2)
-                self.temp_out2 = None
-                self._configuration["panel"]["label2"] = self.label2_use
-                if self.label2_use == 0:
-                    self.terminate_thread(2)
-                    self.set_timer_label2()
+            # if self.temp_out1 != None and self.temp_out1 != self.label1_use:
+                # self.label1_use = int(self.temp_out1)
+                # self.temp_out1 = None
+                # self._configuration["panel"]["label1"] = self.label1_use
+                # self.terminate_thread(1)
+                # # self.set_timer_label1()
+            # if self.temp_out2 != None and self.temp_out2 != self.label2_use:
+                # label2_use_old = self.label2_use
+                # self.label2_use = int(self.temp_out2)
+                # if label2_use_old == 0 and self.temp_out2 == 1:
+                    # self.center_box.append(self.label2)
+                    # self.set_timer_label2()
+                # elif label2_use_old == 0 and self.temp_out2 == 2:
+                    # self.right_box.insert_child_after(self.label2, None)
+                    # self.set_timer_label2()
+                # elif label2_use_old == 1 and self.temp_out2 == 2:
+                    # self.center_box.remove(self.label2)
+                    # self.right_box.insert_child_after(self.label2, None)
+                # elif label2_use_old == 2 and self.temp_out2 == 1:
+                    # self.right_box.remove(self.label2)
+                    # self.center_box.append(self.label2)
+                # self.temp_out2 = None
+                # self._configuration["panel"]["label2"] = self.label2_use
+                # if self.label2_use == 0:
+                    # self.terminate_thread(2)
+                    # self.set_timer_label2()
             if self.service_tray_menu_width_tmp != None:
                 self.service_tray_menu_width = self.service_tray_menu_width_tmp
                 self.service_conf["tray-menu-width"] = self.service_tray_menu_width_tmp
@@ -6192,42 +6197,42 @@ class DialogConfiguration(Gtk.Dialog):
             # clip_sw.connect('changed', self.on_switch, None, "clipboard")
             clip_sw.connect("notify::selected-item", self.on_switch, "clipboard")
             self.page1_box.attach_next_to(clip_sw,clip_lbl,1,1,1)
-        # label1
-        label1_lbl = Gtk.Label(label=WBTXT11)
-        label1_lbl.set_tooltip_text(WBTXT12)
-        self.page1_box.attach(label1_lbl,0,6,1,1)
-        label1_lbl.set_halign(1)
-        # out1_sw = Gtk.Switch.new()
-        # out1_sw = Gtk.ComboBoxText.new()
-        # out1_sw.append_text(WBNO)
-        # out1_sw.append_text(WBYES)
-        # out1_sw.set_active(self._parent.label1_use)
-        out1_sw = Gtk.DropDown.new_from_strings([WBNO,WBYES])
-        out1_sw.set_selected(self._parent.label1_use)
-        # out1_sw.set_halign(1)
-        # out1_sw.connect('changed', self.on_switch, None, "out1")
-        out1_sw.connect("notify::selected-item", self.on_switch, "out1")
-        self.page1_box.attach_next_to(out1_sw,label1_lbl,1,1,1)
-        # label2
-        label2_lbl = Gtk.Label(label=WBTXT13)
-        label2_lbl.set_tooltip_text(WBTXT14)
-        self.page1_box.attach(label2_lbl,0,7,1,1)
-        label2_lbl.set_halign(1)
-        # label2_combo = Gtk.ComboBoxText.new()
-        # label2_combo.append_text(WBOFF)
-        # label2_combo.append_text(WBCENTER)
-        # label2_combo.append_text(WBRIGHT)
-        # label2_combo.set_active(self._parent.label2_use)
-        label2_combo = Gtk.DropDown.new_from_strings([WBOFF,WBCENTER,WBRIGHT])
-        label2_combo.set_selected(self._parent.label2_use)
-        self.page1_box.attach_next_to(label2_combo,label2_lbl,1,1,1)
-        # label2_combo.connect('changed', self.on_label2_combo)
-        label2_combo.connect("notify::selected-item", self.on_label2_combo)
-        # out2_sw = Gtk.Switch.new()
-        # out2_sw.set_active(self._parent.label2_use)
-        # out2_sw.set_halign(1)
-        # out2_sw.connect('notify::active', self.on_switch, "out2")
-        # self.page1_box.attach_next_to(out2_sw,label2_lbl,1,1,1)
+        # # label1
+        # label1_lbl = Gtk.Label(label=WBTXT11)
+        # label1_lbl.set_tooltip_text(WBTXT12)
+        # self.page1_box.attach(label1_lbl,0,6,1,1)
+        # label1_lbl.set_halign(1)
+        # # out1_sw = Gtk.Switch.new()
+        # # out1_sw = Gtk.ComboBoxText.new()
+        # # out1_sw.append_text(WBNO)
+        # # out1_sw.append_text(WBYES)
+        # # out1_sw.set_active(self._parent.label1_use)
+        # out1_sw = Gtk.DropDown.new_from_strings([WBNO,WBYES])
+        # out1_sw.set_selected(self._parent.label1_use)
+        # # out1_sw.set_halign(1)
+        # # out1_sw.connect('changed', self.on_switch, None, "out1")
+        # out1_sw.connect("notify::selected-item", self.on_switch, "out1")
+        # self.page1_box.attach_next_to(out1_sw,label1_lbl,1,1,1)
+        # # label2
+        # label2_lbl = Gtk.Label(label=WBTXT13)
+        # label2_lbl.set_tooltip_text(WBTXT14)
+        # self.page1_box.attach(label2_lbl,0,7,1,1)
+        # label2_lbl.set_halign(1)
+        # # label2_combo = Gtk.ComboBoxText.new()
+        # # label2_combo.append_text(WBOFF)
+        # # label2_combo.append_text(WBCENTER)
+        # # label2_combo.append_text(WBRIGHT)
+        # # label2_combo.set_active(self._parent.label2_use)
+        # label2_combo = Gtk.DropDown.new_from_strings([WBOFF,WBCENTER,WBRIGHT])
+        # label2_combo.set_selected(self._parent.label2_use)
+        # self.page1_box.attach_next_to(label2_combo,label2_lbl,1,1,1)
+        # # label2_combo.connect('changed', self.on_label2_combo)
+        # label2_combo.connect("notify::selected-item", self.on_label2_combo)
+        # # out2_sw = Gtk.Switch.new()
+        # # out2_sw.set_active(self._parent.label2_use)
+        # # out2_sw.set_halign(1)
+        # # out2_sw.connect('notify::active', self.on_switch, "out2")
+        # # self.page1_box.attach_next_to(out2_sw,label2_lbl,1,1,1)
         
         # # taskmanager
         # task_lbl = Gtk.Label(label="Task manager")
