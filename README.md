@@ -20,7 +20,7 @@ Features:
 - notifications (with history)
 - polkit agent (gtk4 version)
 - calendar appointments (gtk3 version)
-- two command outputs
+- two command outputs (gtk3 version)
 - sticky notes (gtk3 version)
 - a timer (gtk3 version)
 - a menu editor
