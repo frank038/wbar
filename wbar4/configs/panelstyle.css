@@ -140,26 +140,7 @@ grid {
 }*/
 
 /* the volume widget */
-#vollevelbar {
-  padding-top: 0px;
-  padding-bottom: 0px;
-  margin-top: 0px;
-  margin-bottom: 0px;
-}
-
-/* #vollevelbar trough */
-/* #vollevelbar trough highlight */
-#vollevelbar trough {
-  background: white;
-}
-
-#vollevelbar slider {
-  background: #00000000;
-  min-height: 20px;
-}
-
-/*#vollevelbar trough, progress {
-  background-color: white;
+/*#volumelevelbar {
 }*/
 
 /* the menu window */
@@ -338,6 +319,15 @@ grid {
 #yndialog {
   border-radius: 10px 10px 10px 10px;
   border-width: 0px;
+  border-color: @border_color;
+  border-style: solid;
+}
+
+/* the polkit agent */
+#polkitgtk4 {
+  padding: 10px;
+  border-radius: 12px;
+  border-width: 1px;
   border-color: @border_color;
   border-style: solid;
 }
