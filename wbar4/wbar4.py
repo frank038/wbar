@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 1.6
+# V. 1.6.1
 
 VOLBAR_WIDTH = 100
 VOLBAR_HEIGHT = -1
@@ -7375,7 +7375,8 @@ class Notifier(Service.Object):
         self._win.da_gesture_l = Gtk.GestureClick.new()
         self._win.da_gesture_l.set_button(1)
         self._win.add_controller(self._win.da_gesture_l)
-        self._win.da_gesture_l.connect('released', self.on_da_gesture_l, self._win)
+        if NOTIFICATION_FADE == 0:
+            self._win.da_gesture_l.connect('released', self.on_da_gesture_l, self._win)
         #
         if _pixbuf:
             texture = Gdk.Texture.new_for_pixbuf(_pixbuf)
@@ -7506,6 +7507,7 @@ class Notifier(Service.Object):
             win.set_opacity(_opacity+0.20)
             return True
         else:
+            self._win.da_gesture_l.connect('released', self.on_da_gesture_l, self._win)
             return False
     
     # action button pressed
