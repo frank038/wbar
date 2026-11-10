@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 1.2.3
+# V. 1.2.4
 
 USE_CAT_SYMBOLIC = 0
 USE_VOL_IMAGE = 0
@@ -640,7 +640,8 @@ def _f_populate_menu():
             continue
         else:
             the_menu.append([_el_name,_el_cat,_el_exec,_el_icon,_el_comment,_el_path,_el])
-
+    the_menu.sort()
+    
 # build the menu at start
 _f_populate_menu()
 
