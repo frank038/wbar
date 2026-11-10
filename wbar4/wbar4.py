@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 1.6.1
+# V. 1.6.2
 
 VOLBAR_WIDTH = 100
 VOLBAR_HEIGHT = -1
@@ -64,6 +64,7 @@ if _USE_PIL == 1:
 QUIT = False
 
 _curr_dir = os.getcwd()
+main_app = None
 
 def _error_log(_error):
     pass
@@ -181,14 +182,14 @@ if USE_VOLUME == 1:
 _starting_conf = {"panel":{"height":30,"width":0,"corner-top":30,\
     "corner-bottom":0,"position":1,"clipboard":1,\
     "label1":0,"label2":0,"tasklist":1,"clock":2,"time_format":0,\
-    "volume_command":""} }
+    "volume_command":"","use_xhost":0} }
 
 if is_wayland:
     if not shutil.which("wl-paste"):
         _starting_conf["panel"]["clipboard"] = 0
 
 _panelconf = os.path.join(_curr_dir, "configs/panelconfg.json")
-
+USE_XHOST = 0
 
 # screen = Gdk.Screen.get_default()
 # provider = Gtk.CssProvider()
@@ -658,7 +659,7 @@ def _f_populate_menu():
             continue
         else:
             the_menu.append([_el_name,_el_cat,_el_exec,_el_icon,_el_comment,_el_path,_el])
-            
+    the_menu.sort()
 
 class SignalObject(GObject.Object):
     
@@ -862,6 +863,8 @@ class MyWindow(Gtk.ApplicationWindow):
         self.load_conf()
         
         _panel_conf = self._configuration["panel"]
+        global USE_XHOST
+        USE_XHOST = _panel_conf["use_xhost"]
         
         if is_wayland:
             if not shutil.which("wl-paste"):
@@ -4228,6 +4231,8 @@ class menuWin(Gtk.Window):
         super().__init__()
         
         self._parent = parent
+        global main_app
+        main_app = self
         
         self.set_transient_for(self._parent)
         # self.set_modal(True)
@@ -4345,7 +4350,6 @@ class menuWin(Gtk.Window):
             self.scrolledwindow.set_child(self.iconview)
             self.iconview.connect('row-activated', self.on_iv_item_activated)
         
-        #
         self.gesture_iv = Gtk.GestureClick.new()
         self.gesture_iv.set_button(3)
         self.iconview.add_controller(self.gesture_iv)
@@ -4660,7 +4664,8 @@ class menuWin(Gtk.Window):
             pass
     
     def on_populate_menu(self):
-        _f_populate_menu()
+        if the_menu == []:
+            _f_populate_menu()
     
     def rebuild_menu(self):
         if self._parent.MW:
@@ -4697,6 +4702,8 @@ class menuWin(Gtk.Window):
             return
         if len(_text) < _n_chars_search:
             return
+        elif len(_text) == _n_chars_search:
+            GLib.idle_add(self.empty_iconview)
         else:
             if self._btn_toggled:
                 self._btn_toggled.set_active(False)
@@ -4936,7 +4943,7 @@ class menuWin(Gtk.Window):
             for _item in self.bookmarks:
                 self.f_menu_item(_item)
             return
-        
+        # [_el_name,_el_cat,_el_exec,_el_icon,_el_comment,_el_path,_el])
         for el in the_menu:
             if el[1] == cat_name:
                 _i = self._find_the_icon(el[3])
@@ -5736,6 +5743,7 @@ class otherWin(Gtk.Window):
         self.main_box.append(self.btn_box)
         
         conf_btn = Gtk.Button(label=WBCONFIGURATOR)
+        conf_btn.set_hexpand(True)
         conf_btn.connect('clicked', self.on_conf_btn)
         self.btn_box.append(conf_btn)
         
@@ -6287,6 +6295,15 @@ class DialogConfiguration(Gtk.Dialog):
             # volume_entry.set_text(self._parent.volume_command)
             # volume_entry.connect('changed', self.on_volume_entry)
             # self.page1_box.attach_next_to(volume_entry,volume_lbl,1,1,1)
+        # xhost
+        xhost_lbl = Gtk.Label(label=WBTXT109)
+        xhost_lbl.set_tooltip_text(WBTXT110)
+        self.page1_box.attach(xhost_lbl,0,11,1,1)
+        xhost_lbl.set_halign(1)
+        xhost_sw = Gtk.DropDown.new_from_strings([WBNO,WBYES])
+        xhost_sw.set_selected(USE_XHOST)
+        xhost_sw.connect("notify::selected-item", self.on_xhost_combo)
+        self.page1_box.attach_next_to(xhost_sw,xhost_lbl,1,1,1)
         
         ## MENU
         menu_lbl_w = Gtk.Label(label=WBTXT21)
@@ -6708,15 +6725,15 @@ class DialogConfiguration(Gtk.Dialog):
         _pad_spinbtn.connect('value-changed', self.on_other_spinbtn, "pad")
         _pad_spinbtn.set_numeric(True)
         
-        _lbl_audio_start_lvl = Gtk.Label(label=WBTXT80)
-        _lbl_audio_start_lvl.set_tooltip_text(WBTXT81)
-        self.page6_box.attach(_lbl_audio_start_lvl,0,2,1,1)
-        _lbl_audio_start_lvl.set_halign(1)
-        _audio_lvl_spinbtn = Gtk.SpinButton.new_with_range(0,50,1)
-        _audio_lvl_spinbtn.set_value(_AUDIO_START_LEVEL)
-        self.page6_box.attach_next_to(_audio_lvl_spinbtn,_lbl_audio_start_lvl,1,1,1)
-        _audio_lvl_spinbtn.connect('value-changed', self.on_other_spinbtn, "audio_level")
-        _audio_lvl_spinbtn.set_numeric(True)
+        # _lbl_audio_start_lvl = Gtk.Label(label=WBTXT80)
+        # _lbl_audio_start_lvl.set_tooltip_text(WBTXT81)
+        # self.page6_box.attach(_lbl_audio_start_lvl,0,2,1,1)
+        # _lbl_audio_start_lvl.set_halign(1)
+        # _audio_lvl_spinbtn = Gtk.SpinButton.new_with_range(0,50,1)
+        # _audio_lvl_spinbtn.set_value(_AUDIO_START_LEVEL)
+        # self.page6_box.attach_next_to(_audio_lvl_spinbtn,_lbl_audio_start_lvl,1,1,1)
+        # _audio_lvl_spinbtn.connect('value-changed', self.on_other_spinbtn, "audio_level")
+        # _audio_lvl_spinbtn.set_numeric(True)
         
         _lbl_use_volume = Gtk.Label(label=WBTXT82)
         self.page6_box.attach(_lbl_use_volume,0,3,1,1)
@@ -6925,6 +6942,11 @@ class DialogConfiguration(Gtk.Dialog):
     def on_time_combo_use(self, cb, _d):
         # self._parent.on_time_combo_use(cb.get_active())
         self._parent.on_time_combo_use(cb.get_selected())
+        
+    def on_xhost_combo(self, cb, _d):
+        global USE_XHOST
+        USE_XHOST = cb.get_selected()
+        self._parent._configuration["panel"]["use_xhost"] = USE_XHOST
         
     def on_time_combo(self, cb, _d):
         # self._parent.on_time_combo(cb.get_active())
@@ -8223,9 +8245,55 @@ class PolkitWindow(Gtk.Window):
         # signal.signal(signal.SIGTERM, self.sigtype_handler)
         #
         self.connect("realize", self.on_realize)
+        self.connect("unmap", self.on_unmap)
         #
-        self.present()
-        self.entry.grab_focus()
+        if USE_XHOST:
+            try:
+                subprocess.Popen(["xhost","+SI:localuser:root"], env=os.environ.copy()) # xhost + local: # xhost +SI:localuser:root
+            except:
+                pass
+        ret = self.check_permissions("org.freedesktop.policykit.exec")
+        if ret == "pkauthorized":
+            self.present()
+            self.entry.grab_focus()
+        else:
+            self.destroy()
+    
+    def on_unmap(self, _w):
+        GLib.timeout_add(10000, self.on_unmap_f)
+        
+    def on_unmap_f(self):
+        if USE_XHOST:
+            try:
+                subprocess.Popen(["xhost","-SI:localuser:root"], env=os.environ.copy()) # xhost + local: # xhost +SI:localuser:root
+            except:
+                pass
+    
+    def check_permissions(self, action_id):
+        authority = Polkit.Authority.get_sync(None)
+        # Polkit.Authority.get_async(None, callback_funzione, data)
+        subject = Polkit.UnixProcess.new_for_owner(os.getpid(), 0, -1)
+        try:
+            result = authority.check_authorization_sync(
+                subject,
+                action_id,
+                None,
+                Polkit.CheckAuthorizationFlags.NONE,
+                None
+            )
+            if result.get_is_authorized():
+                # print("✅ The user is already authorized for: {}".format(action_id))
+                return True
+            elif result.get_is_challenge():
+                # print("🔑 The user is authorized for: {}".format(action_id))
+                return "pkauthorized"
+            else:
+                # print("❌ The user cannot access for: {}".format(action_id))
+                main_app.msg_simple(PKNOAUTH)
+                return False
+        except Exception as E:
+            main_app.msg_simple("{}:\n{}".format(PKERROR,str(E)))
+            return False
     
     # def sigtype_handler(self, sig, frame):
         # if sig == signal.SIGINT or sig == signal.SIGTERM:
