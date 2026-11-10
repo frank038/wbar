@@ -40,7 +40,8 @@ Requirements:
 - gtk-launch command line (gtk4 version)
 - wl-clipboard for the clipboard (wl-paste and wl-copy are needed)
 - pactl for volume applet (gtk4 version; amixer is supported; read below for more)
-- pyqt6 for the internal menu editor and for the applets
+- pyqt6 for the internal menu editor and for the applets (gtk3 version)
+- xhost (the command line): added the ability to use xhost to give user the access right; that right is removed after ten seconds
 
 How to use:
 - just unzip the archive and launch waybar_launch.sh/waybar.sh
