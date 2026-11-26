@@ -60,6 +60,9 @@ class MainWindow(Gtk.ApplicationWindow):
         btn_close.connect("clicked", lambda w: self.destroy())
         ####
         self.main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        self.main_box.set_margin_start(4)
+        self.main_box.set_margin_end(4)
+        self.main_box.set_margin_bottom(4)
         self.set_child(self.main_box)
         #
         self.grid1 = Gtk.Grid.new()
