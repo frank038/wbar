@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 1.6.2
+# V. 1.6.4
 
 VOLBAR_WIDTH = 100
 VOLBAR_HEIGHT = -1
@@ -2612,7 +2612,7 @@ class MyWindow(Gtk.ApplicationWindow):
                 if 'IconName' in _found[1]:
                     _icon = _found[1]['IconName']
                     try:
-                        _pb = icon_theme.lookup_icon(_icon, None, self._app_icon_size, 1, Gtk.TextDirection.NONE, Gtk.IconLookupFlags.FORCE_REGULAR)
+                        _pb = icon_theme.lookup_icon(_icon+"-symbolic", [_icon], self._app_icon_size, 1, Gtk.TextDirection.NONE, Gtk.IconLookupFlags.FORCE_REGULAR)
                     except:
                         _pb = None
                 #
@@ -2623,7 +2623,9 @@ class MyWindow(Gtk.ApplicationWindow):
                             _icon_w = _found[1]['IconPixmap'][0][0]
                             _icon_h = _found[1]['IconPixmap'][0][1]
                 #
-                if 'ToolTip' in _found[1]:
+                if 'IconAccessibleDesc' in _found[1]:
+                    _label = _found[1]['IconAccessibleDesc']
+                elif 'ToolTip' in _found[1]:
                     _label = _found[1]['ToolTip'][2]
                 elif 'Title' in _found[1]:
                     _label = _found[1]['Title']
@@ -2712,13 +2714,16 @@ class MyWindow(Gtk.ApplicationWindow):
                                                 self._set_icon(_pb, sender)
                                             #
                                             # self._set_icon(_icon, sender)
-
                                         #
+                                        if key == 'IconAccessibleDesc':
+                                            _tooltip = item['IconAccessibleDesc']
+                                            self._set_tooltip(_tooltip, sender)
                                         elif key == 'ToolTip':
                                             _tooltip = item['ToolTip'][2]
                                             self._set_tooltip(_tooltip, sender)
                                         elif key == 'Title':
-                                            pass
+                                            _tooltip = item['Title']
+                                            self._set_tooltip(_tooltip, sender)
                                         elif key == 'Status':
                                             _status = item['Status']
                                             if _status in ['Active', 'Attention']:
@@ -2773,117 +2778,117 @@ class MyWindow(Gtk.ApplicationWindow):
                 old_items = items.copy()
                 return
     
-    def _item_changed22(self, sender, path):
-        global items
-        global old_items
-        # 
-        if len(items) > len(old_items):
-            _path = sender+path
-            _found = [_path, items[_path]]
-            #
-            old_items = items.copy()
-            #
-            if _found:
-                if 'Status' in _found[1]:
-                    _status = _found[1]['Status']
-                    if _status == 'Passive':
-                        return
-                #
-                _icon = _found[1]['IconName']
-                #
-                if 'ToolTip' in _found[1]:
-                    _label = _found[1]['ToolTip'][2]
-                elif 'Title' in _found[1]:
-                    _label = _found[1]['Title']
-                else:
-                    _label = ""
-                #
-                _name = _found[0].split("/")[0]
-                _path =  "/"+"/".join(_found[0].split("/")[1:])
-                if 'Menu' in _found[1]:
-                    _menu = _found[1]['Menu']
-                else:
-                    _menu = None
-                #
-                self.add_btn(_label, _name, _path, _menu)
-                # 
-                self._set_icon(_icon, _name)
-            #
-            return
-        # 
-        elif len(items) < len(old_items):
-            _found = []
-            for k,v in old_items.items():
-                if items == {}:
-                    _found = [k,v]
-                    break
-                else:
-                    if k not in items:
-                        _found = [k,v]
-                        break
-            #
-            if _found:
-                # remove button
-                sender = k.split("/")[0]
-                self.remove_btn(sender)
-                #
-                old_items = items.copy()
-                return
-        #
-        else:
-            _path = sender+path
-            if _path in items:
-                item = items[_path]
-                #
-                old_item = None
-                if _path in old_items:
-                    old_item = old_items[_path]
-                if old_item:
-                    if item != old_item:
-                        for key,v in item.items():
-                            for kk,vv in old_item.items():
-                                if key == kk:
-                                    if v != vv:
-                                        if key == 'IconName':
-                                            _icon = item['IconName']
-                                            self._set_icon(_icon, sender)
-                                        # elif key == 'IconPixmap':
+    # def _item_changed22(self, sender, path):
+        # global items
+        # global old_items
+        # # 
+        # if len(items) > len(old_items):
+            # _path = sender+path
+            # _found = [_path, items[_path]]
+            # #
+            # old_items = items.copy()
+            # #
+            # if _found:
+                # if 'Status' in _found[1]:
+                    # _status = _found[1]['Status']
+                    # if _status == 'Passive':
+                        # return
+                # #
+                # _icon = _found[1]['IconName']
+                # #
+                # if 'ToolTip' in _found[1]:
+                    # _label = _found[1]['ToolTip'][2]
+                # elif 'Title' in _found[1]:
+                    # _label = _found[1]['Title']
+                # else:
+                    # _label = ""
+                # #
+                # _name = _found[0].split("/")[0]
+                # _path =  "/"+"/".join(_found[0].split("/")[1:])
+                # if 'Menu' in _found[1]:
+                    # _menu = _found[1]['Menu']
+                # else:
+                    # _menu = None
+                # #
+                # self.add_btn(_label, _name, _path, _menu)
+                # # 
+                # self._set_icon(_icon, _name)
+            # #
+            # return
+        # # 
+        # elif len(items) < len(old_items):
+            # _found = []
+            # for k,v in old_items.items():
+                # if items == {}:
+                    # _found = [k,v]
+                    # break
+                # else:
+                    # if k not in items:
+                        # _found = [k,v]
+                        # break
+            # #
+            # if _found:
+                # # remove button
+                # sender = k.split("/")[0]
+                # self.remove_btn(sender)
+                # #
+                # old_items = items.copy()
+                # return
+        # #
+        # else:
+            # _path = sender+path
+            # if _path in items:
+                # item = items[_path]
+                # #
+                # old_item = None
+                # if _path in old_items:
+                    # old_item = old_items[_path]
+                # if old_item:
+                    # if item != old_item:
+                        # for key,v in item.items():
+                            # for kk,vv in old_item.items():
+                                # if key == kk:
+                                    # if v != vv:
+                                        # if key == 'IconName':
+                                            # _icon = item['IconName']
+                                            # self._set_icon(_icon, sender)
+                                        # # elif key == 'IconPixmap':
+                                            # # pass
+                                        # elif key == 'ToolTip':
+                                            # _tooltip = item['ToolTip'][2]
+                                            # self._set_tooltip(_tooltip, sender)
+                                        # elif key == 'Title':
                                             # pass
-                                        elif key == 'ToolTip':
-                                            _tooltip = item['ToolTip'][2]
-                                            self._set_tooltip(_tooltip, sender)
-                                        elif key == 'Title':
-                                            pass
-                                        elif key == 'Status':
-                                            _status = item['Status']
-                                            if _status in ['Active', 'Attention']:
-                                                # create a button
-                                                if 'ToolTip' in item:
-                                                    _label = item['ToolTip'][2]
-                                                elif 'Title' in item:
-                                                    _label = item['Title']
-                                                else:
-                                                    _label = ""
-                                                if 'Menu' in item:
-                                                    _menu = item['Menu']
-                                                else:
-                                                    _menu = None
-                                                #
-                                                self.add_btn(_label, sender, path, _menu)
-                                                # set the icon and tooltip
-                                                self._set_icon(_icon, sender)
-                                            #
-                                            else:
-                                                self.remove_btn(sender)
-                                        elif key == 'AttentionIconName':
-                                            pass
-                                        elif key == 'OverlayIconName':
-                                            pass
-                                        # elif key == 'IconThemePath':
+                                        # elif key == 'Status':
+                                            # _status = item['Status']
+                                            # if _status in ['Active', 'Attention']:
+                                                # # create a button
+                                                # if 'ToolTip' in item:
+                                                    # _label = item['ToolTip'][2]
+                                                # elif 'Title' in item:
+                                                    # _label = item['Title']
+                                                # else:
+                                                    # _label = ""
+                                                # if 'Menu' in item:
+                                                    # _menu = item['Menu']
+                                                # else:
+                                                    # _menu = None
+                                                # #
+                                                # self.add_btn(_label, sender, path, _menu)
+                                                # # set the icon and tooltip
+                                                # self._set_icon(_icon, sender)
+                                            # #
+                                            # else:
+                                                # self.remove_btn(sender)
+                                        # elif key == 'AttentionIconName':
                                             # pass
-                                    #
-                old_items = items.copy()
-                return
+                                        # elif key == 'OverlayIconName':
+                                            # pass
+                                        # # elif key == 'IconThemePath':
+                                            # # pass
+                                    # #
+                # old_items = items.copy()
+                # return
     
     def render(self, sender, path):
         self._item_changed(sender, path)
@@ -5670,7 +5675,7 @@ class otherWin(Gtk.Window):
             
             _remove_btn = Gtk.Button()
             try:
-                _pb = icon_theme.lookup_icon("gtk-delete", None, 24, 1, Gtk.TextDirection.NONE, Gtk.IconLookupFlags.FORCE_REGULAR)
+                _pb = icon_theme.lookup_icon("remove",["edit-delete","gtk-delete","editdelete"], 24, 1, Gtk.TextDirection.NONE, Gtk.IconLookupFlags.FORCE_REGULAR)
                 _remove_btn.set_child(Gtk.Image.new_from_paintable(_pb))
             except:
                 _remove_btn.set_label("X")
@@ -7175,6 +7180,8 @@ class Notifier(Service.Object):
         self._not_counter = 1
         self._not_data = self._parent.not_data
         self.this_pix = None
+        #
+        self.not_count = 0
     
     @Service.method("org.freedesktop.Notifications", out_signature="as")
     def GetCapabilities(self):
@@ -7293,18 +7300,27 @@ class Notifier(Service.Object):
                 self._not_data.put(NOTIFICATION_DATA)
             return
         else:
+            if _found_same_id == 1:
+                _found_same_el.close()
             # skip applications not to show
             if _appname not in self._parent.not_skip_apps:
                 _d = (0, self._y, _appname, _icon, _summ, _body, _timeout, _hints, _actions, _replaceid)
-                self.create_not_win(_d, _urgency)
-            if _found_same_id == 1:
-                _found_same_el.close()
-            # do not write on disc - do not list
-            if _appname not in self._parent.not_skip_apps2:
-                NOTIFICATION_DATA = [_appname,_summ, _body, self.this_pix]
-                self._not_data.put(NOTIFICATION_DATA)
+                self.not_count += 1
+                # self.create_not_win(_d, _urgency)
+                # NotWin(self, _d, _urgency)
+                GLib.timeout_add((self.not_count-1)*1000+10, self.on_show_notification, _d, _urgency) 
+            # # do not write on disc - do not list
+            # if _appname not in self._parent.not_skip_apps2:
+                # NOTIFICATION_DATA = [_appname,_summ, _body, self.this_pix]
+                # self._not_data.put(NOTIFICATION_DATA)
         #
         return 1
+        
+    def on_show_notification(self, _d, _urgency):
+        # if self.not_count == 1:
+            # return True
+        NotWin(self, _d, _urgency)
+        return False
         
     # _data = (0, self._y, _appname, _icon, _summ, _body, _timeout, _hints, _actions, _replaceid)
     def create_not_win(self, _data, _urgency):
@@ -7574,10 +7590,10 @@ class Notifier(Service.Object):
         # # self._win.close()
         # w.close()
     
-    def on_show(self, widget):
-        # self._surface = self.get_surface()
-        self._surface = widget.get_surface()
-        self.surface_id_connect = self._surface.connect("layout",self.on_surface)
+    # def on_show(self, widget):
+        # # self._surface = self.get_surface()
+        # self._surface = widget.get_surface()
+        # self.surface_id_connect = self._surface.connect("layout",self.on_surface)
     
     def on_surface(self, _srf,ww,hh):
         # self.old_width = self.get_width()
@@ -7593,7 +7609,10 @@ class Notifier(Service.Object):
         self._y += (_NW_height+self._parent.not_pad_pixels)
         #
         self.list_notifications.append([self._win, self.__replaceid, self._y])
-    
+        #
+        self.not_count -= 1
+        self.not_count = max(0, self.not_count)
+        
     def on_win_realize(self, w):
         # self._surface = self.get_surface()
         self._surface = w.get_surface()
@@ -7762,6 +7781,511 @@ class Notifier(Service.Object):
             except:
                 pass
         elif self._parent.not_sounds not in [1,2] and SOUND_PLAYER == 1:
+            _player = self._parent.not_sounds
+            try:
+                os.system("{0} {1} &".format(_player, _sound))
+            except:
+                pass
+    
+    def on_fade_out_notification(self, nw):
+        _opacity = nw.get_opacity()
+        if _opacity > 0:
+            nw.set_opacity(_opacity-0.20)
+            return True
+        else:
+            nw.close()
+            return False
+    
+    def on_close_notification(self, nw):
+        if NOTIFICATION_FADE == 1:
+            GLib.timeout_add(50, self.on_fade_out_notification, nw)
+        else:
+            nw.close()
+        
+    def _close_notification(self,_t,nw):
+        GLib.timeout_add(_t, self.on_close_notification, nw)
+    
+
+class NotWin():
+    def __init__(self, _parent, _data, _urgency):
+    # # _data = (0, self._y, _appname, _icon, _summ, _body, _timeout, _hints, _actions, _replaceid)
+    # def create_not_win(self, _data, _urgency):
+        self._parent = _parent
+        _x = _data[0]
+        # if self._parent.list_notifications:
+            # # _y = self._parent.list_notifications[-1][-1]
+            # _y = self._parent._y
+        # else:
+            # _y = _data[1]
+        _y = self._parent._y
+        _appname = dbus_to_python(_data[2])
+        _icon = _data[3] # path or None
+        _summary = dbus_to_python(_data[4])
+        _body = dbus_to_python(_data[5])
+        _timeout = dbus_to_python(_data[6])
+        _hints = _data[7]
+        _actions = _data[8]
+        _replaceid = _data[9]
+        self.__replaceid = _replaceid
+        #
+        _is_transient = _on_hints(_hints, "transient")
+        self._not_path = os.path.join(_curr_dir,"mynots")
+        _ICON_SIZE = self._parent._parent.not_icon_size
+        #
+        _pixbuf = None
+        _desktop_entry = _on_hints(_hints, "desktop-entry")
+        ret_icon = None
+        #
+        if _desktop_entry:
+            ret_icon = self._on_desktop_entry(os.path.basename(_desktop_entry))
+        # _not_name =  str(int(time.time()))
+        # _notification_path = os.path.join(self._not_path, _not_name)
+        _pixbuf_data = self._find_icon(ret_icon, _icon, _hints, _ICON_SIZE)
+        _pixbuf = None
+        _pixbuf_rounded = 1
+        if _pixbuf_data != None:
+            _pixbuf = _pixbuf_data[0]
+            # 0 for images - 1 from iconTheme
+            _pixbuf_rounded = _pixbuf_data[1]
+        #
+        self.this_pix = _pixbuf
+        #############
+        # global LIST_NOTIFICATIONS
+        # write the notification content
+        if not _appname in self._parent._parent.not_skip_apps2:
+            if not _is_transient and STORE_NOTIFICATIONS:
+                try:
+                    # _not_item = {"_app":_appname, "_summ": _summary,"_body": _body}
+                    # LIST_NOTIFICATIONS.insert(0, [_not_name, _not_item])
+                    #
+                    # if os.access(self._not_path,os.W_OK):
+                        # os.makedirs(_notification_path)
+                        # ff = open(os.path.join(_notification_path,"notification"), "w")
+                        # ff.write(_appname+"\n\n\n@\n\n\n"+_summary+"\n\n\n@\n\n\n"+_body)
+                        # ff.close()
+                        # if _pixbuf:
+                            # _pixbuf.savev(os.path.join(_notification_path,"image.png"),"png",None,None)
+                        # # if not self._parent.not_alert_img.get_visible():
+                        # # do not show whether do not disturb is setted - just to not make too much confusion in the bar
+                    #
+                    if self._parent._parent.not_do_not_disturb == 0:
+                        self._parent._parent.not_alert_img.set_visible(True)
+                    else:
+                        self._parent._parent.to_show_alert_img = 1
+                    # counter
+                    self._parent._parent.not_to_read += 1
+                except:
+                    pass
+        # only register - do not show
+        if _x == -99999:
+            # self._win.destroy()
+            return
+        ###########
+        self._win = Gtk.Window()
+        self._win.set_size_request(self._parent._parent.not_width, self._parent._parent.not_height)
+        #
+        GtkLayerShell.init_for_window(self._win)
+        GtkLayerShell.set_namespace(self._win, "notificationwin")
+        GtkLayerShell.set_margin(self._win, GtkLayerShell.Edge.RIGHT, 6 + _x)
+        GtkLayerShell.set_margin(self._win, GtkLayerShell.Edge.TOP, 6 + _y)
+        GtkLayerShell.set_anchor(self._win, GtkLayerShell.Edge.TOP, 1)
+        GtkLayerShell.set_anchor(self._win, GtkLayerShell.Edge.RIGHT, 1)
+        GtkLayerShell.set_layer(self._win, GtkLayerShell.Layer.OVERLAY)
+        GtkLayerShell.set_keyboard_mode(self._win, GtkLayerShell.KeyboardMode.NONE)
+        #
+        self._win.set_name("notificationwin")
+        #
+        self.wmain_box = Gtk.Box.new(1,0)
+        self._win.set_child(self.wmain_box)
+        #
+        self.wbtn_icon_box = Gtk.Box.new(0,0)
+        self.wbtn_icon_box.set_vexpand(True)
+        self.wmain_box.append(self.wbtn_icon_box)
+        #
+        self._win.da_gesture_l = Gtk.GestureClick.new()
+        self._win.da_gesture_l.set_button(1)
+        self._win.add_controller(self._win.da_gesture_l)
+        if NOTIFICATION_FADE == 0:
+            self._win.da_gesture_l.connect('released', self.on_da_gesture_l, self._win)
+        #
+        if _pixbuf:
+            texture = Gdk.Texture.new_for_pixbuf(_pixbuf)
+            ##
+            if (self._parent._parent.not_rounded_img == 1 and _pixbuf_rounded == 0) or self._parent._parent.not_rounded_img == 2:
+                _snapshot = Gtk.Snapshot.new()
+                #
+                _r = Graphene.Rect.alloc()
+                _r.init(0,0,self._parent._parent.not_icon_size,self._parent._parent.not_icon_size)
+                #
+                _rr = Gsk.RoundedRect()
+                _rr.init_from_rect(_r, ((self._parent._parent.not_icon_size2*self._parent._parent.not_icon_roundeness)/2))
+                _rr.normalize()
+                #
+                _snapshot.push_rounded_clip(_rr)
+                _snapshot.append_texture(texture, _r)
+                _snapshot.pop()
+                #
+                _rs = Graphene.Size()
+                _rs.init(self._parent._parent.not_icon_size,self._parent._parent.not_icon_size)
+                texture = _snapshot.to_paintable(_rs)
+            ##
+            _img = Gtk.Image.new_from_paintable(texture)
+            _img.set_pixel_size(self._parent._parent.not_icon_size)
+            _img.set_halign(3)
+            _img.set_valign(3)
+            self.wbtn_icon_box.append(_img)
+        #
+        self.wsecond_box = Gtk.Box.new(1,0)
+        self.wbtn_icon_box.append(self.wsecond_box)
+        self.wsecond_box.set_hexpand(True)
+        # app - summary - body : in second_box vertical
+        if _summary:
+            _lbl_summary = Gtk.Label(label="<b>"+_summary+"</b>")
+            _lbl_summary.set_use_markup(True)
+            _lbl_summary.set_margin_start(4)
+            _lbl_summary.set_margin_end(4)
+            _lbl_summary.set_xalign(0)
+            if _body == "":
+                _lbl_summary.set_vexpand(True)
+            else:
+                _lbl_summary.set_margin_top(4)
+            _lbl_summary.set_wrap(True)
+            _lbl_summary.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
+            # _lbl_summary.set_width_chars(self._notifier._parent.not_max_chars)
+            _lbl_summary.set_max_width_chars(self._parent._parent.not_max_chars)
+            self.wsecond_box.append(_lbl_summary)
+        #
+        if _body:
+            # _lbl_body = Gtk.Label(label=_body)
+            _lbl_body = Gtk.Label()
+            # _lbl_body.set_halign(1)
+            _lbl_body.set_xalign(0)
+            _lbl_body.set_use_markup(True)
+            _lbl_body.set_margin_start(4)
+            _lbl_body.set_margin_end(4)
+            _lbl_body.set_wrap(True)
+            _lbl_body.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
+            if _summary == "":
+                _lbl_body.set_vexpand(True)
+            _lbl_body.set_label(_body)
+            # _lbl_body.set_width_chars(self._notifier._parent.not_max_chars)
+            _lbl_body.set_max_width_chars(self._parent._parent.not_max_chars)
+            _lbl_body.connect('activate-link', self.on_lbl_body_clicked)
+            self.wsecond_box.append(_lbl_body)
+        #
+        self.wmain_box.set_margin_start(_pad)
+        #
+        # action buttons in main_box
+        if _actions:
+            _actions_box = Gtk.Box.new(0,0)
+            self.wmain_box.append(_actions_box)
+            _actions_box.set_halign(3)
+            for _ee in _actions[::2]:
+                btn_name = _actions[_actions.index(_ee)+1]
+                if btn_name == "":
+                    btn_name = MWDEFAULT
+                _btn = Gtk.Button(label=btn_name)
+                _w = _btn.get_child()
+                if isinstance(_w, Gtk.Label):
+                    _w.set_ellipsize(Pango.EllipsizeMode.END)
+                _btn.connect('clicked',self._on_button_callback, _replaceid, _ee, self._win)
+                _actions_box.append(_btn)
+        #
+        self._win.connect('close-request', self.on_close_win,_replaceid)
+        self._win.connect('destroy', self.on_close_win,_replaceid)
+        self._win.connect('realize', self.on_win_realize)
+        #
+        self.surface_id_connect = None
+        self.old_width = None
+        self.old_height = None
+        #
+        if NOTIFICATION_FADE == 1:
+            self._win.set_opacity(0)
+        self._win.set_visible(True)
+        if NOTIFICATION_FADE == 1:
+            self._win.set_opacity(0.20)
+            GLib.timeout_add(50, self.on_fade_in_opacity, self._win)
+        #
+        self._win.present()
+        #
+        if _urgency != 2 and _data[0] != -99999:
+            self._close_notification(_timeout,self._win)
+        #
+        # 0 low - 1 normal - 2 critical
+        _urgency = _on_hints(_hints, "urgency")
+        # sounds
+        _dnd_file = os.path.join(_curr_dir,"do_not_disturb_mode")
+        if self._parent._parent.not_sounds != 0:
+            if not os.path.exists(_dnd_file) or _urgency == 2:
+                _no_sound = _on_hints(_hints, "suppress-sound")
+                _soundfile = _on_hints(_hints, "sound-file")
+                if not _soundfile:
+                    _soundfile = _on_hints(_hints, "sound-name")
+                #
+                if not _no_sound:
+                    if _soundfile:
+                        self.play_sound(_soundfile)
+                    else:
+                        if _urgency == 1 or _urgency == None:
+                            self.play_sound(os.path.join(_curr_dir, "sounds/urgency-normal.wav"))
+                        elif _urgency == 2:
+                            self.play_sound(os.path.join(_curr_dir, "sounds/urgency-critical.wav"))
+        #
+        # do not write on disc - do not list
+        if _appname not in self._parent._parent.not_skip_apps2:
+            NOTIFICATION_DATA = [_appname,_summary, _body, self.this_pix]
+            self._parent._not_data.put(NOTIFICATION_DATA)
+        
+    def on_fade_in_opacity(self, win):
+        _opacity = win.get_opacity()
+        if _opacity < 1:
+            win.set_opacity(_opacity+0.20)
+            return True
+        else:
+            self._win.da_gesture_l.connect('released', self.on_da_gesture_l, self._win)
+            return False
+    
+    # action button pressed
+    def _on_button_callback(self, _btn, _replaceid, _action, win):
+        self._parent.ActionInvoked(_replaceid, _action)
+        win.close()
+    
+    def on_lbl_body_clicked(self, lbl, _url):
+        if _url:
+            _ul = Gtk.UriLauncher.new(_url)
+            _ul.launch(None,None,None,None)
+            #
+            self._parent._parent.not_to_read -= 1
+            if self._parent._parent.not_to_read < 0:
+                self._parent._parent.not_to_read = 0
+            if self._parent._parent.not_to_read == 0:
+                self._parent._parent.not_alert_img.set_visible(False)
+            self.close()
+            #
+            return True
+    
+    def on_da_gesture_l(self, o,n,x,y, win):
+        self._parent._parent.not_to_read -= 1
+        if self._parent._parent.not_to_read < 0:
+            self._parent._parent.not_to_read = 0
+        # if self._parent._parent.not_to_read == 0 and self._parent._parent.to_show_alert_img == 1:
+        if self._parent._parent.not_to_read == 0:
+            self._parent._parent.not_alert_img.set_visible(False)
+        #
+        if NOTIFICATION_FADE == 1:
+            GLib.timeout_add(60, self.on_fade_out_notification, win)
+        else:
+            win.close()
+    
+    def on_close(self,win,_replaceid):
+        self._parent.NotificationClosed(_replaceid, 3)
+        for el in self._parent.list_notifications[:]:
+            if el[0] == win:
+                self._parent.list_notifications.remove(el)
+                if len(self._parent.list_notifications) == 0:
+                    self._parent._y = 0
+                break
+    
+    def on_close_win(self,w,_replaceid):
+        self.on_close(w,_replaceid)
+        # # self._win.close()
+        # w.close()
+    
+    # def on_show(self, widget):
+        # # self._surface = self.get_surface()
+        # self._surface = widget.get_surface()
+        # self.surface_id_connect = self._surface.connect("layout",self.on_surface)
+    
+    def on_surface(self, _srf,ww,hh):
+        # self.old_width = self.get_width()
+        # self.old_height = self.get_height()
+        # self._value = [self.old_width,self.old_height]
+        #
+        if self.surface_id_connect != None:
+            _srf.disconnect(self.surface_id_connect)
+        self.surface_id_connect = None
+        #
+        # _NW_height = self._value[1]
+        # _NW_height = self.old_height
+        _NW_height = self._win.get_height()
+        self._parent._y += (_NW_height+self._parent._parent.not_pad_pixels)
+        #
+        self._parent.list_notifications.append([self._win, self.__replaceid, self._parent._y])
+        #
+        self._parent.not_count -= 1
+        self._parent.not_count = max(0, self._parent.not_count)
+        
+    def on_win_realize(self, w):
+        # self._surface = self.get_surface()
+        self._surface = w.get_surface()
+        self.surface_id_connect = self._surface.connect("layout",self.on_surface)
+        
+        
+    # find the icon from the desktop file
+    def _on_desktop_entry(self, _desktop):
+        app_dirs_user = [os.path.join(os.path.expanduser("~"), ".local/share/applications")]
+        app_dirs_system = ["/usr/share/applications", "/usr/local/share/applications"]
+        _ddir = app_dirs_user+app_dirs_system
+        _icon = None
+        for dd in _ddir:
+            if os.path.exists(dd):
+                for ff in os.listdir(dd):
+                    if os.path.basename(ff) == _desktop+".desktop":
+                        try:
+                            _ap = Gio.DesktopAppInfo.new_from_filename(os.path.join(dd,ff))
+                            _icon = _ap.get_icon()
+                            if _icon:
+                                if isinstance(_icon,Gio.ThemedIcon):
+                                    _icon = _icon.to_string()
+                                elif isinstance(_icon,Gio.FileIcon):
+                                    _icon = _icon.get_file().get_path()
+                                return _icon
+                            else:
+                                return None
+                        except:
+                            return None
+        return None
+    
+    # desktop_icon _icon _hints user_icon_size
+    # priority: image-data image-path/application_icon
+    # return: 0 for images - 1 from iconTheme
+    def _find_icon(self, ret_icon, _icon, _hints, ICON_SIZE):
+        _image_data = _on_hints(_hints, "image-data")
+        _icon_data = _on_hints(_hints, "icon_data")
+        pixbuf = None
+        #
+        if _image_data or _icon_data:
+            if _image_data:
+                _image_data = _image_data
+            else:
+                _image_data = _icon_data
+            try:
+                pixbuf = GdkPixbuf.Pixbuf.new_from_bytes(
+                        width=_image_data[0],
+                        height=_image_data[1],
+                        has_alpha=_image_data[3],
+                        data=GLib.Bytes.new(_image_data[6]),
+                        colorspace=GdkPixbuf.Colorspace.RGB,
+                        rowstride=_image_data[2],
+                        bits_per_sample=_image_data[4],
+                        )
+            except:
+                pass
+            if pixbuf:
+                return [pixbuf.scale_simple(ICON_SIZE,ICON_SIZE,GdkPixbuf.InterpType.BILINEAR), 0]
+        
+        _image_path = _on_hints(_hints, "image-path")
+        if _image_path:
+            if _image_path[0:7] == "file://":
+                _image_path = _image_path[7:]
+            _base_dir = os.path.dirname(_image_path)
+            _base_name = os.path.basename(_image_path)
+            if os.path.exists(_base_dir) and os.path.exists(_image_path):
+                try:
+                    pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(_image_path, ICON_SIZE, ICON_SIZE, 1)
+                except:
+                    pass
+                if pixbuf:
+                    return [pixbuf,0]
+            else:
+                try:
+                    _ret = icon_theme.has_icon(_image_path)
+                    if _ret:
+                        _icon = icon_theme.lookup_icon(_image_path, None, ICON_SIZE, 1, Gtk.TextDirection.NONE, Gtk.IconLookupFlags.FORCE_REGULAR)
+                        # _icon = icon_theme.lookup_icon(_image_path, None, ICON_SIZE, 1, Gtk.TextDirection.NONE, Gtk.IconLookupFlags.FORCE_SYMBOLIC)
+                        file_path = _icon.get_file().get_path()
+                        # 7689 <Gtk.IconPaintable object at 0x7f69a24148c0 (GtkIconPaintable at 0x1449c700)>
+                        # /usr/share/icons/Tela-light/24@2x/panel/nm-signal-100.svg
+                        if os.path.exists(file_path):
+                            pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(file_path, ICON_SIZE, ICON_SIZE, 1)
+                except:
+                    pass
+                if pixbuf:
+                    return [pixbuf,1]
+        
+        if _icon:
+            try:
+                _ret = icon_theme.has_icon(_icon)
+                if _ret:
+                    _iicon = icon_theme.lookup_icon(_icon, None, ICON_SIZE, 1, Gtk.TextDirection.NONE, Gtk.IconLookupFlags.FORCE_REGULAR)
+                    # _iicon = icon_theme.lookup_icon(_icon, None, ICON_SIZE, 1, Gtk.TextDirection.NONE, Gtk.IconLookupFlags.FORCE_SYMBOLIC)
+                    file_path = _iicon.get_file().get_path()
+                    if os.path.exists(file_path):
+                        pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(file_path, ICON_SIZE, ICON_SIZE, 1)
+                else:
+                    _ret = icon_theme.has_icon(_icon+"-symbolic")
+                    if _ret:
+                        _iicon = icon_theme.lookup_icon(_icon+"-symbolic", None, ICON_SIZE, 1, Gtk.TextDirection.NONE, Gtk.IconLookupFlags.FORCE_REGULAR)
+                        # _iicon = icon_theme.lookup_icon(_icon+"-symbolic", None, ICON_SIZE, 1, Gtk.TextDirection.NONE, Gtk.IconLookupFlags.FORCE_SYMBOLIC)
+                        file_path = _iicon.get_file().get_path()
+                        if os.path.exists(file_path):
+                            pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(file_path, ICON_SIZE, ICON_SIZE, 1)
+                    else:
+                        if os.path.exists(_icon):
+                            try:
+                                pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(_icon, ICON_SIZE, ICON_SIZE, 1)
+                            except:
+                                pass
+            except:
+                try:
+                    pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(_icon, ICON_SIZE, ICON_SIZE, 1)
+                except:
+                    pass
+                    # try:
+                        # pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(os.path.join(_curr_dir,"icons","wicon.png"), ICON_SIZE, ICON_SIZE, 1)
+                    # except:
+                        # pass
+            
+            if pixbuf:
+                return [pixbuf,0]
+        
+        if ret_icon:
+            _pix_data = None
+            try:
+                _ret = icon_theme.has_icon(ret_icon)
+                if _ret:
+                    _icon = icon_theme.lookup_icon(ret_icon, None, ICON_SIZE, 1, Gtk.TextDirection.NONE, Gtk.IconLookupFlags.FORCE_REGULAR)
+                    # _icon = icon_theme.lookup_icon(ret_icon, None, ICON_SIZE, 1, Gtk.TextDirection.NONE, Gtk.IconLookupFlags.FORCE_SYMBOLIC)
+                    file_path = _icon.get_file().get_path()
+                    if os.path.exists(file_path):
+                        pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(file_path, ICON_SIZE, ICON_SIZE, 1)
+                        if pixbuf:
+                            _pix_data = [pixbuf, 1]
+                else:
+                    pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(ret_icon, ICON_SIZE, ICON_SIZE, 1)
+                    if pixbuf:
+                        _pix_data = [pixbuf, 0]
+            except:
+                pass
+                # try:
+                    # pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(os.path.join(_curr_dir,"icons","wicon.png"), ICON_SIZE, ICON_SIZE, 1)
+                    # _pix_data = [pixbuf, 0]
+                # except:
+                    # pass
+            #
+            if _pix_data:
+                return _pix_data
+        
+        # try:
+            # pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(os.path.join(_curr_dir,"icons","wicon.png"), ICON_SIZE, ICON_SIZE, 1)
+            # if pixbuf:
+                # return [pixbuf,1]
+        # except:
+            # pass
+        
+        return None
+    
+    def play_sound(self, _sound):
+        if self._parent._parent.not_sounds == 1 and SOUND_PLAYER == 1:
+            try:
+                ctx = GSound.Context()
+                ctx.init()
+                ret = ctx.play_full({GSound.ATTR_EVENT_ID: _sound})
+                if ret == None:
+                    ret = ctx.play_full({GSound.ATTR_MEDIA_FILENAME: _sound})
+            except:
+                pass
+        elif self._parent._parent.not_sounds not in [1,2] and SOUND_PLAYER == 1:
             _player = self._parent.not_sounds
             try:
                 os.system("{0} {1} &".format(_player, _sound))
