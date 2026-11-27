@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 1.6.5
+# V. 1.6.6
 
 VOLBAR_WIDTH = 100
 VOLBAR_HEIGHT = -1
@@ -695,7 +695,8 @@ def _f_populate_menu():
             continue
         else:
             the_menu.append([_el_name,_el_cat,_el_exec,_el_icon,_el_comment,_el_path,_el])
-    the_menu.sort()
+    # the_menu.sort()
+    the_menu.sort(key = lambda val: val[0].lower())
 
 # populate categories
 menu_bookmarks = []
