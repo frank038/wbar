@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 1.6.4
+# V. 1.6.5
 
 VOLBAR_WIDTH = 100
 VOLBAR_HEIGHT = -1
@@ -15,7 +15,7 @@ except:
     except:
         CDLL('./libgtk4-layer-shell.so')
 
-from wbar4lang import *
+# from wbar4lang import *
 import os,sys,shutil,stat
 import gi
 gi.require_version('Gtk', '4.0')
@@ -25,6 +25,8 @@ from gi.repository import Gtk4LayerShell as GtkLayerShell
 from gi.repository import Gtk, Gdk, Gio, GLib, GObject, Pango, Graphene, Gsk
 from gi.repository import GdkPixbuf
 from gi.repository import Gtk4LayerShell as GtkLayerShell
+gi.require_version("Adw","1")
+from gi.repository import Adw
 from pathlib import Path
 import json
 from threading import Thread
@@ -74,6 +76,40 @@ def _error_log(_error):
     # _ff.close()
 
 _HOME = Path.home()
+
+# # the directory settings and options
+# if not os.access(_curr_dir, os.W_OK):
+    # HOME_CONFIG = os.path.join(_HOME,".config","wbar4")
+    # try:
+        # if not os.path.exists(HOME_CONFIG):
+            # os.mkdir(HOME_CONFIG, mode=0o770)
+    # except:
+        # HOME_CONFIG = _curr_dir
+    # if HOME_CONFIG != _curr_dir:
+        # try:
+            # shutil.copytree("/usr/share/wbar4/configs", os.path.join(HOME_CONFIG, "configs"))
+            # shutil.copytree("/usr/share/wbar4/icons", os.path.join(HOME_CONFIG, "icons"))
+            # shutil.copytree("/usr/share/wbar4/langs", os.path.join(HOME_CONFIG, "langs"))
+            # shutil.copytree("/usr/share/wbar4/mynots", os.path.join(HOME_CONFIG, "langs"))
+            # shutil.copytree("/usr/share/wbar4/scripts", os.path.join(HOME_CONFIG, "langs"))
+            # shutil.copytree("/usr/share/wbar4/addons", os.path.join(HOME_CONFIG, "langs"))
+            # shutil.copytree("/usr/share/wbar4/clips", os.path.join(HOME_CONFIG, "langs"))
+        # except Exception as E:
+            # HOME_CONFIG = _curr_dir
+# else:
+HOME_CONFIG = _curr_dir
+
+## language
+sys.path.append(os.path.join(HOME_CONFIG, "langs"))
+# _lang_names = GLib.get_language_names()
+# _langs_application = os.listdir(os.path.join(HOME_CONFIG, "langs"))
+# for l_lang in _lang_names:
+    # if l_lang+".py" in _langs_application:
+        # _lang = __import__(l_lang)
+        # break
+# else:
+    # _lang = __import__("en")
+from en import *
 
 _display = Gdk.Display.get_default()
 display_type = GObject.type_name(_display.__gtype__)
@@ -147,8 +183,8 @@ if USE_POLKIT:
     gi.require_version("PolkitAgent", "1.0")
     from gi.repository import Polkit, PolkitAgent
     try:
-        gi.require_version("Adw", "1")
-        from gi.repository import Adw
+        # gi.require_version("Adw", "1")
+        # from gi.repository import Adw
         USE_ADWAITA_POLKIT = 1
     except:
         USE_ADWAITA_POLKIT = 0
@@ -283,13 +319,13 @@ load_addons()
 
 #################
 
-def MyDialog(data1, data2, parent):
-    dialog = Gtk.AlertDialog()
-    dialog.set_message(data1)
-    dialog.set_detail(data2)
-    dialog.set_modal(True)
-    dialog.set_buttons(["Close"])
-    dialog.show(parent)
+# def MyDialog(data1, data2, parent):
+    # dialog = Gtk.AlertDialog()
+    # dialog.set_message(data1)
+    # dialog.set_detail(data2)
+    # dialog.set_modal(True)
+    # dialog.set_buttons(["Close"])
+    # dialog.show(parent)
 
 qq = queue.Queue(maxsize=1)
 # USER_THEME=0
@@ -661,6 +697,10 @@ def _f_populate_menu():
             the_menu.append([_el_name,_el_cat,_el_exec,_el_icon,_el_comment,_el_path,_el])
     the_menu.sort()
 
+# populate categories
+menu_bookmarks = []
+menu_bookmarks_rebuild = 1
+
 class SignalObject(GObject.Object):
     
     def __init__(self):
@@ -757,7 +797,6 @@ WINDOWS_LIST = []
 
 QUIT = 1
 class MyWindow(Gtk.ApplicationWindow):
-# class MyWindow(Gtk.Window):
 
     # def __init__(self):
     def __init__(self, *args, **kwargs):
@@ -1297,13 +1336,13 @@ class MyWindow(Gtk.ApplicationWindow):
         self.right_box.append(self.otherbutton)
         
         gdir1 = Gio.File.new_for_path(os.path.join(_HOME, ".local/share/applications"))
-        self.monitor1 = gdir1.monitor_directory(Gio.FileMonitorFlags.SEND_MOVED, None)
+        self.monitor1 = gdir1.monitor_directory(Gio.FileMonitorFlags.WATCH_MOVES, None)
         self.monitor1.connect("changed", self.directory_changed)
         gdir2 = Gio.File.new_for_path("/usr/share/applications")
-        self.monitor2 = gdir2.monitor_directory(Gio.FileMonitorFlags.SEND_MOVED, None)
+        self.monitor2 = gdir2.monitor_directory(Gio.FileMonitorFlags.WATCH_MOVES, None)
         self.monitor2.connect("changed", self.directory_changed)
         gdir3 = Gio.File.new_for_path("/usr/local/share/applications")
-        self.monitor3 = gdir3.monitor_directory(Gio.FileMonitorFlags.SEND_MOVED, None)
+        self.monitor3 = gdir3.monitor_directory(Gio.FileMonitorFlags.WATCH_MOVES, None)
         self.monitor3.connect("changed", self.directory_changed)
         
         if USE_VOLUME:
@@ -2230,12 +2269,16 @@ class MyWindow(Gtk.ApplicationWindow):
         _f_populate_menu()
     
     def directory_changed(self, monitor, file1, file2, event):
-        if (event == Gio.FileMonitorEvent.CREATED):
+        if (event == Gio.FileMonitorEvent.CREATED) or (event == Gio.FileMonitorEvent.MOVED_IN):
             self.on_directory_changed(file1.get_path(), "created")
-        elif (event == Gio.FileMonitorEvent.DELETED):
+        elif (event == Gio.FileMonitorEvent.DELETED) or (event == Gio.FileMonitorEvent.MOVED_OUT):
             self.on_directory_changed(file1.get_path(), "deleted")
-
-    def on_directory_changed(self, _path, _type):
+        elif (event == Gio.FileMonitorEvent.RENAMED):
+            self.on_directory_changed(file1.get_path(), "renamed", file2.get_path())
+        elif (event == Gio.FileMonitorEvent.CHANGED):
+            self.on_directory_changed(file1.get_path(), "changed")
+        
+    def on_directory_changed(self, _path, _type, file_new=None):
         try:
             if self.q.empty():
                 self.q.put("new", timeout=0.001)
@@ -2248,18 +2291,37 @@ class MyWindow(Gtk.ApplicationWindow):
                 self.MW = None
             
             _bookmarks = None
-            with open(os.path.join(_curr_dir, "favorites"), "r") as _f:
-                _bookmarks = _f.readlines()
+            try:
+                with open(os.path.join(_curr_dir, "favorites"), "r") as _f:
+                    _bookmarks = _f.readlines()
+            except:
+                pass
             
-            if _type == "deleted":
+            if _type == "deleted" or _type == "renamed":
                 for el in _bookmarks[:]:
                     if el.strip("\n") == _path:
                         _bookmarks.remove(el)
                         break
             
-            with open(os.path.join(_curr_dir, "favorites"), "w") as _f:
-                for el in _bookmarks:
-                    _f.write(el)
+            if _type == "renamed":
+                _bookmarks.append(file_new+"\n")
+                global menu_bookmarks
+                global menu_bookmarks_rebuild
+                menu_bookmarks = []
+                menu_bookmarks_rebuild = 1
+            
+            # if _type == "changed":
+                # global menu_bookmarks
+                # global menu_bookmarks_rebuild
+                # menu_bookmarks = []
+                # menu_bookmarks_rebuild = 1
+            
+            try:
+                with open(os.path.join(_curr_dir, "favorites"), "w") as _f:
+                    for el in _bookmarks:
+                        _f.write(el)
+            except:
+                pass
             
             self.rebuild_menu()
     
@@ -3670,45 +3732,45 @@ class MyWindow(Gtk.ApplicationWindow):
         else:
             self.MW = menuWin(self)
     
-    def f_on_set_timer(self,_play_sound,_dialog):
-        if _play_sound:
-            _sound = os.path.join(_curr_dir,"sounds","timer.wav")
-            if not self.entry_sound_text:
-                try:
-                    ctx = GSound.Context()
-                    ctx.init()
-                    ret = ctx.play_full({GSound.ATTR_EVENT_ID: _sound})
-                    if ret == None:
-                        ret = ctx.play_full({GSound.ATTR_MEDIA_FILENAME: _sound})
-                except:
-                    pass
-            else:
-                _player = self.entry_sound_text
-                try:
-                    os.system("{0} {1} &".format(_player, _sound))
-                except:
-                    pass
-                    
-        if _dialog:
-            self._message_dialog_yes("Timer!")
-        
-        self._is_timer_set = 0
-        self.timer_id = None
-        return False
+    # def f_on_set_timer(self,_play_sound,_dialog):
+        # if _play_sound:
+            # _sound = os.path.join(_curr_dir,"sounds","timer.wav")
+            # if not self.entry_sound_text:
+                # try:
+                    # ctx = GSound.Context()
+                    # ctx.init()
+                    # ret = ctx.play_full({GSound.ATTR_EVENT_ID: _sound})
+                    # if ret == None:
+                        # ret = ctx.play_full({GSound.ATTR_MEDIA_FILENAME: _sound})
+                # except:
+                    # pass
+            # else:
+                # _player = self.entry_sound_text
+                # try:
+                    # os.system("{0} {1} &".format(_player, _sound))
+                # except:
+                    # pass
+                    # 
+        # if _dialog:
+            # self._message_dialog_yes("Timer!")
+        # 
+        # self._is_timer_set = 0
+        # self.timer_id = None
+        # return False
     
-    def on_set_timer(self, _value):
-        if self.OW:
-            self.OW.close()
-            self.OW = None
-        dialog = timerDialog(self)
-        response = dialog.run()
-        if response == Gtk.ResponseType.OK:
-            (_min,_sound,_dialog) = dialog._values
-            self.timer_id = GLib.timeout_add_seconds(_min*60, self.f_on_set_timer, _sound, _dialog)
-            self._is_timer_set = 1
-        elif response == Gtk.ResponseType.CANCEL:
-            pass
-        dialog.destroy()
+    # def on_set_timer(self, _value):
+        # if self.OW:
+            # self.OW.close()
+            # self.OW = None
+        # dialog = timerDialog(self)
+        # response = dialog.run()
+        # if response == Gtk.ResponseType.OK:
+            # (_min,_sound,_dialog) = dialog._values
+            # self.timer_id = GLib.timeout_add_seconds(_min*60, self.f_on_set_timer, _sound, _dialog)
+            # self._is_timer_set = 1
+        # elif response == Gtk.ResponseType.CANCEL:
+            # pass
+        # dialog.destroy()
     
     def on_button_conf_clicked(self, widget):
         dialog = DialogConfiguration(self)
@@ -4386,18 +4448,20 @@ class menuWin(Gtk.Window):
         self.main_box.append(separator)
         
         ### SEARCH BAR
-        self.search_bar = Gtk.SearchBar()
-        self.search_bar.set_search_mode(True)
+        # self.search_bar = Gtk.SearchBar()
+        # self.search_bar.set_name("mysearchbar")
+        # self.search_bar.set_search_mode(True)
         self.searchentry = Gtk.SearchEntry()
         self.searchentry.set_name("mysearchentry")
         self.searchentry.connect('search-changed', self.on_search)
         self.searchentry.connect('activate', self.on_search_return)
         self.searchentry.props.hexpand = True
-        self.search_bar.set_child(self.searchentry)
-        self.search_bar.set_show_close_button(False)
-        self.search_bar.set_visible(True)
-        self.search_bar.set_search_mode(True)
-        self.main_box.append(self.search_bar)
+        # self.search_bar.set_child(self.searchentry)
+        # self.search_bar.set_show_close_button(False)
+        # self.search_bar.set_visible(True)
+        # self.search_bar.set_search_mode(True)
+        # self.main_box.append(self.search_bar)
+        self.main_box.append(self.searchentry)
         
         # # separator
         # separator = Gtk.Separator()
@@ -4486,8 +4550,8 @@ class menuWin(Gtk.Window):
         # populate the menu
         self.q.put_nowait("new")
         self.on_populate_menu()
-        # populate categories
-        self.bookmarks = []
+        # populate the categories
+        # self.bookmarks = []
         self.set_categories()
         #
         ###########
@@ -4504,7 +4568,7 @@ class menuWin(Gtk.Window):
         if self._btn_toggled:
             self._btn_toggled.set_active(False)
         self._btn_toggled = self.btn_bookmark
-        self.populate_bookmarks()
+        # self.populate_bookmarks()
         self._btn_toggled.set_active(True)
         self.searchentry.set_text("")
         # needed to let this window to close after losing focus
@@ -4524,6 +4588,7 @@ class menuWin(Gtk.Window):
     
     # value is the path of the dragged item
     def on_drop(self, _ctrl, value, _x, _y):
+        global menu_bookmarks
         # menu item dragging - no bookmark items
         if self.isMenuDragging == 1:
             self.isMenuDragging = 0
@@ -4535,7 +4600,7 @@ class menuWin(Gtk.Window):
         if isinstance(value, str):
             # _w is flowbox or image or label
             _w = self.iconview.pick(_x,_y,0)
-            # the path in self.bookmarks to substitute with value
+            # the path in menu_bookmarks to substitute with value
             _found = None
             if isinstance(_w, Gtk.Image):
                 for el in self.list_elements:
@@ -4551,15 +4616,15 @@ class menuWin(Gtk.Window):
             if _found != None:
                 if _found != "__flowbox":
                     item = _found
-                    self.bookmarks.remove(value)
-                    idx = self.bookmarks.index(item)
-                    self.bookmarks.insert(idx+1, value)
+                    menu_bookmarks.remove(value)
+                    idx = menu_bookmarks.index(item)
+                    menu_bookmarks.insert(idx+1, value)
                 elif _found == "__flowbox":
-                    self.bookmarks.remove(value)
-                    self.bookmarks.append(value)
+                    menu_bookmarks.remove(value)
+                    menu_bookmarks.append(value)
                 try:
                     with open(_menu_favorites, "w") as _f:
-                        for el in self.bookmarks:
+                        for el in menu_bookmarks:
                             _f.write(el+"\n")
                     # emptry the iconview
                     self.empty_iconview()
@@ -4575,6 +4640,7 @@ class menuWin(Gtk.Window):
             self._parent.MW = None
     
     def on_iv_gesture(self, _p,_n,x,y):
+        global menu_bookmarks
         iv = _p.get_widget()
         _child = iv.get_child_at_pos(x,y).get_child()
         _item = _child._path
@@ -4582,7 +4648,7 @@ class menuWin(Gtk.Window):
         # return
         if _item != None:
             # remove from bookmarks
-            if _item in self.bookmarks:
+            if _item in menu_bookmarks:
                 if self._btn_toggled.icat != "Bookmarks":
                     return
                 # dialog = ynDialog(self, "Delete from Bookmarks?", "Question")
@@ -4595,50 +4661,51 @@ class menuWin(Gtk.Window):
                 #
                 dialogMenu(self, 1, _item)
                 
-    def on_yndialog_response(self, dialog, response_id, _type, _item):
-        # delete the bookmark
-        if _type == 0:
-            if response_id == Gtk.ResponseType.OK:
-                _content = None
-                try:
-                    self.bookmarks.remove(_item)
-                    with open(_menu_favorites, "w") as _f:
-                        for el in self.bookmarks:
-                            _f.write(el+"\n")
-                    # rebuild bookmarks
-                    self.populate_bookmarks_at_start()
-                    self.populate_category("Bookmarks")
-                except Exception as E:
-                    self.msg_simple("Error\n"+str(E))
-            #
-            dialog.destroy()
-            self._parent.MW = None
-            self.close()
-        # add the bookmark
-        elif _type == 1:
-            if response_id == Gtk.ResponseType.OK:
-                _content = None
-                try:
-                    with open(_menu_favorites, "a") as _f:
-                        _f.write(_item)
-                        _f.write("\n")
-                    self.bookmarks.append(_item)
-                    # rebuild bookmarks
-                    self.populate_bookmarks_at_start()
-                    self.populate_category("Bookmarks")
-                except Exception as E:
-                    self.msg_simple("Error\n"+str(E))
-            dialog.destroy()
-            self._parent.MW = None
-            self.close()
-        # # TO DO
-        # # rebuild the menu
-        # elif _type == 2:
+    # def on_yndialog_response(self, dialog, response_id, _type, _item):
+        # global menu_bookmarks
+        # # delete the bookmark
+        # if _type == 0:
             # if response_id == Gtk.ResponseType.OK:
-                # self.rebuild_menu()
+                # _content = None
+                # try:
+                    # menu_bookmarks.remove(_item)
+                    # with open(_menu_favorites, "w") as _f:
+                        # for el in menu_bookmarks:
+                            # _f.write(el+"\n")
+                    # # rebuild bookmarks
+                    # self.populate_bookmarks_at_start()
+                    # self.populate_category("Bookmarks")
+                # except Exception as E:
+                    # self.msg_simple("Error\n"+str(E))
+            # #
             # dialog.destroy()
             # self._parent.MW = None
             # self.close()
+        # # add the bookmark
+        # elif _type == 1:
+            # if response_id == Gtk.ResponseType.OK:
+                # _content = None
+                # try:
+                    # with open(_menu_favorites, "a") as _f:
+                        # _f.write(_item)
+                        # _f.write("\n")
+                    # menu_bookmarks.append(_item)
+                    # # rebuild bookmarks
+                    # self.populate_bookmarks_at_start()
+                    # self.populate_category("Bookmarks")
+                # except Exception as E:
+                    # self.msg_simple("Error\n"+str(E))
+            # dialog.destroy()
+            # self._parent.MW = None
+            # self.close()
+        # # # TO DO
+        # # # rebuild the menu
+        # # elif _type == 2:
+            # # if response_id == Gtk.ResponseType.OK:
+                # # self.rebuild_menu()
+            # # dialog.destroy()
+            # # self._parent.MW = None
+            # # self.close()
     
     def on_modify_menu(self, btn):
         if self._parent.menu_editor == "__internal__":
@@ -4668,6 +4735,7 @@ class menuWin(Gtk.Window):
         except:
             pass
     
+    # at the first menu window opening
     def on_populate_menu(self):
         if the_menu == []:
             _f_populate_menu()
@@ -4821,29 +4889,40 @@ class menuWin(Gtk.Window):
         self._btn_toggled = btn
     
     def populate_bookmarks_at_start(self):
+        global menu_bookmarks
+        global menu_bookmarks_rebuild
+        if menu_bookmarks_rebuild == 0:
+            return
+        menu_bookmarks_rebuild = 0
         _content = None
-        with open(_menu_favorites, "r") as _f:
-            _content = _f.readlines()
+        try:
+            with open(_menu_favorites, "r") as _f:
+                _content = _f.readlines()
+        except:
+            _content = None
+        if _content == None:
+            return
         not_found = 0
-        self.bookmarks = []
+        # menu_bookmarks = []
         for el in _content:
             if el == "\n" or el == "" or el == None:
                 continue
             if not os.path.exists(el.strip("\n")):
                 not_found +=1
                 continue
-            self.bookmarks.append(el.strip("\n"))
+            menu_bookmarks.append(el.strip("\n"))
         if not_found:
             try:
                 _f = open(_menu_favorites, "w")
-                for el in self.bookmarks:
+                for el in menu_bookmarks:
                     _f.write(el+"\n")
                 _f.close()
             except Exception as E:
                 self.msg_simple(WBERROR+"\n"+str(E))
     
     def populate_bookmarks(self):
-        for eel in self.bookmarks:
+        global menu_bookmarks
+        for eel in menu_bookmarks:
             self.f_menu_item(eel)
     
     def on_drag_prepare(self, _ctrl, _x, _y):
@@ -4944,8 +5023,9 @@ class menuWin(Gtk.Window):
         self.on_populate_category_main(cat_name)
     
     def on_populate_category_main(self, cat_name):
+        global menu_bookmarks
         if cat_name == "Bookmarks":
-            for _item in self.bookmarks:
+            for _item in menu_bookmarks:
                 self.f_menu_item(_item)
             return
         # [_el_name,_el_cat,_el_exec,_el_icon,_el_comment,_el_path,_el])
@@ -5150,18 +5230,32 @@ class menuWin(Gtk.Window):
     # def on_show(self, widget):
         # pass
 
-class dialogMenu(Gtk.Window):
+# bookmark - modify the menu - etc.
+# class dialogMenu(Gtk.Window):
+class dialogMenu(Adw.Dialog):
     def __init__(self, _parent, _type, _item):
         super().__init__()
         self._parent = _parent
         self._item = _item
         #
+        # self.set_margin_start(4)
+        # self.set_margin_end(4)
+        # self.set_margin_top(4)
+        # self.set_margin_bottom(4)
+        
+        # self.set_name("commandwin")
+        # self.set_transient_for(self._parent._parent)
+        # self.set_modal(True)
+        # self.set_decorated(False)
+        
         self._type = _type
         self.main_box = Gtk.Box.new(1,0)
         self.set_child(self.main_box)
         
         self.main_box.set_margin_start(4)
         self.main_box.set_margin_end(4)
+        self.main_box.set_margin_top(4)
+        self.main_box.set_margin_bottom(4)
         
         # lbl = Gtk.Label(label="")
         
@@ -5182,12 +5276,26 @@ class dialogMenu(Gtk.Window):
             btn_bookmark = Gtk.Button(label=WBTXT3)
             btn_box.append(btn_bookmark)
             btn_bookmark.connect("clicked", self.remove_from_bookmark)
+            
+            if self._parent._parent.menu_editor:
+                btn_menu = Gtk.Button(label=WBTXT2)
+                btn_box.append(btn_menu)
+                btn_menu.connect("clicked", self.modify_menu)
+        
+        # btn_rebuild_menu = Gtk.Button(label="Rebuild the menu")
+        # btn_box.append(btn_rebuild_menu)
+        # btn_rebuild_menu.connect("clicked", self.rebuild_menu)
         
         btn_close = Gtk.Button(label=WBCLOSE)
         btn_box.append(btn_close)
         btn_close.connect("clicked", lambda w: self.close())
         
-        self.set_visible(True)
+        # self.set_visible(True)
+        self.present(self._parent._parent)
+    
+    # def rebuild_menu(self, w):
+        # self._parent.rebuild_menu()
+        # self._parent.set_categories()
     
     def add_to_bookmark(self, btn):
         try:
@@ -5230,29 +5338,29 @@ class dialogMenu(Gtk.Window):
         self.close()
     
 
-class ynDialog(Gtk.Dialog):
-    def __init__(self, parent, _title1, _type):
-        super().__init__(title=_type, transient_for=parent)
-        
-        self.add_buttons(WBOK1, Gtk.ResponseType.OK, WBCANCEL1, Gtk.ResponseType.CANCEL)
-        self.set_name(WBINFO)
-        # self.set_default_size(150, 100)
-        label = Gtk.Label(label=_title1)
-        box = self.get_child()
-        box.append(label)
-        self.set_visible(True)
+# class ynDialog(Gtk.Dialog):
+    # def __init__(self, parent, _title1, _type):
+        # super().__init__(title=_type, transient_for=parent)
+        # 
+        # self.add_buttons(WBOK1, Gtk.ResponseType.OK, WBCANCEL1, Gtk.ResponseType.CANCEL)
+        # self.set_name(WBINFO)
+        # # self.set_default_size(150, 100)
+        # label = Gtk.Label(label=_title1)
+        # box = self.get_child()
+        # box.append(label)
+        # self.set_visible(True)
 
-class infoDialog(Gtk.Dialog):
-    def __init__(self, parent, _title1, _type):
-        super().__init__(title=_type, transient_for=parent)
-        
-        self.add_buttons(WBCLOSE, Gtk.ResponseType.OK)
-        self.set_name(WBINFO)
-        # self.set_default_size(150, 100)
-        label = Gtk.Label(label=_title1)
-        box = self.get_child()
-        box.append(label)
-        self.set_visible(True)
+# class infoDialog(Gtk.Dialog):
+    # def __init__(self, parent, _title1, _type):
+        # super().__init__(title=_type, transient_for=parent)
+        # 
+        # self.add_buttons(WBCLOSE, Gtk.ResponseType.OK)
+        # self.set_name(WBINFO)
+        # # self.set_default_size(150, 100)
+        # label = Gtk.Label(label=_title1)
+        # box = self.get_child()
+        # box.append(label)
+        # self.set_visible(True)
 
 class _object(GObject.Object):
     name = GObject.Property(type=str)
@@ -5517,7 +5625,9 @@ class otherWin(Gtk.Window):
         self.main_box = Gtk.Box.new(orientation=Gtk.Orientation.VERTICAL,spacing=0)
         self.main_box.set_margin_start(_pad)
         self.main_box.set_margin_end(_pad)
+        self.main_box.set_margin_top(_pad)
         self.set_child(self.main_box)
+        
         
         self._stack = Gtk.Stack()
         _stack_vbox1 = Gtk.Box(orientation=Gtk.Orientation.VERTICAL,spacing=0)
@@ -5843,22 +5953,22 @@ class otherWin(Gtk.Window):
         # except:
             # pass
     
-    def on_timer_btn(self, btn):
-        if self._parent._is_timer_set == 1:
-            self.timer_btn.set_label("Set a timer")
-            self._parent._is_timer_set = 0
-            try:
-                GLib.source_remove(self._parent.timer_id)
-            except:
-                pass
-            return
-        
-        _value = 1
-        if self._parent.OW:
-            _this = self._parent.OW
-            self._parent.OW = None
-            _this.destroy()
-        self._parent.on_set_timer(_value)
+    # def on_timer_btn(self, btn):
+        # if self._parent._is_timer_set == 1:
+            # self.timer_btn.set_label("Set a timer")
+            # self._parent._is_timer_set = 0
+            # try:
+                # GLib.source_remove(self._parent.timer_id)
+            # except:
+                # pass
+            # return
+        # 
+        # _value = 1
+        # if self._parent.OW:
+            # _this = self._parent.OW
+            # self._parent.OW = None
+            # _this.destroy()
+        # self._parent.on_set_timer(_value)
     
     def on_conf_btn(self, btn):
         if self._parent.OW:
@@ -6027,57 +6137,57 @@ class noteDialog(Gtk.Window):
         self.destroy()
 
 
-class timerDialog(Gtk.Dialog):
-    def __init__(self, parent):
-        super().__init__(title="Set a timer", transient_for=parent, flags=0)
-        self.add_buttons(
-            Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_OK, Gtk.ResponseType.OK
-        )
-        
-        self._parent = parent
-        
-        # self.self_style_context = self.get_style_context()
-        # self.self_style_context.add_class("timerwin")
-        self.set_name("timerwin")
-        
-        self.set_default_size(100, 100)
-        box = self.get_child()
-        self.set_decorated(False)
-        
-        for el in box.get_children()[0].get_children()[0].get_children():
-            if isinstance(el, Gtk.Button):
-                el.set_relief(Gtk.ReliefStyle.NONE)
-        
-        _lbl = Gtk.Label(label=WBTXT104)
-        box.add(_lbl)
-        _spinbtn = Gtk.SpinButton.new_with_range(3,3000,1)
-        box.add(_spinbtn)
-        _spinbtn.connect('value-changed', self.on_spinbtn)
-        _spinbtn.set_input_purpose(Gtk.InputPurpose.DIGITS)
-        
-        self.chk_sound = Gtk.CheckButton(label=WBTXT105)
-        self.chk_sound.set_active(True)
-        self.chk_sound.connect('toggled', self.on_toggle_toggled, "sound")
-        box.add(self.chk_sound)
-        
-        self.chk_dialog = Gtk.CheckButton(label=WBTXT106)
-        self.chk_dialog.connect('toggled', self.on_toggle_toggled, "dialog")
-        box.add(self.chk_dialog)
-        # minutes - sound - dialog
-        self._values = [3,True,False]
-        
-        self.show_all()
-        
-    def on_spinbtn(self, btn):
-        self._values[0] = btn.get_value_as_int()
-        
-    def on_toggle_toggled(self, btn, _type):
-        if _type == "sound":
-            self._values[1] = btn.get_active()
-        elif _type == "dialog":
-            self._values[2] = btn.get_active()
-        if self._values[1] == False and self._values[2] == False:
-            self._values[2] = True
+# class timerDialog(Gtk.Dialog):
+    # def __init__(self, parent):
+        # super().__init__(title="Set a timer", transient_for=parent, flags=0)
+        # self.add_buttons(
+            # Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL, Gtk.STOCK_OK, Gtk.ResponseType.OK
+        # )
+        # 
+        # self._parent = parent
+        # 
+        # # self.self_style_context = self.get_style_context()
+        # # self.self_style_context.add_class("timerwin")
+        # self.set_name("timerwin")
+        # 
+        # self.set_default_size(100, 100)
+        # box = self.get_child()
+        # self.set_decorated(False)
+        # 
+        # for el in box.get_children()[0].get_children()[0].get_children():
+            # if isinstance(el, Gtk.Button):
+                # el.set_relief(Gtk.ReliefStyle.NONE)
+        # 
+        # _lbl = Gtk.Label(label=WBTXT104)
+        # box.add(_lbl)
+        # _spinbtn = Gtk.SpinButton.new_with_range(3,3000,1)
+        # box.add(_spinbtn)
+        # _spinbtn.connect('value-changed', self.on_spinbtn)
+        # _spinbtn.set_input_purpose(Gtk.InputPurpose.DIGITS)
+        # 
+        # self.chk_sound = Gtk.CheckButton(label=WBTXT105)
+        # self.chk_sound.set_active(True)
+        # self.chk_sound.connect('toggled', self.on_toggle_toggled, "sound")
+        # box.add(self.chk_sound)
+        # 
+        # self.chk_dialog = Gtk.CheckButton(label=WBTXT106)
+        # self.chk_dialog.connect('toggled', self.on_toggle_toggled, "dialog")
+        # box.add(self.chk_dialog)
+        # # minutes - sound - dialog
+        # self._values = [3,True,False]
+        # 
+        # self.show_all()
+        # 
+    # def on_spinbtn(self, btn):
+        # self._values[0] = btn.get_value_as_int()
+        # 
+    # def on_toggle_toggled(self, btn, _type):
+        # if _type == "sound":
+            # self._values[1] = btn.get_active()
+        # elif _type == "dialog":
+            # self._values[2] = btn.get_active()
+        # if self._values[1] == False and self._values[2] == False:
+            # self._values[2] = True
         
 
 class DialogConfiguration(Gtk.Dialog):
@@ -6095,6 +6205,10 @@ class DialogConfiguration(Gtk.Dialog):
         self.set_name("configuratorwin")
         
         box = self.get_child()
+        box.set_margin_top(_pad)
+        box.set_margin_bottom(_pad)
+        box.set_margin_start(_pad)
+        box.set_margin_end(_pad)
         
         self.set_modal(True)
         self.set_transient_for(self._parent)
@@ -6113,6 +6227,7 @@ class DialogConfiguration(Gtk.Dialog):
         self.notebook.append_page(self.page1_box, page1_label)
         #
         self.page2_box = Gtk.Grid.new()
+        
         self.page2_box.set_column_homogeneous(True)
         page2_label = Gtk.Label(label=WBMENU)
         self.notebook.append_page(self.page2_box, page2_label)
