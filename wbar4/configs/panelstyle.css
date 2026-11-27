@@ -37,7 +37,8 @@ expander {
 #tasklist button:hover,
 #tasklist button:checked {
   box-shadow: 0px 0px 5px rgba(128, 128, 128, 0.7) inset;
-  border: 1px solid #555555;
+  /*border: 1px solid #555555;*/
+  border: 1px solid transparent;
   border-radius: 10px 10px 10px 10px;
 }
 
@@ -62,22 +63,22 @@ expander {
   font-family: DIGITALDREAMFAT;
   /*font-size: 21px;*/
 }
-
+/*
 #label1button {
   background-color: transparent;
   padding-top: 0px;
   padding-bottom: 0px;
   margin-top: 0px;
   margin-bottom: 0px;
-}
-
+}*/
+/*
 #label2button {
   background-color: transparent;
   padding-top: 0px;
   padding-bottom: 0px;
   margin-top: 0px;
   margin-bottom: 0px;
-}
+}*/
 
 /* the background colour of each cell in the menu */
 #menuwin flowbox flowboxchild:hover {
@@ -157,6 +158,7 @@ grid {
   border: solid;
   border-width: 1px;
   /* border-color: #7F7F7F;*/
+  border-color: transparent;
   margin: 2px;
   /*font-size: 24px;*/
 }
@@ -210,8 +212,8 @@ grid {
 
 #commandwin button {
   border-radius: 6px;
-  border: solid;
-  border-width: 1px;
+  /*border: solid;
+  border-width: 1px;*/
   /*border-color: #7F7F7F;*/
   margin: 2px;
   /*font-size: 24px;*/
@@ -232,8 +234,8 @@ grid {
 
 #servicewin button {
   border-radius: 6px;
-  border: solid;
-  border-width: 1px;
+  /*border: solid;
+  border-width: 1px;*/
   /*border-color: #7F7F7F;*/
   margin: 2px;
 }
