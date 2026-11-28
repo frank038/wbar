@@ -63,35 +63,34 @@ expander {
   font-family: DIGITALDREAMFAT;
   /*font-size: 21px;*/
 }
-/*
+
 #label1button {
   background-color: transparent;
   padding-top: 0px;
   padding-bottom: 0px;
   margin-top: 0px;
   margin-bottom: 0px;
-}*/
-/*
+}
+
 #label2button {
   background-color: transparent;
   padding-top: 0px;
   padding-bottom: 0px;
   margin-top: 0px;
   margin-bottom: 0px;
-}*/
-
-/* the background colour of each cell in the menu */
-#menuwin flowbox flowboxchild:hover {
-  background-color: #e0e0e0;
 }
 
+/* the background colour of each cell in the menu */
+/* #menuwin flowbox flowboxchild:hover {
+  background-color: #e0e0e0;
+} */
+
 /* .menuwin flowbox flowboxchild:hover box { */
-#menuwin flowbox flowboxchild:hover label {
-  /*border: 2px solid #484848;*/
+/* #menuwin flowbox flowboxchild:hover label {
   border: 2px solid #a0a0a0;
   border-radius: 6px;
   margin: -2px;
-}
+} */
 
 /* menu flowbox */
 /*#"mymenuflowbox" {
