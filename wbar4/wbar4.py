@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# V. 1.6.6
+# V. 1.6.7
 
 VOLBAR_WIDTH = 100
 VOLBAR_HEIGHT = -1
@@ -802,6 +802,9 @@ class MyWindow(Gtk.ApplicationWindow):
     # def __init__(self):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        global main_app
+        main_app = self
+        
         # self._app = self.get_application()
         
         # self.load_css('main.css')
@@ -4299,8 +4302,8 @@ class menuWin(Gtk.Window):
         super().__init__()
         
         self._parent = parent
-        global main_app
-        main_app = self
+        # global main_app
+        # main_app = self
         
         self.set_transient_for(self._parent)
         # self.set_modal(True)
@@ -4410,14 +4413,18 @@ class menuWin(Gtk.Window):
             self.iconview.set_homogeneous(True)
             self.iconview.set_max_children_per_line(self._parent.menu_n_items)
             self.iconview.set_min_children_per_line(self._parent.menu_n_items)
-            self.scrolledwindow.set_child(self.iconview)
+            # self.scrolledwindow.set_child(self.iconview)
+            menu_box = Gtk.Box.new(Gtk.Orientation.VERTICAL,0)
+            menu_box.append(self.iconview)
+            menu_box.set_vexpand(False)
+            self.scrolledwindow.set_child(menu_box)
             self.iconview.connect('child-activated', self.on_iv_item_activated)
         elif self.menu_item_type == 1:
             self.iconview = Gtk.ListBox.new()
             self.iconview.set_name("mymenulistview")
             self.scrolledwindow.set_child(self.iconview)
             self.iconview.connect('row-activated', self.on_iv_item_activated)
-        
+            
         self.gesture_iv = Gtk.GestureClick.new()
         self.gesture_iv.set_button(3)
         self.iconview.add_controller(self.gesture_iv)
